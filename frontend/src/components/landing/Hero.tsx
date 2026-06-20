@@ -45,7 +45,7 @@ export function Hero(): React.JSX.Element {
         variants={container}
         initial="hidden"
         animate="show"
-        className="mx-auto flex max-w-4xl flex-col items-center px-4 py-20 text-center sm:py-28"
+        className="mx-auto flex max-w-4xl flex-col items-center px-4 pb-10 pt-20 text-center sm:pb-12 sm:pt-28"
       >
         {/* Framed logo "app icon" enclosure. */}
         <motion.div variants={item}>
@@ -75,7 +75,7 @@ export function Hero(): React.JSX.Element {
         >
           dアニメストアでも、離れた友達とウォッチパーティー。
           <br className="hidden sm:block" />
-          再生も一時停止もシークも自動でシンクする、完全無料の Chrome 拡張機能。
+          再生も一時停止も自動でシンクする、完全無料の ブラウザ拡張機能。
         </motion.p>
 
         <motion.ul
