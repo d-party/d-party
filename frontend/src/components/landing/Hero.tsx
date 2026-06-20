@@ -18,7 +18,14 @@ const item: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
 };
 
-const BADGES = ["完全無料", "広告なし", "Chrome拡張機能", "インストール即利用"];
+const BADGES = [
+  "完全無料",
+  "広告なし",
+  "Google Chrome 拡張機能",
+  "Microsoft Edge 拡張機能",
+  "アカウント登録不要",
+  "オープンソースソフトウェア",
+];
 
 export function Hero(): React.JSX.Element {
   const reduce = useReducedMotion();
