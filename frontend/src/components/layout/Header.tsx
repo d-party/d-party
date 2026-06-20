@@ -12,9 +12,9 @@ import {
   MessageSquare,
   X,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 
+import { Logo } from "@/components/Logo";
 import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
 import { cn } from "@/lib/utils";
 
@@ -94,13 +94,7 @@ export function Header(): React.JSX.Element {
     <nav className="bg-neutral-900 text-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2">
         <Link href="/" className="inline-flex items-center" aria-label="d-party">
-          <Image
-            src="/favicon/favicon-32x32.png"
-            alt="d-party"
-            width={40}
-            height={40}
-            className="rounded"
-          />
+          <Logo className="size-10" />
         </Link>
 
         <button

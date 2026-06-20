@@ -1,6 +1,6 @@
-import Image from "next/image";
 import { Download } from "lucide-react";
 
+import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
 
@@ -9,14 +9,7 @@ export default function HomePage(): React.JSX.Element {
   return (
     <section className="mx-auto max-w-4xl px-4 py-16 text-center">
       <div className="mx-auto w-2/3 max-w-md">
-        <Image
-          src="/logo/dp.png"
-          alt="d-party"
-          width={512}
-          height={512}
-          priority
-          className="h-auto w-full"
-        />
+        <Logo className="h-auto w-full" />
       </div>
 
       <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl">
