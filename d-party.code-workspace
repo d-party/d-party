@@ -1,0 +1,26 @@
+{
+  "folders": [
+    { "path": ".", "name": "d-party (root)" },
+    { "path": "backend", "name": "backend" },
+    { "path": "chrome-extension", "name": "chrome-extension" }
+  ],
+  "settings": {
+    "files.eol": "\n",
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/.venv": true,
+      "backend/MySQL/data": true,
+      "backend/Django/static": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.vscode-pylance",
+      "ms-python.black-formatter",
+      "ms-azuretools.vscode-docker",
+      "redhat.vscode-yaml",
+      "anthropic.claude-code"
+    ]
+  }
+}

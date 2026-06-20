@@ -1,0 +1,115 @@
+{
+  "name": "d-party Dev Container",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends default-libmysqlclient-dev pkg-config graphviz && sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*",
+  "postCreateCommand": "git submodule update --init --recursive",
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    },
+    "ghcr.io/devcontainers-extra/features/poetry:2": {},
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
+    "ghcr.io/devcontainers-extra/features/act:1": {},
+    "ghcr.io/devcontainers-extra/features/pre-commit:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1.1.0": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "installDockerBuildx": true,
+      "installDockerComposeSwitch": true,
+      "version": "latest",
+      "dockerDashComposeVersion": "v2"
+    }
+  },
+  "remoteEnv": {
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "ms-python.mypy-type-checker",
+        "ms-azuretools.vscode-docker",
+        "redhat.vscode-yaml",
+        "tamasfe.even-better-toml",
+        "anthropic.claude-code"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "editor.formatOnSave": true,
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter"
+        },
+        "chat.tools.terminal.autoApprove": {
+          "poetry": true,
+          "python": true,
+          "python3": true,
+          "pip": true,
+          "pytest": true,
+          "black": true,
+          "act": true,
+          "ls": true,
+          "cat": true,
+          "pwd": true,
+          "echo": true,
+          "head": true,
+          "tail": true,
+          "wc": true,
+          "tree": true,
+          "which": true,
+          "find": true,
+          "grep": true,
+          "rg": true,
+          "/^git (status|log|diff|branch|show|fetch|remote|submodule|rev-parse)\\b/": true,
+          "/^docker(\\s+compose)?\\s+(ps|logs|images|version|config)\\b/": true,
+          "rm": false,
+          "rmdir": false,
+          "mv": false,
+          "sudo": false,
+          "chmod": false,
+          "chown": false,
+          "kill": false,
+          "killall": false,
+          "curl": false,
+          "wget": false,
+          "/^git (push|reset|rebase|clean|checkout|restore|commit)\\b/": false,
+          "/^docker(\\s+compose)?\\s+(down|rm|kill|stop|prune)\\b/": false,
+          "/\\brm\\b/": false,
+          "/>|>>/": false,
+          "/&&|\\|\\||;/": false
+        }
+      }
+    }
+  },
+  "forwardPorts": [80, 443, 3306, 6379, 8000, 8080, 9090, 9100],
+  "portsAttributes": {
+    "80": { "label": "Nginx (App)", "onAutoForward": "silent" },
+    "443": { "label": "Nginx (HTTPS)", "onAutoForward": "silent" },
+    "3306": { "label": "MySQL", "onAutoForward": "silent" },
+    "6379": { "label": "Redis", "onAutoForward": "silent" },
+    "8000": { "label": "Django", "onAutoForward": "silent" },
+    "8080": { "label": "phpMyAdmin", "onAutoForward": "silent" },
+    "9090": { "label": "Prometheus", "onAutoForward": "silent" },
+    "9100": { "label": "node-exporter", "onAutoForward": "silent" }
+  },
+  "otherPortsAttributes": {
+    "onAutoForward": "silent"
+  },
+  "remoteUser": "vscode",
+  "mounts": [
+    {
+      "source": "${localEnv:HOME}${localEnv:USERPROFILE}/.claude",
+      "target": "/home/vscode/.claude",
+      "type": "bind"
+    },
+    {
+      "source": "${localEnv:HOME}${localEnv:USERPROFILE}/.config/gh",
+      "target": "/home/vscode/.config/gh",
+      "type": "bind"
+    }
+  ]
+}

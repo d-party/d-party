@@ -1,0 +1,28 @@
+# ── Editor / OS ──────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+.vscode/*.local.json
+
+# ── Python ───────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ── Node ─────────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Secrets / local env ──────────────────────────────────────────────────
+.env
+*.local
+
+# ── Logs / data ──────────────────────────────────────────────────────────
+*.log

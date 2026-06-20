@@ -1,0 +1,24 @@
+{
+  // ── General ───────────────────────────────────────────────────────────────
+  "editor.formatOnSave": true,
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+
+  // ── Python (backend submodule) ────────────────────────────────────────────
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true
+  },
+
+  // ── Search ────────────────────────────────────────────────────────────────
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.venv": true,
+    "backend/MySQL/data": true,
+    "backend/Django/static": true
+  },
+  "files.watcherExclude": {
+    "backend/MySQL/data/**": true
+  }
+}
