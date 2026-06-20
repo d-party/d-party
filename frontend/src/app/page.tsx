@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
 
 const STEPS = [
-  { title: "Chrome に追加", text: "Chrome ウェブストアから d-party をインストール。" },
+  {
+    title: "Google Chrome / Microsoft Edge に追加",
+    text: "Chrome ウェブストアから d-party をインストール（Edge でも利用できます）。",
+  },
   { title: "アニメを開く", text: "dアニメストアで一緒に観たい作品のプレイヤーを開く。" },
   { title: "リンクを共有", text: "生成されたルームリンクを友達に送るだけ。" },
   { title: "一緒に視聴", text: "全員そろったら再生。あとは自動でシンクします。" },
