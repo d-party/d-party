@@ -1,7 +1,10 @@
-# 追加が必要なバックエンド API: ロビー解決エンドポイント
+# バックエンド API: ロビー解決エンドポイント
+
+> **実装状況:** `backend` 側で実装済み（`api.views.AnimeStoreLobbyResolveAPI` /
+> `api/urls.py` の `v1/anime-store/lobby/<uuid:room_id>`）。本ドキュメントは仕様の記録。
 
 フロントエンドのルーム遷移ページ（`/anime-store/lobby/[roomId]`）は、`room_id` から
-dアニメストアのリダイレクト URL を解決するために新しい REST エンドポイントを必要とします。
+dアニメストアのリダイレクト URL を解決するためにこの REST エンドポイントを使用します。
 これは旧 Django テンプレートビュー `web/views.py:AnimeRoomLobby` がサーバ側で行っていた処理の置き換えです。
 
 > **サブモジュール運用ルール:** このエンドポイントは `backend`（[d-party-Backend](https://github.com/d-party/d-party-Backend)）

@@ -19,6 +19,7 @@ dアニメストアで「同時視聴」を実現する **d-party** のユーザ
 | --- | --- | --- |
 | `/` | ランディングページ（アニメーション付き） | `web/templates/index.html` |
 | `/usage` | 使い方ガイド | `web/templates/usage.html` |
+| `/stats` | 統計（誰でも閲覧可。公開 stats API を利用） | `web/templates/chart.html` |
 | `/qa` | Q&A（よくある質問） | （新規） |
 | `/anime-store/lobby/[roomId]` | ルーム遷移（バージョン確認 → リダイレクト） | `web/templates/lobby_redirect.html` |
 | （404） | Not Found | `web/templates/404.html` |
@@ -46,14 +47,18 @@ pnpm format           # prettier --write .
 ## バックエンド接続先
 
 接続先は `src/infrastructure/env.ts` に集約しています（旧 `js/common/settings.js` 相当）。
-既定はローカル開発バックエンド（`localhost`）で、ビルド時に `NEXT_PUBLIC_*` 環境変数で上書きできます。
+既定はローカル開発バックエンド（`localhost` / `http` / `ws`）で、デプロイ先のドメインと
+プロトコル（http/https・ws/wss）はビルド時の `NEXT_PUBLIC_*` 環境変数で上書きします。
 
 ```bash
-# 本番例
-NEXT_PUBLIC_BACKEND_HOST="d-party.net/"
+# デプロイ例（ドメイン・プロトコルは環境に合わせて差し替える）
+NEXT_PUBLIC_BACKEND_HOST="example.com/"
 NEXT_PUBLIC_BACKEND_PROTOCOL="https://"
 NEXT_PUBLIC_WEBSOCKET_PROTOCOL="wss://"
 ```
+
+> docker-compose では `FRONTEND_BACKEND_HOST` / `FRONTEND_BACKEND_PROTOCOL`
+> （backend の compose）から上記ビルド引数へ渡されます。
 
 ## ルーム遷移（ロビー）について
 

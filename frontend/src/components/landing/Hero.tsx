@@ -75,7 +75,7 @@ export function Hero(): React.JSX.Element {
         >
           dアニメストアでも、離れた友達とウォッチパーティー。
           <br className="hidden sm:block" />
-          再生も一時停止も自動でシンクする、完全無料の ブラウザ拡張機能。
+          再生も一時停止も自動でシンクする、完全無料のブラウザ拡張機能。
         </motion.p>
 
         <motion.ul

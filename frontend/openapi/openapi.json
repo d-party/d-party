@@ -81,6 +81,136 @@
           }
         }
       }
+    },
+    "/api/v1/statistics/anime-store/anime-user-all-count": {
+      "get": {
+        "operationId": "statsUserAllCount",
+        "summary": "Total user count.",
+        "responses": {
+          "200": {
+            "description": "Count.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CountResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics/anime-store/anime-room-all-count": {
+      "get": {
+        "operationId": "statsRoomAllCount",
+        "summary": "Total room count.",
+        "responses": {
+          "200": {
+            "description": "Count.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CountResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics/anime-store/anime-reaction-all-count": {
+      "get": {
+        "operationId": "statsReactionAllCount",
+        "summary": "Total reaction count.",
+        "responses": {
+          "200": {
+            "description": "Count.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CountResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics/anime-store/anime-user-alive-count": {
+      "get": {
+        "operationId": "statsUserAliveCount",
+        "summary": "Currently connected user count.",
+        "responses": {
+          "200": {
+            "description": "Count.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CountResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics/anime-store/anime-room-alive-count": {
+      "get": {
+        "operationId": "statsRoomAliveCount",
+        "summary": "Currently active room count.",
+        "responses": {
+          "200": {
+            "description": "Count.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CountResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics/anime-store/active-user-per-day": {
+      "get": {
+        "operationId": "statsActiveUserPerDay",
+        "summary": "Daily count of users.",
+        "responses": {
+          "200": {
+            "description": "Per-day counts.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PerDayResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics/anime-store/active-room-per-day": {
+      "get": {
+        "operationId": "statsActiveRoomPerDay",
+        "summary": "Daily count of rooms.",
+        "responses": {
+          "200": {
+            "description": "Per-day counts.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PerDayResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics/anime-store/anime-reaction-count": {
+      "get": {
+        "operationId": "statsReactionCount",
+        "summary": "Per-type reaction counts.",
+        "responses": {
+          "200": {
+            "description": "Per-type counts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReactionTypeCountResult"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -120,6 +250,53 @@
         "required": ["message"],
         "properties": {
           "message": { "type": "string" }
+        }
+      },
+      "CountResult": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["count"],
+            "properties": {
+              "count": { "type": "integer" }
+            }
+          }
+        }
+      },
+      "PerDayResult": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["day", "count"],
+              "properties": {
+                "day": { "type": "string", "format": "date" },
+                "count": { "type": "integer" }
+              }
+            }
+          }
+        }
+      },
+      "ReactionTypeCountResult": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["count", "reaction_type"],
+              "properties": {
+                "count": { "type": "integer" },
+                "reaction_type": { "type": "string" }
+              }
+            }
+          }
         }
       }
     }

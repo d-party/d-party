@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
+  BarChart3,
   BookOpen,
   Code2,
   Download,
@@ -31,6 +32,7 @@ type NavLink = {
 const NAV_LINKS: NavLink[] = [
   { label: "ホーム", href: "/", icon: Home },
   { label: "使い方", href: "/usage", icon: BookOpen },
+  { label: "統計", href: "/stats", icon: BarChart3 },
   { label: "Q&A", href: "/qa", icon: HelpCircle },
   {
     label: "ダウンロード",

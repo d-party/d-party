@@ -20,6 +20,7 @@ src/
     layout.tsx               <html>/metadata/Header/Footer
     page.tsx                 ランディング（旧 index.html）— Hero/Features 等を合成
     usage/page.tsx           使い方（旧 usage.html）
+    stats/page.tsx           統計（公開）— StatsDashboard（公開 stats API + 自前バーチャート）
     qa/page.tsx              Q&A（新規）— Faq アコーディオン
     anime-store/lobby/[roomId]/page.tsx
                              ルーム遷移（旧 lobby_redirect.html）— client component

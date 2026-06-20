@@ -6,13 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export * from './apiMessage';
-export * from './countResult';
-export * from './countResultData';
-export * from './lobbyRedirect';
-export * from './perDayResult';
-export * from './perDayResultDataItem';
-export * from './reactionTypeCountResult';
-export * from './reactionTypeCountResultDataItem';
-export * from './versionCheckParams';
-export * from './versionCheckResult';
+export type ReactionTypeCountResultDataItem = {
+  count: number;
+  reaction_type: string;
+};

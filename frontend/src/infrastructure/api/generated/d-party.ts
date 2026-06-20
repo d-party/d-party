@@ -7,7 +7,10 @@
  */
 import type {
   ApiMessage,
+  CountResult,
   LobbyRedirect,
+  PerDayResult,
+  ReactionTypeCountResult,
   VersionCheckParams,
   VersionCheckResult
 } from './model';
@@ -102,6 +105,294 @@ export const getLobbyResolveUrl = (roomId: string,) => {
 export const lobbyResolve = async (roomId: string, options?: RequestInit): Promise<lobbyResolveResponse> => {
 
   return customFetch<lobbyResolveResponse>(getLobbyResolveUrl(roomId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type statsUserAllCountResponse200 = {
+  data: CountResult
+  status: 200
+}
+
+export type statsUserAllCountResponseSuccess = (statsUserAllCountResponse200) & {
+  headers: Headers;
+};
+;
+
+export type statsUserAllCountResponse = (statsUserAllCountResponseSuccess)
+
+export const getStatsUserAllCountUrl = () => {
+
+
+
+
+  return `/api/v1/statistics/anime-store/anime-user-all-count`
+}
+
+/**
+ * @summary Total user count.
+ */
+export const statsUserAllCount = async ( options?: RequestInit): Promise<statsUserAllCountResponse> => {
+
+  return customFetch<statsUserAllCountResponse>(getStatsUserAllCountUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type statsRoomAllCountResponse200 = {
+  data: CountResult
+  status: 200
+}
+
+export type statsRoomAllCountResponseSuccess = (statsRoomAllCountResponse200) & {
+  headers: Headers;
+};
+;
+
+export type statsRoomAllCountResponse = (statsRoomAllCountResponseSuccess)
+
+export const getStatsRoomAllCountUrl = () => {
+
+
+
+
+  return `/api/v1/statistics/anime-store/anime-room-all-count`
+}
+
+/**
+ * @summary Total room count.
+ */
+export const statsRoomAllCount = async ( options?: RequestInit): Promise<statsRoomAllCountResponse> => {
+
+  return customFetch<statsRoomAllCountResponse>(getStatsRoomAllCountUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type statsReactionAllCountResponse200 = {
+  data: CountResult
+  status: 200
+}
+
+export type statsReactionAllCountResponseSuccess = (statsReactionAllCountResponse200) & {
+  headers: Headers;
+};
+;
+
+export type statsReactionAllCountResponse = (statsReactionAllCountResponseSuccess)
+
+export const getStatsReactionAllCountUrl = () => {
+
+
+
+
+  return `/api/v1/statistics/anime-store/anime-reaction-all-count`
+}
+
+/**
+ * @summary Total reaction count.
+ */
+export const statsReactionAllCount = async ( options?: RequestInit): Promise<statsReactionAllCountResponse> => {
+
+  return customFetch<statsReactionAllCountResponse>(getStatsReactionAllCountUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type statsUserAliveCountResponse200 = {
+  data: CountResult
+  status: 200
+}
+
+export type statsUserAliveCountResponseSuccess = (statsUserAliveCountResponse200) & {
+  headers: Headers;
+};
+;
+
+export type statsUserAliveCountResponse = (statsUserAliveCountResponseSuccess)
+
+export const getStatsUserAliveCountUrl = () => {
+
+
+
+
+  return `/api/v1/statistics/anime-store/anime-user-alive-count`
+}
+
+/**
+ * @summary Currently connected user count.
+ */
+export const statsUserAliveCount = async ( options?: RequestInit): Promise<statsUserAliveCountResponse> => {
+
+  return customFetch<statsUserAliveCountResponse>(getStatsUserAliveCountUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type statsRoomAliveCountResponse200 = {
+  data: CountResult
+  status: 200
+}
+
+export type statsRoomAliveCountResponseSuccess = (statsRoomAliveCountResponse200) & {
+  headers: Headers;
+};
+;
+
+export type statsRoomAliveCountResponse = (statsRoomAliveCountResponseSuccess)
+
+export const getStatsRoomAliveCountUrl = () => {
+
+
+
+
+  return `/api/v1/statistics/anime-store/anime-room-alive-count`
+}
+
+/**
+ * @summary Currently active room count.
+ */
+export const statsRoomAliveCount = async ( options?: RequestInit): Promise<statsRoomAliveCountResponse> => {
+
+  return customFetch<statsRoomAliveCountResponse>(getStatsRoomAliveCountUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type statsActiveUserPerDayResponse200 = {
+  data: PerDayResult
+  status: 200
+}
+
+export type statsActiveUserPerDayResponseSuccess = (statsActiveUserPerDayResponse200) & {
+  headers: Headers;
+};
+;
+
+export type statsActiveUserPerDayResponse = (statsActiveUserPerDayResponseSuccess)
+
+export const getStatsActiveUserPerDayUrl = () => {
+
+
+
+
+  return `/api/v1/statistics/anime-store/active-user-per-day`
+}
+
+/**
+ * @summary Daily count of users.
+ */
+export const statsActiveUserPerDay = async ( options?: RequestInit): Promise<statsActiveUserPerDayResponse> => {
+
+  return customFetch<statsActiveUserPerDayResponse>(getStatsActiveUserPerDayUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type statsActiveRoomPerDayResponse200 = {
+  data: PerDayResult
+  status: 200
+}
+
+export type statsActiveRoomPerDayResponseSuccess = (statsActiveRoomPerDayResponse200) & {
+  headers: Headers;
+};
+;
+
+export type statsActiveRoomPerDayResponse = (statsActiveRoomPerDayResponseSuccess)
+
+export const getStatsActiveRoomPerDayUrl = () => {
+
+
+
+
+  return `/api/v1/statistics/anime-store/active-room-per-day`
+}
+
+/**
+ * @summary Daily count of rooms.
+ */
+export const statsActiveRoomPerDay = async ( options?: RequestInit): Promise<statsActiveRoomPerDayResponse> => {
+
+  return customFetch<statsActiveRoomPerDayResponse>(getStatsActiveRoomPerDayUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type statsReactionCountResponse200 = {
+  data: ReactionTypeCountResult
+  status: 200
+}
+
+export type statsReactionCountResponseSuccess = (statsReactionCountResponse200) & {
+  headers: Headers;
+};
+;
+
+export type statsReactionCountResponse = (statsReactionCountResponseSuccess)
+
+export const getStatsReactionCountUrl = () => {
+
+
+
+
+  return `/api/v1/statistics/anime-store/anime-reaction-count`
+}
+
+/**
+ * @summary Per-type reaction counts.
+ */
+export const statsReactionCount = async ( options?: RequestInit): Promise<statsReactionCountResponse> => {
+
+  return customFetch<statsReactionCountResponse>(getStatsReactionCountUrl(),
   {
     ...options,
     method: 'GET'

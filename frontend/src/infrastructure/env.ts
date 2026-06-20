@@ -1,20 +1,21 @@
 /**
  * Backend connection configuration for the user-facing frontend.
  *
- * Port of the Chrome extension's `env.ts` (itself a port of the old
- * `js/common/settings.js`). Values default to the **local development** backend
- * (the docker-compose stack served via nginx on localhost) and can be overridden
- * at build time via `NEXT_PUBLIC_*` environment variables. For production, set:
- *   NEXT_PUBLIC_BACKEND_HOST="d-party.net/"
+ * Defaults assume **local development** (the docker-compose stack served via
+ * nginx on `localhost` over plain http/ws). The deploy domain and the
+ * http/https · ws/wss schemes are environment-specific, so they are read from
+ * `NEXT_PUBLIC_*` build-time env vars and overridden per environment. Example
+ * for a production deploy:
+ *   NEXT_PUBLIC_BACKEND_HOST="example.com/"
  *   NEXT_PUBLIC_BACKEND_PROTOCOL="https://"
  *   NEXT_PUBLIC_WEBSOCKET_PROTOCOL="wss://"
  */
 
 export const BACKEND_HOST = process.env.NEXT_PUBLIC_BACKEND_HOST ?? "localhost/";
 export const BACKEND_PROTOCOL =
-  process.env.NEXT_PUBLIC_BACKEND_PROTOCOL ?? "https://";
+  process.env.NEXT_PUBLIC_BACKEND_PROTOCOL ?? "http://";
 export const WEBSOCKET_PROTOCOL =
-  process.env.NEXT_PUBLIC_WEBSOCKET_PROTOCOL ?? "wss://";
+  process.env.NEXT_PUBLIC_WEBSOCKET_PROTOCOL ?? "ws://";
 
 export const API_ENDPOINT = `${BACKEND_PROTOCOL}${BACKEND_HOST}api/v1/`;
 
