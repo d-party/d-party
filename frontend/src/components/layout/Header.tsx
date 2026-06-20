@@ -1,9 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  BookOpen,
+  Code2,
+  Download,
+  Heart,
+  Home,
+  Menu,
+  MessageSquare,
+  X,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
 
 import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
 import { cn } from "@/lib/utils";
@@ -11,37 +21,68 @@ import { cn } from "@/lib/utils";
 type NavLink = {
   label: string;
   href: string;
+  icon: LucideIcon;
   /** External links open in a new tab. */
   external?: boolean;
 };
 
-/** Ported from web/templates/header.html (Bootstrap navbar → Tailwind). */
+/** Ported from web/templates/header.html (Bootstrap navbar → icon nav). */
 const NAV_LINKS: NavLink[] = [
-  { label: "ホーム", href: "/" },
-  { label: "使い方", href: "/usage" },
-  { label: "ダウンロード", href: CHROME_WEBSTORE_URL, external: true },
-  { label: "開発", href: "https://github.com/d-Party", external: true },
-  { label: "ご意見", href: "https://forms.gle/kKPbAPGY96rbaKgK8", external: true },
+  { label: "ホーム", href: "/", icon: Home },
+  { label: "使い方", href: "/usage", icon: BookOpen },
+  {
+    label: "ダウンロード",
+    href: CHROME_WEBSTORE_URL,
+    icon: Download,
+    external: true,
+  },
+  { label: "開発", href: "https://github.com/d-Party", icon: Code2, external: true },
+  {
+    label: "寄付",
+    href: "https://github.com/sponsors/d-party",
+    icon: Heart,
+    external: true,
+  },
+  {
+    label: "ご意見",
+    href: "https://forms.gle/kKPbAPGY96rbaKgK8",
+    icon: MessageSquare,
+    external: true,
+  },
 ];
 
 function NavItem({ link }: { link: NavLink }): React.JSX.Element {
+  const Icon = link.icon;
   const className =
-    "block px-3 py-2 text-sm text-neutral-300 transition-colors hover:text-white";
+    "flex items-center justify-center rounded-md p-2 text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white";
+  const content = (
+    <>
+      <Icon className="size-5" aria-hidden />
+      <span className="sr-only">{link.label}</span>
+    </>
+  );
   if (link.external) {
     return (
       <a
         className={className}
         href={link.href}
+        title={link.label}
+        aria-label={link.label}
         target="_blank"
         rel="noreferrer noopener"
       >
-        {link.label}
+        {content}
       </a>
     );
   }
   return (
-    <Link className={className} href={link.href}>
-      {link.label}
+    <Link
+      className={className}
+      href={link.href}
+      title={link.label}
+      aria-label={link.label}
+    >
+      {content}
     </Link>
   );
 }
@@ -72,7 +113,7 @@ export function Header(): React.JSX.Element {
           {open ? <X className="size-6" /> : <Menu className="size-6" />}
         </button>
 
-        <ul className="hidden items-center lg:flex">
+        <ul className="hidden items-center gap-1 lg:flex">
           {NAV_LINKS.map((link) => (
             <li key={link.label}>
               <NavItem link={link} />
@@ -83,8 +124,8 @@ export function Header(): React.JSX.Element {
 
       <ul
         className={cn(
-          "border-t border-neutral-800 px-4 pb-2 lg:hidden",
-          open ? "block" : "hidden",
+          "flex flex-wrap gap-1 border-t border-neutral-800 px-4 pb-2 lg:hidden",
+          open ? "flex" : "hidden",
         )}
       >
         {NAV_LINKS.map((link) => (
