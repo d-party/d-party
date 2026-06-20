@@ -9,7 +9,7 @@
     "search.exclude": {
       "**/node_modules": true,
       "**/.venv": true,
-      "backend/MySQL/data": true,
+      "backend/Postgres/data": true,
       "backend/Django/static": true
     }
   },

@@ -1,7 +1,7 @@
 {
   "name": "d-party Dev Container",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
-  "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends default-libmysqlclient-dev pkg-config graphviz && sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*",
+  "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config graphviz && sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*",
   "postCreateCommand": "git submodule update --init --recursive",
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
@@ -85,14 +85,14 @@
       }
     }
   },
-  "forwardPorts": [80, 443, 3306, 6379, 8000, 8080, 9090, 9100],
+  "forwardPorts": [80, 443, 5432, 6379, 8000, 8080, 9090, 9100],
   "portsAttributes": {
     "80": { "label": "Nginx (App)", "onAutoForward": "silent" },
     "443": { "label": "Nginx (HTTPS)", "onAutoForward": "silent" },
-    "3306": { "label": "MySQL", "onAutoForward": "silent" },
+    "5432": { "label": "PostgreSQL", "onAutoForward": "silent" },
     "6379": { "label": "Redis", "onAutoForward": "silent" },
     "8000": { "label": "Django", "onAutoForward": "silent" },
-    "8080": { "label": "phpMyAdmin", "onAutoForward": "silent" },
+    "8080": { "label": "Adminer", "onAutoForward": "silent" },
     "9090": { "label": "Prometheus", "onAutoForward": "silent" },
     "9100": { "label": "node-exporter", "onAutoForward": "silent" }
   },
