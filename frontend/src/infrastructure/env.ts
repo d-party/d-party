@@ -35,5 +35,8 @@ export const CHROME_WEBSTORE_URL =
 /** Google Chrome 配布ページ（使い方ガイドのリンク）。 */
 export const GOOGLE_CHROME_URL = "https://www.google.com/intl/ja_jp/chrome/";
 
+/** Microsoft Edge 配布ページ（Chrome 拡張機能に対応するもう一つのブラウザ）。 */
+export const MICROSOFT_EDGE_URL = "https://www.microsoft.com/ja-jp/edge";
+
 /** dアニメストア（本家）トップ。 */
 export const D_ANIME_STORE_URL = "https://animestore.docomo.ne.jp/animestore/";

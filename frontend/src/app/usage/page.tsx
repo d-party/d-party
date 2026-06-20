@@ -3,18 +3,19 @@ import Image from "next/image";
 import {
   ChevronDown,
   Download,
-  ExternalLink,
   Mail,
   PartyPopper,
   Play,
   Share2,
 } from "lucide-react";
+import { FaChrome, FaEdge } from "react-icons/fa";
 
 import { Button } from "@/components/ui/button";
 import {
   CHROME_WEBSTORE_URL,
   D_ANIME_STORE_URL,
   GOOGLE_CHROME_URL,
+  MICROSOFT_EDGE_URL,
 } from "@/infrastructure/env";
 
 export const metadata: Metadata = {
@@ -30,16 +31,28 @@ type Step = {
 
 const STEPS: Step[] = [
   {
-    title: "PCにGoogle Chromeをインストール",
+    title: "PCで Chrome か Edge を起動",
     description:
-      "まずはd-partyが唯一対応しているブラウザ『Google Chrome』をインストールしてください。Google Chromeの拡張機能は残念ながらスマートフォン版ではまだ利用できません。そのため、PCにGoogle Chromeをインストールしましょう。",
+      "d-party は Chrome 拡張機能として動作し、Google Chrome と Microsoft Edge の両方に対応しています。どちらかの PC 版ブラウザを起動してください（インストールしていない場合は右のボタンから入手できます）。拡張機能は残念ながらスマートフォン版では利用できないため、PC でご利用ください。",
     media: (
-      <Button asChild size="lg" variant="secondary">
-        <a href={GOOGLE_CHROME_URL} target="_blank" rel="noreferrer noopener">
-          <ExternalLink />
-          Google Chrome
-        </a>
-      </Button>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button asChild size="lg" variant="secondary">
+          <a href={GOOGLE_CHROME_URL} target="_blank" rel="noreferrer noopener">
+            <FaChrome />
+            Chrome
+          </a>
+        </Button>
+        <Button asChild size="lg" variant="secondary">
+          <a
+            href={MICROSOFT_EDGE_URL}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            <FaEdge />
+            Edge
+          </a>
+        </Button>
+      </div>
     ),
   },
   {

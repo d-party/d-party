@@ -18,7 +18,7 @@ const ENTRIES: FaqEntry[] = [
   {
     question: "対応しているブラウザは？",
     answer:
-      "PC 版の Google Chrome のみ対応しています。スマートフォン版 Chrome やその他のブラウザでは利用できません。",
+      "PC 版の Google Chrome および Microsoft Edge に対応しています（どちらも Chrome 拡張機能が動作します）。スマートフォン版や、その他のブラウザでは利用できません。",
   },
   {
     question: "dアニメストアの契約は必要ですか？",
