@@ -1,46 +1,87 @@
-import { Download } from "lucide-react";
+import { ArrowRight, Download } from "lucide-react";
+import Link from "next/link";
 
-import { Logo } from "@/components/Logo";
+import { Features } from "@/components/landing/Features";
+import { Hero } from "@/components/landing/Hero";
+import { Reveal } from "@/components/motion/Reveal";
 import { Button } from "@/components/ui/button";
 import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
 
-/** Landing page — ported from web/templates/index.html. */
+const STEPS = [
+  { title: "Chrome に追加", text: "Chrome ウェブストアから d-party をインストール。" },
+  { title: "アニメを開く", text: "dアニメストアで一緒に観たい作品のプレイヤーを開く。" },
+  { title: "リンクを共有", text: "生成されたルームリンクを友達に送るだけ。" },
+  { title: "一緒に視聴", text: "全員そろったら再生。あとは自動でシンクします。" },
+];
+
+/** Landing page — modernised port of web/templates/index.html. */
 export default function HomePage(): React.JSX.Element {
   return (
-    <section className="mx-auto max-w-4xl px-4 py-16 text-center">
-      <div className="mx-auto w-2/3 max-w-md">
-        <Logo className="h-auto w-full" />
-      </div>
+    <>
+      <Hero />
 
-      <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl">
-        d-party
-      </h1>
+      <Features />
 
-      <h2 className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-        dアニメストアでもウォッチパーティーができる
-        <br />
-        完全無料の Google Chrome 向け拡張機能
-      </h2>
+      {/* How it works (summary → links to the full usage guide). */}
+      <section className="mx-auto max-w-5xl px-4 py-16">
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl font-bold tracking-tight">使い方はかんたん</h2>
+          <p className="mt-3 text-muted-foreground">4 ステップで始められます。</p>
+        </Reveal>
 
-      <p className="mx-auto mt-6 max-w-2xl text-left leading-relaxed text-foreground/90">
-        作品数が豊富なdアニメストアで友達と一緒に同時視聴がしたいと思ったことはありませんか？
-        「せーの」なんて掛け声で再生のタイミングを同期していませんでしたか？もうそんな面倒ごとは必要ありません！
-        <br />
-        『d-party』を使えばルーム参加者のプレイヤーの再生状況を自動的にシンクしてくれます。
-        <br />
-        途中で動画を止めてトイレに行ったり、ちょっと巻き戻しをして語り合いがもっと簡単になります。
-        <br />
-        完全無料・広告無しの『d-party』を使ってみてください。
-      </p>
+        <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {STEPS.map((step, i) => (
+            <Reveal key={step.title} delay={i * 0.08}>
+              <li className="h-full rounded-2xl border border-border bg-card p-6">
+                <span className="flex size-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+                  {i + 1}
+                </span>
+                <h3 className="mt-4 font-semibold">{step.title}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{step.text}</p>
+              </li>
+            </Reveal>
+          ))}
+        </ol>
 
-      <div className="mt-10">
-        <Button asChild size="lg" className="h-12 px-8 text-base">
-          <a href={CHROME_WEBSTORE_URL} target="_blank" rel="noreferrer noopener">
-            <Download />
-            今すぐインストール
-          </a>
-        </Button>
-      </div>
-    </section>
+        <Reveal className="mt-8 text-center">
+          <Button asChild variant="outline">
+            <Link href="/usage">
+              詳しい使い方を見る
+              <ArrowRight />
+            </Link>
+          </Button>
+        </Reveal>
+      </section>
+
+      {/* Final CTA. */}
+      <section className="mx-auto max-w-5xl px-4 pb-24">
+        <Reveal>
+          <div className="relative overflow-hidden rounded-3xl border border-border bg-card px-6 py-14 text-center">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-primary/10 to-transparent"
+            />
+            <h2 className="text-3xl font-bold tracking-tight">
+              さあ、みんなでアニメを観よう
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+              完全無料・広告なし。dアニメストアの作品を、離れた友達と同時視聴。
+            </p>
+            <div className="mt-8">
+              <Button asChild size="lg" className="h-12 px-8 text-base">
+                <a
+                  href={CHROME_WEBSTORE_URL}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  <Download />
+                  今すぐインストール
+                </a>
+              </Button>
+            </div>
+          </div>
+        </Reveal>
+      </section>
+    </>
   );
 }

@@ -17,10 +17,13 @@ dアニメストアで「同時視聴」を実現する **d-party** のユーザ
 
 | ルート | 内容 | 旧テンプレート |
 | --- | --- | --- |
-| `/` | ランディングページ | `web/templates/index.html` |
+| `/` | ランディングページ（アニメーション付き） | `web/templates/index.html` |
 | `/usage` | 使い方ガイド | `web/templates/usage.html` |
+| `/qa` | Q&A（よくある質問） | （新規） |
 | `/anime-store/lobby/[roomId]` | ルーム遷移（バージョン確認 → リダイレクト） | `web/templates/lobby_redirect.html` |
 | （404） | Not Found | `web/templates/404.html` |
+
+ライト/ダークモードに対応しています（ヘッダーのトグルで切替、初期値は OS 設定に追従）。
 
 ## セットアップ
 

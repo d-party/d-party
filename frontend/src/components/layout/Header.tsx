@@ -7,6 +7,7 @@ import {
   Code2,
   Download,
   Heart,
+  HelpCircle,
   Home,
   Menu,
   MessageSquare,
@@ -15,6 +16,7 @@ import {
 import Link from "next/link";
 
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +32,7 @@ type NavLink = {
 const NAV_LINKS: NavLink[] = [
   { label: "ホーム", href: "/", icon: Home },
   { label: "使い方", href: "/usage", icon: BookOpen },
+  { label: "Q&A", href: "/qa", icon: HelpCircle },
   {
     label: "ダウンロード",
     href: CHROME_WEBSTORE_URL,
@@ -97,23 +100,27 @@ export function Header(): React.JSX.Element {
           <Logo className="size-10" />
         </Link>
 
-        <button
-          type="button"
-          className="inline-flex items-center justify-center rounded p-2 text-neutral-300 hover:text-white lg:hidden"
-          aria-label="メニューを開閉"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? <X className="size-6" /> : <Menu className="size-6" />}
-        </button>
+        <div className="flex items-center gap-1">
+          <ul className="hidden items-center gap-1 lg:flex">
+            {NAV_LINKS.map((link) => (
+              <li key={link.label}>
+                <NavItem link={link} />
+              </li>
+            ))}
+          </ul>
 
-        <ul className="hidden items-center gap-1 lg:flex">
-          {NAV_LINKS.map((link) => (
-            <li key={link.label}>
-              <NavItem link={link} />
-            </li>
-          ))}
-        </ul>
+          <ThemeToggle />
+
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded p-2 text-neutral-300 hover:text-white lg:hidden"
+            aria-label="メニューを開閉"
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? <X className="size-6" /> : <Menu className="size-6" />}
+          </button>
+        </div>
       </div>
 
       <ul
