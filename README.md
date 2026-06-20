@@ -12,10 +12,11 @@
 
 | パス                | サービス            | スタック                                                        | リポジトリ                                                                        |
 | ------------------- | ------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `backend/`          | Django バックエンド | Python 3.11 · Django 4 · Channels · DRF · MySQL · Redis · Nginx | [d-party-Backend](https://github.com/d-party/d-party-Backend)                     |
+| `backend/`          | Django バックエンド | Python 3.13 · Django 5 · Channels · DRF · PostgreSQL · Redis · Nginx | [d-party-Backend](https://github.com/d-party/d-party-Backend)                     |
 | `chrome-extension/` | Chrome 拡張機能     | Manifest V3 · Vanilla JS · jQuery 3.6                           | [d-party-Chrome-Extensions](https://github.com/d-party/d-party-Chrome-Extensions) |
+| `frontend/`         | ユーザー向けフロントエンド | Next.js 15 · React 19 · TypeScript · Tailwind CSS v4 · shadcn/ui · pnpm | [d-party-Frontend](https://github.com/d-party/d-party-Frontend)                   |
 
-両サブモジュールは `main` ブランチを追跡しています（`.gitmodules` 参照）。
+各サブモジュールは `main` ブランチを追跡しています（`.gitmodules` 参照）。
 
 ## 必要要件
 
@@ -76,7 +77,7 @@ docker compose up -d
 | ------------------------------ | --------------------- |
 | アプリ（Nginx 経由）           | http://localhost      |
 | Django（直接 / debug-toolbar） | http://localhost:8000 |
-| phpMyAdmin                     | http://localhost:8080 |
+| Adminer（PostgreSQL 管理）     | http://localhost:8080 |
 | Prometheus                     | http://localhost:9090 |
 
 ## サブモジュールの扱い

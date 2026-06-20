@@ -6,3 +6,7 @@
 	path = backend
 	url = git@github.com:d-party/d-party-Backend.git
 	branch = main
+[submodule "frontend"]
+	path = frontend
+	url = git@github.com:d-party/d-party-Frontend.git
+	branch = main
