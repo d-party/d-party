@@ -34,3 +34,6 @@ export const CHROME_WEBSTORE_URL =
 
 /** Google Chrome 配布ページ（使い方ガイドのリンク）。 */
 export const GOOGLE_CHROME_URL = "https://www.google.com/intl/ja_jp/chrome/";
+
+/** dアニメストア（本家）トップ。 */
+export const D_ANIME_STORE_URL = "https://animestore.docomo.ne.jp/animestore/";

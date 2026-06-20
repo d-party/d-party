@@ -1,7 +1,7 @@
 /** Ported from web/templates/footer.html. */
 export function Footer(): React.JSX.Element {
   return (
-    <footer className="mt-auto border-t border-neutral-200 bg-neutral-50 py-6 dark:border-neutral-800 dark:bg-neutral-900">
+    <footer className="mt-auto border-t border-border bg-card py-6">
       <div className="mx-auto max-w-6xl px-4 text-center text-sm text-muted-foreground">
         <p>
           d-party — dアニメストアでウォッチパーティー ·{" "}

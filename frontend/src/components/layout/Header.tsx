@@ -16,7 +16,6 @@ import {
 import Link from "next/link";
 
 import { Logo } from "@/components/Logo";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
 import { cn } from "@/lib/utils";
 
@@ -108,8 +107,6 @@ export function Header(): React.JSX.Element {
               </li>
             ))}
           </ul>
-
-          <ThemeToggle />
 
           <button
             type="button"

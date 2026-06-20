@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Faq, type FaqEntry } from "@/components/qa/Faq";
+import { D_ANIME_STORE_URL } from "@/infrastructure/env";
 
 export const metadata: Metadata = {
   title: "Q&A",
@@ -21,8 +22,21 @@ const ENTRIES: FaqEntry[] = [
   },
   {
     question: "dアニメストアの契約は必要ですか？",
-    answer:
-      "必要です。本家本元の dアニメストアのアカウントが必要で、「dアニメストア for Prime Video」や「dアニメストア ニコニコ支店」では利用できません。",
+    answer: (
+      <>
+        必要です。本家本元の{" "}
+        <a
+          href={D_ANIME_STORE_URL}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="text-primary underline-offset-4 hover:underline"
+        >
+          dアニメストア
+        </a>
+        のアカウントが必要で、「dアニメストア for Prime
+        Video」や「dアニメストア ニコニコ支店」では利用できません。
+      </>
+    ),
   },
   {
     question: "スマートフォンで使えますか？",

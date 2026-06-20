@@ -24,12 +24,11 @@ src/
     anime-store/lobby/[roomId]/page.tsx
                              ルーム遷移（旧 lobby_redirect.html）— client component
     not-found.tsx            404（旧 404.html）
-    globals.css              Tailwind + shadcn テーマトークン（拡張機能 popup から移植、ダークは .dark クラス）
+    globals.css              Tailwind + shadcn テーマトークン（拡張機能 popup から移植、ダーク専用）
   components/
     layout/Header.tsx Footer.tsx
     landing/                 Hero / Features（framer-motion アニメーション）
     motion/Reveal.tsx        スクロール表示アニメ（prefers-reduced-motion 対応）
-    theme/ThemeToggle.tsx    class ベースのダークモード切替（初期化は layout.tsx の no-FOUC スクリプト）
     qa/Faq.tsx               アコーディオン（client）
     ui/                      shadcn コンポーネント（拡張機能と共通の Button 等）
   infrastructure/

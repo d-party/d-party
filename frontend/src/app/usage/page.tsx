@@ -11,7 +11,11 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { CHROME_WEBSTORE_URL, GOOGLE_CHROME_URL } from "@/infrastructure/env";
+import {
+  CHROME_WEBSTORE_URL,
+  D_ANIME_STORE_URL,
+  GOOGLE_CHROME_URL,
+} from "@/infrastructure/env";
 
 export const metadata: Metadata = {
   title: "使い方",
@@ -40,8 +44,22 @@ const STEPS: Step[] = [
   },
   {
     title: "dアニメストアを契約",
-    description:
-      "もしもまだであれば、dアニメストアのアカウントを作成してください。dアニメストア for Prime Video や dアニメストア ニコニコ支店では使えません。本家本元のdアニメストアのアカウントを作成してサブスクリプションを契約してください。",
+    description: (
+      <>
+        もしもまだであれば、dアニメストアのアカウントを作成してください。dアニメストア
+        for Prime Video や dアニメストア
+        ニコニコ支店では使えません。本家本元の
+        <a
+          href={D_ANIME_STORE_URL}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="text-primary underline-offset-4 hover:underline"
+        >
+          dアニメストア
+        </a>
+        のアカウントを作成してサブスクリプションを契約してください。
+      </>
+    ),
     media: (
       <Image
         src="/logo/d-anime.png"

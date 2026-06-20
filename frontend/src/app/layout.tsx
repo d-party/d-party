@@ -35,26 +35,11 @@ export const metadata: Metadata = {
   },
 };
 
-// Applied before paint to avoid a flash of the wrong theme. Reads the stored
-// preference, falling back to the OS `prefers-color-scheme`.
-const THEME_INIT_SCRIPT = `
-(function () {
-  try {
-    var t = localStorage.getItem("theme");
-    var dark = t ? t === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
-    if (dark) document.documentElement.classList.add("dark");
-  } catch (e) {}
-})();
-`;
-
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>): React.JSX.Element {
   return (
-    <html lang="ja" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-      </head>
+    <html lang="ja">
       <body className="flex min-h-dvh flex-col">
         <Header />
         <main className="flex-1">{children}</main>

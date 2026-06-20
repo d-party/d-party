@@ -1,49 +1,20 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:is(.dark *));
-
 /*
- * shadcn/ui theme tokens — ported verbatim from the Chrome extension
- * (chrome-extension/src/presentation/popup/styles.css) so the two surfaces
- * share an identical visual language. Brand colour is d-party red.
+ * d-party is a dark-only experience. shadcn/ui theme tokens use the dark
+ * palette from the Chrome extension (chrome-extension/src/presentation/popup/
+ * styles.css). Brand colour is d-party red.
  */
 :root {
+  color-scheme: dark;
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  /* Brand theme colour: red. */
-  --primary: oklch(0.637 0.237 25.331);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.637 0.237 25.331);
-}
-
-/*
- * Dark mode is class-based (`.dark` on <html>) so the theme toggle can control
- * it. The no-FOUC script in layout.tsx sets the initial class from the stored
- * preference, falling back to the OS `prefers-color-scheme`.
- */
-.dark {
   --background: oklch(0.165 0.01 270);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.215 0.01 270);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.215 0.01 270);
   --popover-foreground: oklch(0.985 0 0);
-  /* Keep the brand red accent in dark mode too. */
+  /* Brand theme colour: red. */
   --primary: oklch(0.637 0.237 25.331);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.27 0.01 270);
@@ -52,6 +23,8 @@
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.27 0.01 270);
   --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.637 0.237 25.331);
