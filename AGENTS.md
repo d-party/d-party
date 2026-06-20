@@ -14,10 +14,10 @@
 
 ## Architecture（サブモジュール構成）
 
-| パス | サービス | スタック | 上流リポジトリ |
-|---|---|---|---|
-| `backend/` | Django バックエンド | Python 3.11 · Django 4 · Channels · DRF · MySQL 8 · Redis 7 · Nginx | [d-party-Backend](https://github.com/d-party/d-party-Backend) |
-| `chrome-extension/` | Chrome 拡張機能 | Manifest V3 · Vanilla JS · jQuery 3.6 | [d-party-Chrome-Extensions](https://github.com/d-party/d-party-Chrome-Extensions) |
+| パス                | サービス            | スタック                                                            | 上流リポジトリ                                                                    |
+| ------------------- | ------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `backend/`          | Django バックエンド | Python 3.11 · Django 4 · Channels · DRF · MySQL 8 · Redis 7 · Nginx | [d-party-Backend](https://github.com/d-party/d-party-Backend)                     |
+| `chrome-extension/` | Chrome 拡張機能     | Manifest V3 · Vanilla JS · jQuery 3.6                               | [d-party-Chrome-Extensions](https://github.com/d-party/d-party-Chrome-Extensions) |
 
 両サブモジュールとも `main` ブランチを追跡（`.gitmodules`）。
 
@@ -141,12 +141,12 @@ cd backend && act push        # backend のワークフローを実行
 
 ## 動作確認 URL（ローカル backend 起動時）
 
-| URL | 内容 |
-|-----|------|
-| `http://localhost` | アプリ（Nginx 経由） |
+| URL                     | 内容                                |
+| ----------------------- | ----------------------------------- |
+| `http://localhost`      | アプリ（Nginx 経由）                |
 | `http://localhost:8000` | Django 直接（debug-toolbar 有効時） |
-| `http://localhost:8080` | phpMyAdmin |
-| `http://localhost:9090` | Prometheus |
+| `http://localhost:8080` | phpMyAdmin                          |
+| `http://localhost:9090` | Prometheus                          |
 
 > 外部サービス（Google 等）は bot 検出でブロックされることがある。外部調査には
 > `WebSearch` / `WebFetch` を優先し、ブラウザ検証は localhost に集中させること。

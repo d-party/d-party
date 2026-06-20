@@ -10,10 +10,10 @@
 
 ## 構成
 
-| パス | サービス | スタック | リポジトリ |
-|---|---|---|---|
-| `backend/` | Django バックエンド | Python 3.11 · Django 4 · Channels · DRF · MySQL · Redis · Nginx | [d-party-Backend](https://github.com/d-party/d-party-Backend) |
-| `chrome-extension/` | Chrome 拡張機能 | Manifest V3 · Vanilla JS · jQuery 3.6 | [d-party-Chrome-Extensions](https://github.com/d-party/d-party-Chrome-Extensions) |
+| パス                | サービス            | スタック                                                        | リポジトリ                                                                        |
+| ------------------- | ------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `backend/`          | Django バックエンド | Python 3.11 · Django 4 · Channels · DRF · MySQL · Redis · Nginx | [d-party-Backend](https://github.com/d-party/d-party-Backend)                     |
+| `chrome-extension/` | Chrome 拡張機能     | Manifest V3 · Vanilla JS · jQuery 3.6                           | [d-party-Chrome-Extensions](https://github.com/d-party/d-party-Chrome-Extensions) |
 
 両サブモジュールは `main` ブランチを追跡しています（`.gitmodules` 参照）。
 
@@ -72,12 +72,12 @@ docker compose up -d
 
 ## URL 一覧（ローカル backend 起動時）
 
-| 内容 | URL |
-|---|---|
-| アプリ（Nginx 経由） | http://localhost |
+| 内容                           | URL                   |
+| ------------------------------ | --------------------- |
+| アプリ（Nginx 経由）           | http://localhost      |
 | Django（直接 / debug-toolbar） | http://localhost:8000 |
-| phpMyAdmin | http://localhost:8080 |
-| Prometheus | http://localhost:9090 |
+| phpMyAdmin                     | http://localhost:8080 |
+| Prometheus                     | http://localhost:9090 |
 
 ## サブモジュールの扱い
 
