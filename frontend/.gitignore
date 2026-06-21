@@ -31,3 +31,6 @@ pnpm-debug.log*
 
 # vercel
 .vercel
+
+# storybook
+storybook-static/
