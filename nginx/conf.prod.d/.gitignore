@@ -1,0 +1,3 @@
+# envsubst が templates-prod/*.template から生成する実体（コミットしない）
+*.conf
+!.gitignore

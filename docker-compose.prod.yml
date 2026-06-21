@@ -1,0 +1,80 @@
+# 本番オーバーレイ。dev (docker compose up = override.yml) には手を入れず、
+# 本番固有の構成だけを足す:
+#   - frontend : Dockerfile で standalone ビルドを配信（dev の `pnpm dev` を置換）
+#   - nginx    : TLS 終端（nginx.prod.conf + templates-prod）
+#   - certbot  : Let's Encrypt 証明書の自動更新
+#   - 環境固有値は .env.prod を後勝ちで注入（DEBUG=0 / MY_DOMAIN / wss など）
+#
+#   # 初回（証明書のブートストラップ）— staging 既定 / 本番は --production
+#   ./init-letsencrypt.sh --staging
+#   ./init-letsencrypt.sh --production
+#
+#   # 通常起動（証明書取得後）。certbot は letsencrypt profile のときだけ起動する。
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#       --profile letsencrypt up -d
+#
+# 開発環境では本ファイルを読み込まない限り certbot は存在せず、証明書発行も走らない。
+
+services:
+  django:
+    env_file:
+      - ./.env.prod
+    restart: unless-stopped
+
+  frontend:
+    # dev の node/pnpm dev を上書きし、本番は standalone ビルドを node で配信する。
+    # NEXT_PUBLIC_* は next build 時に焼き込まれるため build.args で渡す
+    # （build 引数は env_file を読めない。値は .env.prod と一致させること）。
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_BACKEND_PROTOCOL: "https://"
+        NEXT_PUBLIC_BACKEND_HOST: "d-party.net/"
+        NEXT_PUBLIC_WEBSOCKET_PROTOCOL: "wss://"
+    env_file:
+      - ./.env.prod
+    restart: unless-stopped
+
+  nginx:
+    # dev は templates/ → conf.d/ を使う。prod は別ディレクトリへ展開し、
+    # メイン設定も nginx.prod.conf（TLS 終端）に切り替える。
+    env_file:
+      - ./.env.prod
+    environment:
+      NGINX_ENVSUBST_TEMPLATE_DIR: /etc/nginx/templates-prod
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx/conf.prod.d
+    restart: unless-stopped
+    volumes:
+      # certbot と証明書 / webroot を共有（nginx 側は読み取り専用）。
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    # 更新された証明書を取り込むため 6h ごとに reload しつつ nginx を前景実行する。
+    # ENTRYPOINT(docker-entrypoint.sh)はそのまま走るので envsubst は実行される。
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        while :; do sleep 6h & wait $${!}; nginx -c /etc/nginx/nginx.prod.conf -s reload; done &
+        exec nginx -c /etc/nginx/nginx.prod.conf -g 'daemon off;'
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: certbot
+    restart: unless-stopped
+    # 明示的に --profile letsencrypt を付けたときだけ起動する。
+    profiles: ["letsencrypt"]
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    # 12h ごとに renew を試みる（certbot は失効30日前になるまで何もしない）。
+    # 取得済み証明書は nginx 側の定期 reload で反映される。
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >-
+        trap exit TERM;
+        while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet;
+        sleep 12h & wait $${!};
+        done;

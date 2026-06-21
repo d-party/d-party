@@ -1,0 +1,40 @@
+# 開発用オーバーレイ。`docker compose up` で自動的に読み込まれる（dev が既定）。
+#
+#   - frontend: node イメージで `pnpm dev`（Turbopack HMR）。ソースをマウントして
+#               ホットリロードする。NEXT_PUBLIC_* は実行時に .env.dev から参照する。
+#   - 環境固有値（DEBUG / MY_DOMAIN / 接続先）は .env.dev を後勝ちで注入する。
+#
+# 本番起動時はこのファイルを読み込ませない（-f を明示する）:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile letsencrypt up -d
+
+services:
+  django:
+    env_file:
+      - ./.env.dev
+
+  nginx:
+    env_file:
+      - ./.env.dev
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    env_file:
+      - ./.env.dev
+    environment:
+      NEXT_TELEMETRY_DISABLED: "1"
+    volumes:
+      # ソースをマウントして HMR を効かせる。node_modules はコンテナ内に隔離
+      # （musl ビルドの turbopack ネイティブバイナリをホストと混ぜない）。
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    command:
+      - sh
+      - -c
+      - corepack enable && pnpm install --frozen-lockfile && exec pnpm dev -p 3000 -H 0.0.0.0
+    # 初回は pnpm install + 初回コンパイルがあるため起動猶予を長めにとる。
+    healthcheck:
+      start_period: 180s
+
+volumes:
+  frontend_node_modules: {}

@@ -53,17 +53,13 @@ services:
       retries: 12
       start_period: 60s
   frontend:
+    # frontend の実体は環境ごとにオーバーレイで与える:
+    #   dev  (docker-compose.override.yml): node イメージで `pnpm dev`（HMR）
+    #   prod (docker-compose.prod.yml)    : Dockerfile で standalone ビルドを配信
     container_name: frontend
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        # ブラウザは nginx と同一オリジン経由でバックエンドへアクセスする。
-        # 既定は localhost(dev)。デプロイ時はドメイン・プロトコルを差し替える。
-        NEXT_PUBLIC_BACKEND_PROTOCOL: "${FRONTEND_BACKEND_PROTOCOL:-http://}"
-        NEXT_PUBLIC_BACKEND_HOST: "${FRONTEND_BACKEND_HOST:-localhost/}"
     expose:
       - "3000"
+    env_file: *env_file
     healthcheck:
       test:
         - "CMD-SHELL"

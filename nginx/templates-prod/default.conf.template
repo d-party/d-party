@@ -1,0 +1,122 @@
+# 本番 server ブロック（TLS 終端 + HTTP→HTTPS リダイレクト + ACME http-01 チャレンジ）。
+# nginx 公式イメージの envsubst（/etc/nginx/templates-prod/*.template）で
+#   ${MY_DOMAIN} ${DJANGO_UPSTREAM} ${FRONTEND_UPSTREAM} ${GRAFANA_UPSTREAM}
+# を .env.global から差し込み、conf.prod.d/default.conf として展開する。
+# nginx の $host / $uri 等は同名の環境変数が無いため置換されない。
+
+upstream app_server {
+    server ${DJANGO_UPSTREAM} fail_timeout=0;
+}
+upstream frontend_server {
+    server ${FRONTEND_UPSTREAM} fail_timeout=0;
+}
+
+# ── :80 — Let's Encrypt チャレンジ応答 + HTTPS への恒久リダイレクト ──
+server {
+    listen 80 default;
+    server_name ${MY_DOMAIN} www.${MY_DOMAIN};
+
+    # certbot(webroot) が書き出すチャレンジファイルを配信する。
+    # certbot コンテナと同じ ./certbot/www を /var/www/certbot にマウントしている。
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type "text/plain";
+    }
+
+    # それ以外はすべて HTTPS へ。
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ── :443 — TLS 終端。アプリ本体への振り分け ──
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${MY_DOMAIN} www.${MY_DOMAIN};
+    client_max_body_size 4G;
+    keepalive_timeout 10;
+
+    ssl_certificate     /etc/letsencrypt/live/${MY_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${MY_DOMAIN}/privkey.pem;
+    include             /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+
+    location /static/ {
+        alias /static/;
+    }
+
+    # grafana は任意（metrics profile）。リクエスト時解決で、コンテナ不在でも nginx を起動させる。
+    location /grafana/ {
+        set $monitor_upstream "${GRAFANA_UPSTREAM}";
+        proxy_set_header Host $host;
+        proxy_pass http://$monitor_upstream;
+    }
+
+    # ── Django (ASGI): REST API・管理画面・統計・メトリクス・WebSocket ──
+    location /api/ {
+        add_header Access-Control-Allow-Origin "*" always;
+        add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Content-Type, Accept" always;
+        if ($request_method = OPTIONS) {
+            add_header Access-Control-Allow-Origin "*" always;
+            add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
+            add_header Access-Control-Allow-Headers "Content-Type, Accept" always;
+            add_header Access-Control-Max-Age 86400 always;
+            return 204;
+        }
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+        proxy_pass http://app_server;
+    }
+    location /admin/ {
+        try_files $uri @proxy_to_app;
+    }
+    location = /metrics {
+        try_files $uri @proxy_to_app;
+    }
+    # WebSocket（同時視聴の同期）。party/ は Django、/anime-store/lobby/ はフロント。
+    location /anime-store/party/ {
+        try_files $uri @proxy_to_app;
+    }
+
+    # ── React フロントエンド: 公開ページ + 静的アセット ──
+    location / {
+        try_files $uri @proxy_to_frontend;
+    }
+
+    location @proxy_to_app {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+        proxy_pass http://app_server;
+    }
+
+    location @proxy_to_frontend {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+        proxy_pass http://frontend_server;
+    }
+
+    error_page 500 502 503 504 /500.html;
+    location = /500.html {
+        root /usr/share/nginx/html;
+    }
+}
