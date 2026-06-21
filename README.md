@@ -45,10 +45,11 @@ git submodule update --init --recursive
 
 ### 2. バックエンドを起動
 
+docker-compose はこのリポジトリのルートにあります（backend サブモジュールは django 単体）。
 初回は Django の migrate と collectstatic が必要です。
 
 ```bash
-cd backend
+# リポジトリのルートで
 docker compose build --no-cache
 docker compose up -d
 docker compose exec django python manage.py makemigrations

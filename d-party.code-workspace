@@ -2,15 +2,16 @@
   "folders": [
     { "path": ".", "name": "d-party (root)" },
     { "path": "backend", "name": "backend" },
-    { "path": "chrome-extension", "name": "chrome-extension" }
+    { "path": "chrome-extension", "name": "chrome-extension" },
+    { "path": "frontend", "name": "frontend" }
   ],
   "settings": {
     "files.eol": "\n",
     "search.exclude": {
       "**/node_modules": true,
       "**/.venv": true,
-      "backend/Postgres/data": true,
-      "backend/Django/static": true
+      "postgres/data": true,
+      "backend/static": true
     }
   },
   "extensions": {
