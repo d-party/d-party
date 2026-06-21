@@ -242,6 +242,10 @@
             "type": "string",
             "format": "uuid",
             "description": "Echoed room UUID."
+          },
+          "title": {
+            "type": "string",
+            "description": "Anime title captured by the extension at room creation. May be empty for rooms created by older extension versions."
           }
         }
       },

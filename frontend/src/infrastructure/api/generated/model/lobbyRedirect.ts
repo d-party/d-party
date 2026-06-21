@@ -13,4 +13,6 @@ export interface LobbyRedirect {
   part_id: string;
   /** Echoed room UUID. */
   room_id: string;
+  /** Anime title captured by the extension at room creation. May be empty for rooms created by older extension versions. */
+  title?: string;
 }

@@ -29,6 +29,13 @@ export const API_BASE_URL = `${BACKEND_PROTOCOL}${BACKEND_HOST}`.replace(
   "",
 );
 
+/**
+ * 公開サイトの絶対 URL。OGP / Twitter カードの画像 URL を絶対化するために
+ * `metadataBase` で使う。デプロイ環境ごとに `NEXT_PUBLIC_SITE_URL` で上書きする。
+ */
+export const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://d-party.net";
+
 /** Chrome ウェブストアの d-party 拡張機能ページ（インストール導線）。 */
 export const CHROME_WEBSTORE_URL =
   "https://chrome.google.com/webstore/detail/d-party/ibmlcfpijglpfbfgaleaeooebgdgcbpc?hl=ja";
