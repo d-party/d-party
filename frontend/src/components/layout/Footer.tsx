@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 /** Ported from web/templates/footer.html. */
 export function Footer(): React.JSX.Element {
   return (
@@ -12,7 +14,14 @@ export function Footer(): React.JSX.Element {
             rel="noreferrer noopener"
           >
             GitHub
-          </a>
+          </a>{" "}
+          ·{" "}
+          <Link
+            href="/privacy"
+            className="underline-offset-4 hover:underline"
+          >
+            プライバシーポリシー
+          </Link>
         </p>
         <p className="mt-1">© {new Date().getFullYear()} d-party</p>
       </div>
