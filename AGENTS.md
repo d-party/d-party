@@ -113,6 +113,24 @@ frontend/
   （backend サブモジュール側に別途実装が必要。`frontend/docs/backend-lobby-endpoint.md` 参照）。
 - 接続先は `src/infrastructure/env.ts`（`NEXT_PUBLIC_*` で上書き、既定 `localhost`）。
 
+## 開発フロー（GitHub Flow）
+
+このプロジェクトは **GitHub Flow** を採用する（旧 Git Flow から移行済み。`develop` は廃止）。
+ルート・各サブモジュールとも同じ運用ルール:
+
+1. `main` は常にデプロイ可能な状態を保つ。
+2. すべての変更は `main` から短命なブランチを切る（命名は `feature/*` · `fix/*` ·
+   `chore/*` · `docs/*` の kebab-case）。
+3. ブランチへ commit / push し、`main` に対して **Pull Request** を出してマージする。
+   `main` へ直接コミットしない。
+4. マージ済みブランチは削除する。
+5. **リリースは `main` から tag を切って行う**（長命なリリースブランチは作らない）。
+   - backend / chrome-extension とも `release` ワークフロー（`workflow_dispatch`）で
+     バージョン tag と GitHub Release を発行する。
+6. CI のトリガ・Dependabot の `target-branch` はすべて `main`（`develop` は参照しない）。
+
+詳細な貢献手順は [CONTRIBUTING.md](CONTRIBUTING.md) を参照。
+
 ## サブモジュール運用ルール（最重要）
 
 1. **サービスのコード変更は必ず該当サブモジュール内で行う。**
