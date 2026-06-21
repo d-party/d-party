@@ -71,10 +71,10 @@ export function Features(): React.JSX.Element {
     <section className="mx-auto max-w-5xl px-4 pb-16 pt-4">
       <div className="mx-auto max-w-2xl text-center">
         <h2 className="text-3xl font-bold tracking-tight">
-          できること
+          dアニメストアを同時視聴で、もっと楽しく
         </h2>
         <p className="mt-3 text-muted-foreground">
-          友達との同時視聴を、もっと簡単で楽しく。
+          d-partyは次のような機能を提供しています。
         </p>
       </div>
 
