@@ -50,12 +50,14 @@ services:
       - ./certbot/conf:/etc/letsencrypt:ro
       - ./certbot/www:/var/www/certbot:ro
     # 更新された証明書を取り込むため 6h ごとに reload しつつ nginx を前景実行する。
-    # ENTRYPOINT(docker-entrypoint.sh)はそのまま走るので envsubst は実行される。
+    # ENTRYPOINT(docker-entrypoint.sh)は CMD が "nginx" で始まる時のみ init スクリプト
+    # （envsubst 含む）を回すので、ここで明示的に templates を展開してから起動する。
     command:
       - /bin/sh
       - -c
       - >-
-        while :; do sleep 6h & wait $${!}; nginx -c /etc/nginx/nginx.prod.conf -s reload; done &
+        /docker-entrypoint.d/20-envsubst-on-templates.sh &&
+        { while :; do sleep 6h & wait $${!}; nginx -c /etc/nginx/nginx.prod.conf -s reload; done; } &
         exec nginx -c /etc/nginx/nginx.prod.conf -g 'daemon off;'
 
   certbot:
