@@ -57,8 +57,19 @@ NEXT_PUBLIC_BACKEND_PROTOCOL="https://"
 NEXT_PUBLIC_WEBSOCKET_PROTOCOL="wss://"
 ```
 
-> docker-compose では `FRONTEND_BACKEND_HOST` / `FRONTEND_BACKEND_PROTOCOL`
-> （backend の compose）から上記ビルド引数へ渡されます。
+### monorepo の docker-compose 経由（dev / prod）
+
+monorepo（d-party ルート）の Compose では dev / prod で `NEXT_PUBLIC_*` の渡し方が変わります。
+
+- **dev**（`docker compose up`）: frontend は `node` イメージで `pnpm dev`（HMR）として起動し、
+  `NEXT_PUBLIC_*` をルートの `.env.dev` から **実行時に**読み込みます（既定 `localhost` / http / ws）。
+  ソースがマウントされるためホットリロードが効きます。
+- **prod**（`docker-compose.prod.yml`）: `Dockerfile` で standalone ビルドし、`NEXT_PUBLIC_*` を
+  `build.args`（ルート `.env.prod` と同値）で **ビルド時に**焼き込みます（`d-party.net` / https / wss）。
+  値を変えた場合は再ビルドが必要です。
+
+> 旧 `FRONTEND_BACKEND_HOST` / `FRONTEND_BACKEND_PROTOCOL` 方式は廃止しました。
+> 環境固有値はルートの `.env.dev` / `.env.prod` に集約しています。
 
 ## ルーム遷移（ロビー）について
 
