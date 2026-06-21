@@ -2,14 +2,14 @@
   "name": "d-party Dev Container",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config graphviz && sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*",
-  "postCreateCommand": "git submodule update --init --recursive",
+  "postCreateCommand": "git submodule update --init --recursive && (cd backend && pre-commit install --install-hooks)",
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
-      "version": "3.11"
+      "version": "3.14"
     },
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "lts"
+      "version": "26"
     },
     "ghcr.io/devcontainers-extra/features/poetry:2": {},
     "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
