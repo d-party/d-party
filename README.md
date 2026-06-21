@@ -60,8 +60,10 @@ docker compose down
 docker compose up -d
 ```
 
-2 回目以降は `docker compose up -d` だけで起動できます。
-詳細は [`backend/README.md`](backend/README.md) を参照してください。
+2 回目以降は `docker compose up -d` だけで起動できます。これは **開発モード**で、
+frontend は `pnpm dev`（HMR）として立ち上がります。dev / prod の切り替えと環境変数は
+[環境設定（dev / prod の出し分け）](#環境設定dev--prod-の出し分け)を参照してください。
+backend 個別の詳細は [`backend/README.md`](backend/README.md) を参照してください。
 
 ### 3. Chrome 拡張機能を読み込む
 
@@ -69,8 +71,76 @@ docker compose up -d
 2. **デベロッパーモード** を有効化
 3. **パッケージ化されていない拡張機能を読み込む** で `chrome-extension/` を選択
 
-接続先バックエンドは `chrome-extension/js/common/settings.js` で設定します
-（既定は `wss://d-party.net`）。詳細は [`chrome-extension/README.md`](chrome-extension/README.md) を参照してください。
+接続先バックエンドは `chrome-extension/src/infrastructure/env.ts` で設定します
+（既定は `wss://d-party.net`。ローカル開発スタックへ向ける場合は `localhost/` / `http://` / `ws://`）。
+詳細は [`chrome-extension/README.md`](chrome-extension/README.md) を参照してください。
+
+## 環境設定（dev / prod の出し分け）
+
+環境固有の設定は **3 つの env ファイル**に分割し、Docker Compose のオーバーレイで
+dev / prod を切り替えます。
+
+| ファイル      | 用途           | 主なキー                                                            |
+| ------------- | -------------- | ------------------------------------------------------------------- |
+| `.env.global` | dev / prod 共有 | `POSTGRES_*` · `*_UPSTREAM` · `TZ` · `D_ANIME_STORE_DOMAIN`          |
+| `.env.dev`    | 開発のみ       | `DEBUG=1` · `MY_DOMAIN=localhost` · `NEXT_PUBLIC_*`（http / ws）     |
+| `.env.prod`   | 本番のみ       | `DEBUG=0` · `MY_DOMAIN=d-party.net` · `CERTBOT_EMAIL` · `NEXT_PUBLIC_*`（https / wss） |
+
+> 環境固有値（`DEBUG` / `MY_DOMAIN` など）は **`.env.global` に置かないこと**。
+> backend の `manage.py` が `/env_files/.env.global` を `override=True` で読み込むため、
+> ここに残すと本番起動時に dev 値で上書きされてしまいます。
+
+### 開発モード（既定）
+
+```bash
+docker compose up -d
+```
+
+`docker-compose.override.yml` が自動的に読み込まれ、
+
+- **frontend** は `node` イメージで `pnpm dev`（Turbopack HMR）。`frontend/` をマウントして
+  ホットリロードが効きます。
+- `.env.dev` が適用され、`DEBUG=1` / `localhost` / http・ws 接続になります。
+
+> 初回は frontend コンテナ内で `pnpm install` と初回コンパイルが走るため、起動完了まで
+> 数分かかります（ヘルスチェック猶予 3 分）。
+
+### 本番モード
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+    --profile letsencrypt up -d
+```
+
+- **frontend** は `Dockerfile` で standalone ビルドを配信（`NEXT_PUBLIC_*` はビルド時に焼き込み）。
+- **nginx** が TLS 終端（`nginx.prod.conf` + `nginx/templates-prod/`）。
+- **certbot** が証明書を自動更新（`--profile letsencrypt` のときだけ起動）。
+- `.env.prod` が適用され、`DEBUG=0` / `d-party.net` / https・wss 接続になります。
+
+## 本番デプロイ（TLS / Let's Encrypt）
+
+本番は nginx の TLS 終端と certbot（webroot / http-01）による証明書の
+**自動取得・自動更新**に対応しています。
+
+1. `.env.prod` の `MY_DOMAIN`（既定 `d-party.net`）と `CERTBOT_EMAIL` を実値に設定する。
+2. 対象ドメインの DNS がこのホストを指し、ポート 80 / 443 が開いていること。
+3. 初回証明書をブートストラップする（まず staging で疎通確認してから本番へ）:
+
+   ```bash
+   ./init-letsencrypt.sh --staging      # テスト証明書（レート制限なし）
+   ./init-letsencrypt.sh --production   # 本番証明書
+   ```
+
+4. 通常起動（certbot の自動更新込み）:
+
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+       --profile letsencrypt up -d
+   ```
+
+certbot は 12 時間ごとに `renew` を試み（失効 30 日前から更新）、nginx は 6 時間ごとに
+reload して新しい証明書を取り込みます。証明書・秘密鍵は `./certbot/`（gitignore 済み）に
+保存されます。
 
 ## URL 一覧（ローカル backend 起動時）
 
@@ -80,6 +150,8 @@ docker compose up -d
 | Django（直接 / debug-toolbar） | http://localhost:8000 |
 | Adminer（PostgreSQL 管理）     | http://localhost:8080 |
 | Prometheus                     | http://localhost:9090 |
+
+> 本番は nginx の TLS 終端により https://d-party.net（http は https へリダイレクト）で配信されます。
 
 ## サブモジュールの扱い
 
