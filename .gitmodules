@@ -1,12 +1,12 @@
 [submodule "chrome-extension"]
 	path = chrome-extension
-	url = git@github.com:d-party/d-party-Chrome-Extensions.git
+	url = git@github.com:d-party/chrome-extension.git
 	branch = main
 [submodule "backend"]
 	path = backend
-	url = git@github.com:d-party/d-party-Backend.git
+	url = git@github.com:d-party/backend.git
 	branch = main
 [submodule "frontend"]
 	path = frontend
-	url = git@github.com:d-party/d-party-Frontend.git
+	url = git@github.com:d-party/frontend.git
 	branch = main
