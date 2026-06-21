@@ -12,6 +12,7 @@ import {
   statsUserAliveCount,
   statsUserAllCount,
 } from "@/infrastructure/api/generated/d-party";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { PerDayResultDataItem } from "@/infrastructure/api/generated/model";
 
 type Totals = {
@@ -26,8 +27,41 @@ type ReactionRow = { reaction_type: string; count: number };
 
 type Bar = { label: string; value: number };
 
+/** Pseudo-random but stable heights so the skeleton bars look chart-like. */
+const SKELETON_BAR_HEIGHTS = [40, 65, 30, 80, 55, 70, 45, 90, 35, 60, 50, 75];
+
+function BarChartSkeleton(): React.JSX.Element {
+  return (
+    <div>
+      <div className="flex h-44 items-end gap-px">
+        {SKELETON_BAR_HEIGHTS.map((h, i) => (
+          <Skeleton
+            key={i}
+            style={{ height: `${h}%` }}
+            className="min-h-[2px] flex-1 rounded-t rounded-b-none"
+          />
+        ))}
+      </div>
+      <div className="mt-2 flex justify-between">
+        <Skeleton className="h-3 w-16" />
+        <Skeleton className="h-3 w-12" />
+        <Skeleton className="h-3 w-16" />
+      </div>
+    </div>
+  );
+}
+
 /** Dependency-free responsive bar chart for the per-day series. */
-function BarChart({ data }: { data: Bar[] }): React.JSX.Element {
+function BarChart({
+  data,
+  loading,
+}: {
+  data: Bar[];
+  loading: boolean;
+}): React.JSX.Element {
+  if (loading) {
+    return <BarChartSkeleton />;
+  }
   if (data.length === 0) {
     return <p className="text-sm text-muted-foreground">データがありません。</p>;
   }
@@ -67,9 +101,13 @@ function StatCard({
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-2 text-3xl font-bold tabular-nums">
-        {loading || value === null ? "…" : value.toLocaleString()}
-      </p>
+      {loading || value === null ? (
+        <Skeleton className="mt-2 h-9 w-20" />
+      ) : (
+        <p className="mt-2 text-3xl font-bold tabular-nums">
+          {value.toLocaleString()}
+        </p>
+      )}
     </div>
   );
 }
@@ -155,20 +193,30 @@ export function StatsDashboard(): React.JSX.Element {
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-border bg-card p-6">
           <h2 className="mb-4 font-semibold">1日ごとのユーザー数</h2>
-          <BarChart data={userSeries} />
+          <BarChart data={userSeries} loading={loading} />
         </section>
         <section className="rounded-2xl border border-border bg-card p-6">
           <h2 className="mb-4 font-semibold">1日ごとのルーム数</h2>
-          <BarChart data={roomSeries} />
+          <BarChart data={roomSeries} loading={loading} />
         </section>
       </div>
 
       <section className="rounded-2xl border border-border bg-card p-6">
         <h2 className="mb-4 font-semibold">リアクション種別ごとの累計</h2>
-        {reactions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {loading ? "読み込み中…" : "データがありません。"}
-          </p>
+        {loading ? (
+          <ul className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <li key={i} className="flex items-center gap-3">
+                <Skeleton className="h-4 w-28 shrink-0" />
+                <Skeleton
+                  className="h-3"
+                  style={{ width: `${90 - i * 15}%` }}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : reactions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">データがありません。</p>
         ) : (
           <ul className="space-y-2">
             {reactions.map((r) => (

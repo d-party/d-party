@@ -79,7 +79,7 @@ const STEPS: Step[] = [
         alt="dアニメストア"
         width={200}
         height={80}
-        className="h-auto w-40"
+        className="h-auto w-20"
       />
     ),
   },

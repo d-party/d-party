@@ -11,7 +11,6 @@ import {
   HelpCircle,
   Home,
   Menu,
-  MessageSquare,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -32,7 +31,6 @@ type NavLink = {
 const NAV_LINKS: NavLink[] = [
   { label: "ホーム", href: "/", icon: Home },
   { label: "使い方", href: "/usage", icon: BookOpen },
-  { label: "統計", href: "/stats", icon: BarChart3 },
   { label: "Q&A", href: "/qa", icon: HelpCircle },
   {
     label: "ダウンロード",
@@ -47,47 +45,48 @@ const NAV_LINKS: NavLink[] = [
     icon: Heart,
     external: true,
   },
-  {
-    label: "ご意見",
-    href: "https://forms.gle/kKPbAPGY96rbaKgK8",
-    icon: MessageSquare,
-    external: true,
-  },
+  { label: "統計", href: "/stats", icon: BarChart3 },
 ];
 
 function NavItem({ link }: { link: NavLink }): React.JSX.Element {
   const Icon = link.icon;
   const className =
-    "flex items-center justify-center rounded-md p-2 text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white";
+    "peer flex items-center justify-center rounded-md p-2 text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white";
   const content = (
     <>
       <Icon className="size-5" aria-hidden />
       <span className="sr-only">{link.label}</span>
     </>
   );
-  if (link.external) {
-    return (
-      <a
-        className={className}
-        href={link.href}
-        title={link.label}
-        aria-label={link.label}
-        target="_blank"
-        rel="noreferrer noopener"
-      >
-        {content}
-      </a>
-    );
-  }
-  return (
-    <Link
-      className={className}
-      href={link.href}
-      title={link.label}
-      aria-label={link.label}
+
+  const tooltip = (
+    <span
+      role="tooltip"
+      className="pointer-events-none absolute left-1/2 top-full z-50 mt-1 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-md bg-neutral-800 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-md transition-all duration-150 peer-hover:translate-y-0 peer-hover:opacity-100 peer-focus-visible:translate-y-0 peer-focus-visible:opacity-100"
     >
-      {content}
-    </Link>
+      {link.label}
+    </span>
+  );
+
+  return (
+    <div className="relative">
+      {link.external ? (
+        <a
+          className={className}
+          href={link.href}
+          aria-label={link.label}
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          {content}
+        </a>
+      ) : (
+        <Link className={className} href={link.href} aria-label={link.label}>
+          {content}
+        </Link>
+      )}
+      {tooltip}
+    </div>
   );
 }
 
@@ -95,10 +94,10 @@ export function Header(): React.JSX.Element {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="bg-neutral-900 text-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2">
+    <nav className="bg-neutral-900/50 text-white">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-1">
         <Link href="/" className="inline-flex items-center" aria-label="d-party">
-          <Logo className="size-10" />
+          <Logo className="size-9" />
         </Link>
 
         <div className="flex items-center gap-1">

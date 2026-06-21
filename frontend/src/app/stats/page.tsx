@@ -12,9 +12,6 @@ export default function StatsPage(): React.JSX.Element {
     <section className="mx-auto max-w-5xl px-4 py-12">
       <header className="mb-10 text-center">
         <h1 className="text-3xl font-bold tracking-tight">統計情報</h1>
-        <p className="mt-3 text-muted-foreground">
-          d-party の利用状況（どなたでも閲覧できます）
-        </p>
       </header>
 
       <StatsDashboard />
