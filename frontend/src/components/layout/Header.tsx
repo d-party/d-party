@@ -95,9 +95,9 @@ export function Header(): React.JSX.Element {
 
   return (
     <nav className="bg-neutral-900/50 text-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-1">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-0.5">
         <Link href="/" className="inline-flex items-center" aria-label="d-party">
-          <Logo className="size-9" />
+          <Logo className="size-8" />
         </Link>
 
         <div className="flex items-center gap-1">

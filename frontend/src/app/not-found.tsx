@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { FaRegHand } from "react-icons/fa6";
 
 import { Button } from "@/components/ui/button";
 
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 export default function NotFound(): React.JSX.Element {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">
-      <Image src="/img/lobby/hand.svg" alt="" width={125} height={125} />
+      <FaRegHand className="text-muted-foreground" size={96} aria-hidden />
       <p className="text-2xl font-bold">404 Not Found</p>
       <p className="text-muted-foreground">このページは存在していません</p>
       <Button asChild variant="secondary" className="mt-2">
