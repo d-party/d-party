@@ -18,11 +18,12 @@ import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
  *   - "true"   → redirect to the dアニメストア player URL (resolved from the
  *                new `GET /api/v1/anime-store/lobby/{room_id}` backend endpoint).
  *   - "false"  → extension too old → show notice, then redirect to the webstore.
- *   - 10s pass with neither verdict → extension not installed → webstore.
+ *   - 30s pass with neither verdict → extension not installed → webstore.
  */
 
 const POLL_INTERVAL_MS = 1000;
-const MAX_POLLS = 9; // checks fire at t=1s..9s, matching the original.
+const MAX_POLLS = 29; // checks fire at t=1s..29s; gives a slow backend more time
+// to write its verdict before we give up and assume the extension is missing.
 const NOTICE_FADE_MS = 2000;
 const WEBSTORE_REDIRECT_MS = 3000;
 
@@ -111,7 +112,7 @@ export default function LobbyPage(): React.JSX.Element {
       }
     }, POLL_INTERVAL_MS);
 
-    // After 10s with no verdict, treat the extension as not installed.
+    // After 30s with no verdict, treat the extension as not installed.
     const notInstalledTimer = window.setTimeout(
       () => {
         if (settled) return;
