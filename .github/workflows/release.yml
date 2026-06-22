@@ -1,0 +1,154 @@
+name: release
+
+# d-party モノレポ統一リリース（方式A: 各サブモジュールの release を起動して待つ）。
+#
+# 流れ:
+#   1. bump_type と最新タグ (vX.Y.Z) から統一バージョンを算出する。
+#      （root にタグが無い初回は v2.3.0 を採番する＝chrome-extension に合わせた基準）
+#   2. backend / frontend / chrome-extension の release ワークフローを
+#      同じバージョンで workflow_dispatch 起動し、完了まで待つ。
+#      各サブモジュールが自分の main に version 変更コミット + タグ (vX.Y.Z) を打つ。
+#      chrome-extension は従来どおり build + Chrome Web Store 公開まで行う。
+#   3. 各サブモジュールの main 最新（= タグ付けされたコミット）へ submodule 参照を進め、
+#      root の main へコミットし、root にも統一タグを打つ。
+#
+# 認証 (GitHub App):
+#   APP_ID / APP_PRIVATE_KEY の 2 Secret から短命トークンを発行して使う（PAT 不要・無期限問題なし）。
+#   App は d-party org の root + backend + frontend + chrome-extension にインストールし、
+#   Repository permissions:
+#     - Actions:  Read and write  … 各サブモジュール release を workflow_dispatch 起動
+#     - Contents: Read and write  … root の submodule bump コミット push / タグ・Release
+#     - Metadata: Read            … 自動付与
+#   ※各サブモジュール内の push / Release は各 repo 自身の GITHUB_TOKEN で行うため、
+#     App トークンには「起動権限（Actions:write）」と「root への push（Contents:write）」だけあれば足りる。
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: "Version bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      release_note:
+        description: "Release notes (optional)"
+        required: false
+        type: string
+      publish:
+        description: "Publish chrome-extension to Chrome Web Store (false = upload only)"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          submodules: true
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Determine next version
+        id: version
+        run: |
+          set -euo pipefail
+          LATEST=$(git tag --list 'v*.*.*' --sort=-v:refname | head -n1 || true)
+          if [ -z "${LATEST}" ]; then
+            # 初回リリースは chrome-extension に合わせて v2.3.0 から開始する
+            VER="2.3.0"
+          else
+            BASE=${LATEST#v}
+            IFS=. read -r MAJOR MINOR PATCH <<< "${BASE}"
+            case "${{ inputs.bump_type }}" in
+              major) MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0;;
+              minor) MINOR=$((MINOR+1)); PATCH=0;;
+              patch) PATCH=$((PATCH+1));;
+            esac
+            VER="${MAJOR}.${MINOR}.${PATCH}"
+          fi
+          echo "num=${VER}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VER}" >> "$GITHUB_OUTPUT"
+          echo "Releasing v${VER} (from ${LATEST:-<none>})"
+
+      - name: Trigger submodule releases and wait
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          VER: ${{ steps.version.outputs.num }}
+          NOTE: ${{ inputs.release_note }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          set -euo pipefail
+
+          # release を起動し、新しく現れた run の id を /tmp に記録する
+          trigger() {
+            local repo="$1"; shift
+            local before
+            before=$(gh run list -R "$repo" --workflow release.yml --limit 1 \
+              --json databaseId -q '.[0].databaseId // 0')
+            gh workflow run release.yml -R "$repo" --ref main "$@"
+            local id="$before"
+            for _ in $(seq 1 30); do
+              sleep 5
+              id=$(gh run list -R "$repo" --workflow release.yml --limit 1 \
+                --json databaseId -q '.[0].databaseId // 0')
+              [ "$id" != "$before" ] && break
+            done
+            if [ "$id" = "$before" ]; then
+              echo "::error::Triggered run for $repo did not appear" >&2
+              exit 1
+            fi
+            echo "$id" > "/tmp/runid_${repo//\//_}"
+            echo "$repo -> run $id"
+          }
+
+          watch() {
+            local repo="$1"
+            local id; id=$(cat "/tmp/runid_${repo//\//_}")
+            echo "Watching $repo run $id ..."
+            gh run watch "$id" -R "$repo" --exit-status
+          }
+
+          trigger d-party/backend          -f version="$VER" -f release_note="$NOTE"
+          trigger d-party/frontend         -f version="$VER" -f release_note="$NOTE"
+          trigger d-party/chrome-extension -f version="$VER" -f release_note="$NOTE" -f publish="$PUBLISH"
+
+          watch d-party/backend
+          watch d-party/frontend
+          watch d-party/chrome-extension
+
+      - name: Bump submodule references
+        run: |
+          set -euo pipefail
+          git submodule update --remote --merge
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend frontend chrome-extension
+          git commit -m "chore: release ${{ steps.version.outputs.tag }} (bump submodules) [skip ci]"
+          git push origin HEAD:main
+
+      - name: Create GitHub Release (root)
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          body: ${{ inputs.release_note }}
+          generate_release_notes: true
+          target_commitish: main
