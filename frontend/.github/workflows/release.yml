@@ -1,0 +1,48 @@
+name: release
+
+# d-party モノレポ root の release ワークフローから統一バージョンを受け取って起動される。
+# package.json の version を書き換えて main へコミットし、タグ + GitHub Release を作る。
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (X.Y.Z)"
+        required: true
+        type: string
+      release_note:
+        description: "Release notes (optional)"
+        required: false
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Bump version and commit
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          # version 行のみを置換してフォーマット差分を最小化する
+          node -e "const fs=require('fs');let s=fs.readFileSync('package.json','utf8');s=s.replace(/(\"version\"\s*:\s*\")[^\"]*(\")/, '\$1'+process.env.VERSION+'\$2');fs.writeFileSync('package.json',s);"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore: bump version to v${VERSION} [skip ci]"
+          git push origin HEAD:main
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: Release v${{ inputs.version }}
+          body: ${{ inputs.release_note }}
+          generate_release_notes: true
+          target_commitish: main
