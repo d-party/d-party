@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
@@ -14,6 +13,8 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+
+import { useToggle } from "react-use";
 
 import { Logo } from "@/components/Logo";
 import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
@@ -91,7 +92,7 @@ function NavItem({ link }: { link: NavLink }): React.JSX.Element {
 }
 
 export function Header(): React.JSX.Element {
-  const [open, setOpen] = useState(false);
+  const [open, toggleOpen] = useToggle(false);
 
   return (
     <nav className="bg-neutral-900/50 text-white">
@@ -114,7 +115,7 @@ export function Header(): React.JSX.Element {
             className="inline-flex items-center justify-center rounded p-2 text-neutral-300 hover:text-white lg:hidden"
             aria-label="メニューを開閉"
             aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => toggleOpen()}
           >
             {open ? <X className="size-6" /> : <Menu className="size-6" />}
           </button>

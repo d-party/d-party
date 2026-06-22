@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useAsync } from "react-use";
 
 import {
   statsActiveRoomPerDay,
@@ -115,53 +115,45 @@ function StatCard({
 const toBars = (rows: PerDayResultDataItem[]): Bar[] =>
   rows.map((r) => ({ label: String(r.day), value: r.count }));
 
-export function StatsDashboard(): React.JSX.Element {
-  const [totals, setTotals] = useState<Totals | null>(null);
-  const [userSeries, setUserSeries] = useState<Bar[]>([]);
-  const [roomSeries, setRoomSeries] = useState<Bar[]>([]);
-  const [reactions, setReactions] = useState<ReactionRow[]>([]);
-  const [error, setError] = useState(false);
+type StatsData = {
+  totals: Totals;
+  userSeries: Bar[];
+  roomSeries: Bar[];
+  reactions: ReactionRow[];
+};
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const [
-          userAll,
-          roomAll,
-          reactionAll,
-          userAlive,
-          roomAlive,
-          userPerDay,
-          roomPerDay,
-          reactionByType,
-        ] = await Promise.all([
-          statsUserAllCount(),
-          statsRoomAllCount(),
-          statsReactionAllCount(),
-          statsUserAliveCount(),
-          statsRoomAliveCount(),
-          statsActiveUserPerDay(),
-          statsActiveRoomPerDay(),
-          statsReactionCount(),
-        ]);
-        if (cancelled) return;
-        setTotals({
-          userAll: userAll.data.data.count,
-          roomAll: roomAll.data.data.count,
-          reactionAll: reactionAll.data.data.count,
-          userAlive: userAlive.data.data.count,
-          roomAlive: roomAlive.data.data.count,
-        });
-        setUserSeries(toBars(userPerDay.data.data));
-        setRoomSeries(toBars(roomPerDay.data.data));
-        setReactions(reactionByType.data.data);
-      } catch {
-        if (!cancelled) setError(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
+export function StatsDashboard(): React.JSX.Element {
+  const { loading, error, value } = useAsync(async (): Promise<StatsData> => {
+    const [
+      userAll,
+      roomAll,
+      reactionAll,
+      userAlive,
+      roomAlive,
+      userPerDay,
+      roomPerDay,
+      reactionByType,
+    ] = await Promise.all([
+      statsUserAllCount(),
+      statsRoomAllCount(),
+      statsReactionAllCount(),
+      statsUserAliveCount(),
+      statsRoomAliveCount(),
+      statsActiveUserPerDay(),
+      statsActiveRoomPerDay(),
+      statsReactionCount(),
+    ]);
+    return {
+      totals: {
+        userAll: userAll.data.data.count,
+        roomAll: roomAll.data.data.count,
+        reactionAll: reactionAll.data.data.count,
+        userAlive: userAlive.data.data.count,
+        roomAlive: roomAlive.data.data.count,
+      },
+      userSeries: toBars(userPerDay.data.data),
+      roomSeries: toBars(roomPerDay.data.data),
+      reactions: reactionByType.data.data,
     };
   }, []);
 
@@ -173,7 +165,10 @@ export function StatsDashboard(): React.JSX.Element {
     );
   }
 
-  const loading = totals === null;
+  const totals = value?.totals ?? null;
+  const userSeries = value?.userSeries ?? [];
+  const roomSeries = value?.roomSeries ?? [];
+  const reactions = value?.reactions ?? [];
   const maxReaction = Math.max(1, ...reactions.map((r) => r.count));
 
   return (

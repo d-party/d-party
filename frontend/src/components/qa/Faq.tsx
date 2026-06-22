@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useSet } from "react-use";
 import { ChevronDown } from "lucide-react";
 
 export type FaqEntry = {
@@ -56,15 +56,7 @@ function FaqItem({
 }
 
 export function Faq({ entries }: { entries: FaqEntry[] }): React.JSX.Element {
-  const [openIndexes, setOpenIndexes] = useState<Set<number>>(new Set([0]));
-
-  const toggle = (i: number) =>
-    setOpenIndexes((prev) => {
-      const next = new Set(prev);
-      if (next.has(i)) next.delete(i);
-      else next.add(i);
-      return next;
-    });
+  const [openIndexes, { toggle }] = useSet<number>(new Set([0]));
 
   return (
     <ul className="space-y-3">
