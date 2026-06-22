@@ -17,7 +17,13 @@ export interface ResolvedRoom {
  */
 export async function resolveRoom(roomId: string): Promise<ResolvedRoom> {
   try {
-    const res = await lobbyResolve(roomId, { next: { revalidate: 600 } });
+    const res = await lobbyResolve(roomId, {
+      next: { revalidate: 600 },
+      // Safety net: resolveRoom is awaited in generateMetadata, so a slow or
+      // hanging backend would block the whole lobby page from rendering. Fail
+      // fast and fall back to generic copy instead.
+      signal: AbortSignal.timeout(1500),
+    });
     if (res.status === 200) {
       return { title: (res.data.title ?? "").trim(), found: true };
     }

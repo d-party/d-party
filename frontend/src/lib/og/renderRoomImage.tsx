@@ -1,29 +1,32 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
 import { ImageResponse } from "next/og";
 
 import { OG_SIZE, RoomOgImage } from "@/components/og/RoomOgImage";
 import { resolveRoom } from "@/infrastructure/lobby";
-import { loadGoogleFont } from "@/lib/og/loadGoogleFont";
 
 /** Shared `alt` text for the room OG / Twitter images. */
 export const OG_ALT = "d-party — dアニメストアで同時視聴";
 
-// Static copy baked into the image; included in the font subset request so all
-// glyphs (kana/kanji) are available to Satori.
-const STATIC_GLYPHS =
-  "d-party WATCH PARTY この作品を一緒に視聴中 dアニメストアで同時視聴 友だちと、同じ瞬間を。 dアニメストアを友だちと同時視聴 d-party.net ▶";
-
 const FONT_FAMILY = "Noto Sans JP";
 
+// Noto Sans JP weights are bundled in the repo (`public/fonts/`) and read from
+// disk, so the OG image needs no request-time fetch to Google Fonts. The full
+// JP glyph set is embedded, so arbitrary anime titles render without tofu.
+// `public/` is copied into the standalone runtime image, so `process.cwd()`
+// resolves correctly in dev, `next start`, and the Docker container alike.
+const FONT_DIR = join(process.cwd(), "public", "fonts");
+
 /**
- * Load the Noto Sans JP weights needed for the image, subsetted to the glyphs
- * actually rendered. Returns `[]` on failure so the image still renders (Latin
- * text via the default font) instead of 500-ing the route.
+ * Load the bundled Noto Sans JP weights. Returns `[]` on failure so the image
+ * still renders (Latin text via the default font) instead of 500-ing the route.
  */
-async function loadFonts(text: string) {
+async function loadFonts() {
   try {
     const [regular, bold] = await Promise.all([
-      loadGoogleFont(FONT_FAMILY, 400, text),
-      loadGoogleFont(FONT_FAMILY, 700, text),
+      readFile(join(FONT_DIR, "NotoSansJP-Regular.ttf")),
+      readFile(join(FONT_DIR, "NotoSansJP-Bold.ttf")),
     ]);
     return [
       {
@@ -52,7 +55,7 @@ async function loadFonts(text: string) {
  */
 export async function renderRoomImage(roomId: string): Promise<ImageResponse> {
   const { title } = await resolveRoom(roomId);
-  const fonts = await loadFonts(`${STATIC_GLYPHS} ${title}`);
+  const fonts = await loadFonts();
 
   return new ImageResponse(<RoomOgImage title={title} />, {
     ...OG_SIZE,
