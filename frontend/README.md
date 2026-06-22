@@ -12,6 +12,14 @@ dアニメストアで「同時視聴」を実現する **d-party** のユーザ
 - **Tailwind CSS v4** + **shadcn/ui**（Radix UI）— テーマトークンは拡張機能の popup と共通
 - **orval** でバックエンド REST API を型安全に生成（`openapi/openapi.json` → `src/infrastructure/api/generated/`）
 - **pnpm** + **ESLint**（flat config）+ **Prettier**
+- **Storybook** で UI コンポーネントを文書化
+
+## Storybook
+
+UI コンポーネントのカタログを Storybook で公開しています（`main` へのマージ時に GitHub Pages へ自動デプロイ）。
+
+- 公開先: <https://d-party.github.io/frontend/>
+- ローカル: `pnpm storybook`（http://localhost:6006）
 
 ## ページ
 
