@@ -1,5 +1,23 @@
 "use client";
 
+import { useMemo } from "react";
+import {
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  LinearScale,
+  Tooltip,
+  type ChartOptions,
+} from "chart.js";
+import { Bar as BarChartJS } from "react-chartjs-2";
+import type { IconType } from "react-icons";
+import {
+  FaHandMiddleFinger,
+  FaHeart,
+  FaSadCry,
+  FaSmileBeam,
+  FaThumbsUp,
+} from "react-icons/fa";
 import { useAsync } from "react-use";
 
 import {
@@ -25,7 +43,34 @@ type Totals = {
 
 type ReactionRow = { reaction_type: string; count: number };
 
+/**
+ * Icon + label per reaction type, keyed by the backend `reaction_type` label
+ * (`streamer.models.ReactionType`). Icons mirror the player's reaction buttons
+ * (`react-icons/fa`) so the stats match what users tap in the extension.
+ */
+const REACTION_META: Record<string, { Icon: IconType; label: string }> = {
+  favorite: { Icon: FaHeart, label: "お気に入り" },
+  thumbs_up: { Icon: FaThumbsUp, label: "いいね" },
+  smile: { Icon: FaSmileBeam, label: "笑顔" },
+  cry: { Icon: FaSadCry, label: "涙" },
+  middle_finger: { Icon: FaHandMiddleFinger, label: "ブーイング" },
+};
+
 type Bar = { label: string; value: number };
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
+
+/**
+ * Resolve a CSS custom property to a concrete color string for the canvas.
+ * Chart.js draws on a <canvas>, which cannot resolve `var(--…)` itself.
+ */
+function cssColor(name: string, fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
+  return value || fallback;
+}
 
 /** Pseudo-random but stable heights so the skeleton bars look chart-like. */
 const SKELETON_BAR_HEIGHTS = [40, 65, 30, 80, 55, 70, 45, 90, 35, 60, 50, 75];
@@ -51,14 +96,71 @@ function BarChartSkeleton(): React.JSX.Element {
   );
 }
 
-/** Dependency-free responsive bar chart for the per-day series. */
+/**
+ * Responsive per-day bar chart built on Chart.js.
+ *
+ * Visually matches the previous hand-rolled bars (thin primary bars with
+ * rounded tops, no axes, first/最大/last footer) but adds a proper hover
+ * tooltip so the exact day and count are readable on mouse-over.
+ */
 function BarChart({
   data,
   loading,
+  unit,
 }: {
   data: Bar[];
   loading: boolean;
+  unit: string;
 }): React.JSX.Element {
+  const chart = useMemo(() => {
+    const primary = cssColor("--primary", "oklch(0.637 0.237 25.331)");
+    const card = cssColor("--card", "oklch(0.215 0.01 270)");
+    const cardForeground = cssColor("--card-foreground", "oklch(0.985 0 0)");
+    const barColor = `color-mix(in oklch, ${primary} 80%, transparent)`;
+
+    const chartData = {
+      labels: data.map((d) => d.label),
+      datasets: [
+        {
+          data: data.map((d) => d.value),
+          backgroundColor: barColor,
+          hoverBackgroundColor: primary,
+          borderRadius: 4,
+          borderSkipped: "bottom" as const,
+          categoryPercentage: 1,
+          barPercentage: 0.9,
+        },
+      ],
+    };
+
+    const options: ChartOptions<"bar"> = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      scales: {
+        x: { display: false },
+        y: { display: false, beginAtZero: true },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: card,
+          titleColor: cardForeground,
+          bodyColor: cardForeground,
+          borderColor: primary,
+          borderWidth: 1,
+          padding: 8,
+          displayColors: false,
+          callbacks: {
+            label: (item) => `${item.formattedValue} ${unit}`,
+          },
+        },
+      },
+    };
+
+    return { chartData, options };
+  }, [data, unit]);
+
   if (loading) {
     return <BarChartSkeleton />;
   }
@@ -70,15 +172,8 @@ function BarChart({
   const last = data[data.length - 1]?.label ?? "";
   return (
     <div>
-      <div className="flex h-44 items-end gap-px">
-        {data.map((d, i) => (
-          <div
-            key={`${d.label}-${i}`}
-            title={`${d.label}: ${d.value}`}
-            style={{ height: `${(d.value / max) * 100}%` }}
-            className="min-h-[2px] flex-1 rounded-t bg-primary/80 transition-colors hover:bg-primary"
-          />
-        ))}
+      <div className="h-44">
+        <BarChartJS data={chart.chartData} options={chart.options} />
       </div>
       <div className="mt-2 flex justify-between text-xs text-muted-foreground">
         <span>{first}</span>
@@ -188,11 +283,11 @@ export function StatsDashboard(): React.JSX.Element {
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-border bg-card p-6">
           <h2 className="mb-4 font-semibold">1日ごとのユーザー数</h2>
-          <BarChart data={userSeries} loading={loading} />
+          <BarChart data={userSeries} loading={loading} unit="ユーザー" />
         </section>
         <section className="rounded-2xl border border-border bg-card p-6">
           <h2 className="mb-4 font-semibold">1日ごとのルーム数</h2>
-          <BarChart data={roomSeries} loading={loading} />
+          <BarChart data={roomSeries} loading={loading} unit="ルーム" />
         </section>
       </div>
 
@@ -202,7 +297,7 @@ export function StatsDashboard(): React.JSX.Element {
           <ul className="space-y-2">
             {Array.from({ length: 5 }).map((_, i) => (
               <li key={i} className="flex items-center gap-3">
-                <Skeleton className="h-4 w-28 shrink-0" />
+                <Skeleton className="h-5 w-6 shrink-0" />
                 <Skeleton
                   className="h-3"
                   style={{ width: `${90 - i * 15}%` }}
@@ -214,18 +309,29 @@ export function StatsDashboard(): React.JSX.Element {
           <p className="text-sm text-muted-foreground">データがありません。</p>
         ) : (
           <ul className="space-y-2">
-            {reactions.map((r) => (
-              <li key={r.reaction_type} className="flex items-center gap-3">
-                <span className="w-28 shrink-0 truncate text-sm text-muted-foreground">
-                  {r.reaction_type}
-                </span>
-                <span
-                  className="h-3 rounded bg-primary/80"
-                  style={{ width: `${(r.count / maxReaction) * 100}%` }}
-                />
-                <span className="text-sm tabular-nums">{r.count.toLocaleString()}</span>
-              </li>
-            ))}
+            {reactions.map((r) => {
+              const meta = REACTION_META[r.reaction_type];
+              return (
+                <li key={r.reaction_type} className="flex items-center gap-3">
+                  <span
+                    className="flex w-6 shrink-0 justify-center text-muted-foreground"
+                    title={meta?.label ?? r.reaction_type}
+                    aria-label={meta?.label ?? r.reaction_type}
+                  >
+                    {meta ? (
+                      <meta.Icon className="h-5 w-5" aria-hidden />
+                    ) : (
+                      <span className="truncate text-sm">{r.reaction_type}</span>
+                    )}
+                  </span>
+                  <span
+                    className="h-3 rounded bg-primary/80"
+                    style={{ width: `${(r.count / maxReaction) * 100}%` }}
+                  />
+                  <span className="text-sm tabular-nums">{r.count.toLocaleString()}</span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
