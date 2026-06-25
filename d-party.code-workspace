@@ -21,6 +21,7 @@
       "ms-python.black-formatter",
       "ms-azuretools.vscode-docker",
       "redhat.vscode-yaml",
+      "ms-kubernetes-tools.vscode-kubernetes-tools",
       "anthropic.claude-code"
     ]
   }

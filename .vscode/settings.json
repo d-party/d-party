@@ -5,6 +5,14 @@
   "files.insertFinalNewline": true,
   "files.trimTrailingWhitespace": true,
 
+  // ── Helm テンプレート ──────────────────────────────────────────────────────
+  // {{- ... }} は Go テンプレートなので純 YAML として検証すると誤検知になる。
+  // helm 言語に関連付けて YAML バリデーションの対象から外す。
+  "files.associations": {
+    "deploy/helm/**/templates/*.yaml": "helm",
+    "deploy/helm/**/templates/*.tpl": "helm"
+  },
+
   // ── Python (backend submodule) ────────────────────────────────────────────
   "[python]": {
     "editor.defaultFormatter": "ms-python.black-formatter",

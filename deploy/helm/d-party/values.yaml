@@ -68,7 +68,7 @@ django:
   # gunicorn の workers 数を env で上書き（backend の gunicorn.conf.py は
   # multiprocessing.cpu_count()+1 を使うため、多 CPU ホストで OOM になりやすい）。
   # 0 を指定すると --workers を付与せず gunicorn.conf.py の既定に従う。
-  gunicornWorkers: 2
+  gunicornWorkers: 3
   resources:
     requests:
       cpu: 150m

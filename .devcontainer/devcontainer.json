@@ -21,7 +21,14 @@
       "installDockerComposeSwitch": true,
       "version": "latest",
       "dockerDashComposeVersion": "v2"
-    }
+    },
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "latest",
+      "helm": "latest",
+      "minikube": "none"
+    },
+    "ghcr.io/devcontainers-extra/features/cloudflared:1": {},
+    "ghcr.io/rio/features/k3d:1": {}
   },
   "remoteEnv": {
     "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
