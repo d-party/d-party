@@ -52,6 +52,55 @@ d-party/                  ← このリポジトリ（ルート）
 - 監視系（prometheus/grafana/cadvisor/node-exporter）は compose の `metrics` profile。
   起動は `docker compose --profile metrics up -d`。
 
+## デプロイ（k3s / Helm / GitOps）
+
+本番想定は **Raspberry Pi (arm64) で組んだ k3s クラスタ**への Helm デプロイ。CD は
+**Argo CD（GitOps）**。設定一式は `deploy/` にある。詳細手順は
+[`deploy/README.md`](deploy/README.md)（および [`deploy/platform/README.md`](deploy/platform/README.md)）を参照。
+
+```
+deploy/
+  helm/d-party/        d-party 単体の Helm chart（このリポジトリの本体）
+    templates/         nginx · django · frontend · postgres · redis · migrate(hook)
+                       · networkpolicy · priorityclass · ingress(任意)
+    values.yaml
+  platform/            クラスタ共有の基盤（d-party 専用ではない singleton）
+    registry.yaml      クラスタ内ローカルレジストリ（registry:2）+ NodePort
+    k3s-registries.yaml  各ノードの /etc/rancher/k3s/registries.yaml
+  build/               d-party 固有: rootless BuildKit で arm64 ネイティブビルド → 共有レジストリへ push
+  argocd/              Argo CD Application の雛形（実体は運用リポジトリへ）
+```
+
+設計の要点（**docker-compose とは前提が異なる**ので注意）:
+
+- **ドメイン解決と TLS は Cloudflare Tunnel（cloudflared）がエッジで終端**する。chart は
+  クラスタ内 HTTP のみを扱い、nginx は `ClusterIP`（cloudflared が `nginx` Service を指す）。
+  cloudflared 本体・ドメイン割り当て・Argo CD 本体の導入は **別の運用リポジトリ**の管轄。
+- **マルチテナント前提**: 同じ端末で d-party 以外のサービスも同居できる。リソースは
+  release 名で prefix され namespace 非固定。RPi 想定で `replicaCount` は既定 1。
+- **d-party は自前の postgres / redis を chart に同梱し、他サービスとは共有しない**。
+  別サービスが DB/Redis を要るなら、そのサービス側で別途立てる。
+- **共有クラスタ基盤（`deploy/platform/`）は d-party の所有物ではない**。chart はそこを
+  「既にある共有レジストリ」として参照するだけ。理想は別 platform リポジトリへ切り出し。
+- **隔離・優先度**: postgres/redis は `NetworkPolicy` で同 release 内からのみ到達可能にし、
+  `PriorityClass`（stateful > app）でメモリ逼迫時にも DB を優先保護する。
+- 機微値（`SECRET_KEY` / `POSTGRES_PASSWORD`）は values に直書きせず `secret.existingSecret`
+  （SealedSecrets/SOPS 等）で渡すのが既定方針。`config.MY_DOMAIN` は単一ドメイン前提。
+- backend イメージは無改変で使う（gunicorn の workers / graceful などは env で上書き）。
+  WebSocket を切らさないため django は `replicas: 1` 固定＋グレースフルなローリング更新。
+
+```bash
+# chart の静的検証（クラスタ不要）
+helm lint deploy/helm/d-party
+helm template d-party deploy/helm/d-party | less
+
+# 手元で実クラスタ検証（k3d）。詳細は deploy/README.md
+k3d cluster create d-party --agents 2
+helm upgrade --install d-party deploy/helm/d-party -n d-party --create-namespace \
+  --set config.MY_DOMAIN=d-party.example --set secret.existingSecret=d-party-secret
+k3d cluster delete d-party        # 後始末
+```
+
 ## backend/（Django）
 
 ```
