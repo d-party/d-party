@@ -1,0 +1,26 @@
+# /etc/rancher/k3s/registries.yaml （k3s 全ノードに配置 → k3s を再起動）
+#
+# 目的: クラスタ内ローカルレジストリへ push したイメージ
+#       `registry.registry.svc.cluster.local:5000/<name>` を、各ノードの
+#       containerd が HTTP(insecure) で pull できるようにする。
+#
+# 仕組み:
+#   - イメージ名のレジストリ部分（mirror のキー）は in-cluster の cluster DNS 名のまま。
+#     ノードはこの DNS を解決できないが、mirror の endpoint を NodePort(localhost:30500)
+#     に向けることで、解決不要で各ノードのローカルから到達できる。
+#   - HTTP のため tls.insecure_skip_verify: true（自己署名 TLS を張る場合は別途設定）。
+#
+# 配置後:
+#   sudo cp k3s-registries.yaml /etc/rancher/k3s/registries.yaml
+#   sudo systemctl restart k3s          # server ノード
+#   sudo systemctl restart k3s-agent    # agent(worker) ノード
+
+mirrors:
+  "registry.registry.svc.cluster.local:5000":
+    endpoint:
+      - "http://127.0.0.1:30500"
+
+configs:
+  "registry.registry.svc.cluster.local:5000":
+    tls:
+      insecure_skip_verify: true

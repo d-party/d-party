@@ -1,0 +1,117 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# クラスタ内ローカルレジストリ（CNCF Distribution / registry:2）
+#
+# in-cluster ビルド（deploy/build/*）の push 先であり、k3s 各ノードの pull 元。
+# - in-cluster からの push: Service の cluster DNS 名で直接到達（HTTP / insecure）。
+# - ノード(containerd)からの pull: NodePort 経由。registries.yaml で
+#   「同じイメージ名 → NodePort エンドポイント」へミラーする（deploy/registry/k3s-registries.yaml）。
+#
+# イメージ名は全体で `registry.registry.svc.cluster.local:5000/<name>` に統一する。
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: registry
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: registry-data
+  namespace: registry
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+  namespace: registry
+  labels:
+    app.kubernetes.io/name: registry
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: registry
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: registry
+    spec:
+      containers:
+        - name: registry
+          image: registry:2
+          ports:
+            - name: registry
+              containerPort: 5000
+          env:
+            - name: REGISTRY_STORAGE_DELETE_ENABLED
+              value: "true"
+            - name: REGISTRY_HTTP_ADDR
+              value: ":5000"
+          readinessProbe:
+            httpGet:
+              path: /v2/
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /v2/
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/registry
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: registry-data
+---
+# in-cluster push 用（buildkit Job がこの DNS 名へ push する）。
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+  namespace: registry
+  labels:
+    app.kubernetes.io/name: registry
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: registry
+  ports:
+    - name: registry
+      port: 5000
+      targetPort: registry
+---
+# ノード(containerd)の pull 用。各ノードの :30500 で待ち受ける（registries.yaml が参照）。
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry-nodeport
+  namespace: registry
+  labels:
+    app.kubernetes.io/name: registry
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: registry
+  ports:
+    - name: registry
+      port: 5000
+      targetPort: registry
+      nodePort: 30500
