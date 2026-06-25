@@ -476,3 +476,139 @@ k3d cluster delete d-party
 | `502/521` が返る | nginx Pod がまだ Ready でない／Service 名ミス | `kubectl -n d-party get endpoints d-party-nginx` を確認 |
 | 拡張の version 判定で弾かれる | API `version/required` を満たさない | `helm upgrade --set config.CHROME_EXTENSION_REQUIRED_VERSION=...` で緩和 |
 
+
+---
+
+## 6. Argo CD でのローカル GitOps 検証
+
+dev container 上の k3d クラスタに **Argo CD** をインストールし、本 chart を
+`Application` として登録して **「git push → 自動 sync → ローリング更新」** の
+往復をローカルで検証します。本番（Pi 実機）でも同じ Application 定義をそのまま
+使えます。
+
+### 6.1 前提
+
+- セクション 5.2 と同じ手順で k3d クラスタと `d-party` Secret が用意済み
+- 後述する Application は GitHub の **feature ブランチ**を参照する想定
+  （Argo CD は `repoURL` を pull するため、ローカルファイルは見えない）
+
+### 6.2 Argo CD のインストール
+
+```bash
+# 1) Argo CD 本体（official manifest）
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl -n argocd rollout status deploy/argocd-server --timeout=5m
+
+# 2) サブモジュール fetch を無効化（このリポジトリは backend/chrome-extension/
+#    frontend を SSH サブモジュールで持つため、Argo CD repo-server が clone に
+#    失敗する。chart 描画にサブモジュールは不要なので無効化する）
+kubectl -n argocd set env deploy/argocd-repo-server ARGOCD_GIT_MODULES_ENABLED=false
+kubectl -n argocd rollout status deploy/argocd-repo-server --timeout=60s
+
+# 3) UI を見る場合（任意。CLI でも完結する）
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath='{.data.password}' | base64 -d ; echo
+kubectl -n argocd port-forward svc/argocd-server 8081:443
+# → https://localhost:8081  (user: admin)
+```
+
+### 6.3 Application 作成
+
+`deploy/argocd/application.example.yaml` を雛形に、ローカル検証用へ調整した
+Application を apply します。`feature/...` ブランチを参照、images をローカル
+import 済みのタグへ、Ingress は disable（k3d で `--disable=servicelb` 起動の
+ため LoadBalancer が割当たらず Argo CD が Unhealthy 扱いになる）に変更します。
+
+```bash
+cat <<'YAML' | kubectl apply -f -
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: d-party
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/d-party/d-party
+    targetRevision: feature/deploy-helm-gitops    # 任意の作業ブランチ
+    path: deploy/helm/d-party
+    helm:
+      releaseName: d-party
+      valuesObject:
+        config:
+          MY_DOMAIN: localhost
+        secret:
+          existingSecret: d-party-secret
+        # ローカルビルド済み image を使う場合のみ（k3d image import 済み想定）
+        django:
+          image:
+            repository: d-party/backend
+            tag: dev
+            pullPolicy: IfNotPresent
+        frontend:
+          image:
+            repository: d-party/frontend
+            tag: dev
+            pullPolicy: IfNotPresent
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: d-party
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+YAML
+
+# 同期状態を監視
+watch -n5 "kubectl -n argocd get application d-party \
+  -o jsonpath='{.status.sync.status}/{.status.health.status}{\"\\n\"}'"
+# 期待: Synced/Healthy
+```
+
+### 6.4 GitOps 往復の実証
+
+values を 1 行変えて push し、Argo CD が自動でローリング更新するのを観察します。
+
+```bash
+# 1) values 変更 → commit → push
+sed -i 's/gunicornWorkers: 2/gunicornWorkers: 3/' deploy/helm/d-party/values.yaml
+git commit -am "deploy: bump gunicornWorkers 2->3"
+git push
+
+# 2) Argo CD に手動 refresh を促す（既定 poll は 3 分）
+kubectl -n argocd patch application d-party --type merge \
+  -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"normal"}}}'
+
+# 3) Pod が入れ替わるのを観察
+kubectl -n d-party get pods -l app.kubernetes.io/component=django -w
+
+# 4) 反映確認（GUNICORN_CMD_ARGS に --workers 3 が入る）
+kubectl -n d-party get pod -l app.kubernetes.io/component=django \
+  -o jsonpath='{.items[0].spec.containers[0].env[?(@.name=="GUNICORN_CMD_ARGS")].value}{"\n"}'
+```
+
+`maxSurge=1 / maxUnavailable=0` と preStop の組み合わせで、HTTP は 0 失敗のまま
+新 Pod へ切り替わります（セクション 2 のグレースフル更新と同じ挙動）。
+
+### 6.5 後片付け
+
+```bash
+# Application 削除（finalizer で d-party ns のリソースもまとめて prune される）
+kubectl -n argocd delete application d-party
+
+# Argo CD ごと落とす場合
+kubectl delete ns argocd
+```
+
+### 6.6 既知の制約と回避（ローカル特有）
+
+| 事象 | 原因 | 回避 |
+|---|---|---|
+| `ComparisonError: Permission denied (publickey)` / `clone of git@github.com:d-party/backend.git failed` | repo-server がサブモジュールを SSH で clone しようとして失敗 | `kubectl -n argocd set env deploy/argocd-repo-server ARGOCD_GIT_MODULES_ENABLED=false` |
+| `waiting for healthy state of networking.k8s.io/Ingress/d-party` から進まない | k3d を `--disable=servicelb` で起動しているため `LoadBalancer` Service が pending、Ingress に IP が付かず Argo CD が Unhealthy 判定 | `ingress.enabled=false` のまま検証する（HTTP 検証は `kubectl port-forward svc/d-party-nginx 8080:80` で代替）。本番 Pi では `--disable=servicelb` を外す |
+| `valuesObject` を patch しても古い render が残り `OutOfSync` が振動する | 進行中の sync 操作が古い snapshot で動いている | `kubectl -n argocd patch application d-party --type merge -p '{"operation":null}'` で in-flight op をクリア → `argocd.argoproj.io/refresh: hard` で再 sync |
+| `applicationsets.argoproj.io` CRD 適用時に `Too long: may not be more than 262144 bytes` の警告 | `kubectl apply` の annotation 上限に当たるだけ。`Application` CRD は別物で問題なし | 単一 `Application` 運用では無視可。`ApplicationSet` を使う場合は `kubectl apply --server-side -f ...` |
+| `helm uninstall` で Argo CD 管理下の release を消すと再生成される | `syncPolicy.automated.selfHeal: true` のため。意図的に止めるには Application 自体を delete | 一時的に止めたければ `kubectl -n argocd patch application d-party --type merge -p '{"spec":{"syncPolicy":{"automated":null}}}'` |
