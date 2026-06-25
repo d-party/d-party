@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "d-party.django.fullname" . }}
+  labels:
+    {{- include "d-party.labels" . | nindent 4 }}
+    app.kubernetes.io/component: django
+spec:
+  # replicas は 1 を維持する（values.django.replicaCount のコメント参照）。
+  replicas: {{ .Values.django.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ .Values.django.strategy.maxSurge }}
+      maxUnavailable: {{ .Values.django.strategy.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "d-party.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: django
+  template:
+    metadata:
+      labels:
+        {{- include "d-party.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: django
+      annotations:
+        # config/secret 変更時に Pod を確実に巻き直す。
+        checksum/config: {{ include (print $.Template.BasePath "/configmap-env.yaml") . | sha256sum }}
+    spec:
+      {{- with (include "d-party.priorityClassName.app" .) }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # ── グレースフル更新の要 ──
+      # SIGTERM → preStop で readiness を落として nginx の振り分けから外し、
+      # gunicorn の graceful-timeout で既存 WebSocket を見送る猶予を確保する。
+      terminationGracePeriodSeconds: {{ .Values.django.terminationGracePeriodSeconds }}
+      containers:
+        - name: django
+          image: "{{ .Values.django.image.repository }}:{{ .Values.django.image.tag }}"
+          imagePullPolicy: {{ .Values.django.image.pullPolicy }}
+          # 既定 CMD(sh entrypoint.sh) をそのまま使う（cron 登録 →
+          # close_active_sessions → gunicorn）。backend は改変しない。
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: {{ include "d-party.configName" . }}
+            - secretRef:
+                name: {{ include "d-party.secretName" . }}
+          env:
+            {{- include "d-party.connectionEnv" . | nindent 12 }}
+            # gunicorn.conf.py を改変せず graceful-timeout / timeout / workers を上書きする。
+            - name: GUNICORN_CMD_ARGS
+              value: >-
+                --graceful-timeout {{ .Values.django.gunicornGracefulTimeout }}
+                --timeout {{ .Values.django.gunicornGracefulTimeout }}
+                {{- if gt (int .Values.django.gunicornWorkers) 0 }}
+                --workers {{ .Values.django.gunicornWorkers }}
+                {{- end }}
+          lifecycle:
+            preStop:
+              exec:
+                # readiness 失効を nginx/endpoints へ伝播させてから gunicorn に
+                # SIGTERM が届くまでの猶予。新規 WS を旧 Pod へ流さない。
+                command: ["sh", "-c", "sleep {{ .Values.django.preStopSleepSeconds }}"]
+          # ALLOWED_HOSTS を避けるため HTTP ではなく TCP で生死判定する
+          # （compose の healthcheck と同方針）。
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            {{- toYaml .Values.django.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "d-party.django.fullname" . }}
+  labels:
+    {{- include "d-party.labels" . | nindent 4 }}
+    app.kubernetes.io/component: django
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "d-party.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: django
+  ports:
+    - name: http
+      port: {{ .Values.django.service.port }}
+      targetPort: http

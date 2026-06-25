@@ -1,0 +1,20 @@
+d-party をデプロイしました（release: {{ .Release.Name }} / namespace: {{ .Release.Namespace }}）。
+
+エントリポイントはクラスタ内の nginx Service（HTTP）です:
+
+  {{ include "d-party.nginx.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.nginx.service.port }}
+
+TLS とドメイン解決はこの chart の範囲外です。Cloudflare Tunnel（cloudflared）の
+ingress を上記 Service に向けてください（複数ドメイン/他サービスの振り分けは
+クラスタ運用リポジトリ側で管理します）。
+
+動作確認:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "d-party.nginx.fullname" . }} 8080:{{ .Values.nginx.service.port }}
+  # → http://localhost:8080/ （フロント）, http://localhost:8080/api/... （API）
+
+{{- if not .Values.secret.existingSecret }}
+
+[警告] secret.existingSecret 未指定のため、chart が SECRET_KEY / POSTGRES_PASSWORD を
+平文 values から生成しました。本番では SealedSecrets / SOPS 等の既存 Secret を
+secret.existingSecret に渡し、平文を Git に置かないでください。
+{{- end }}

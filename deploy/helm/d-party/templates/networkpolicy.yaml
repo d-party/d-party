@@ -1,0 +1,51 @@
+{{- if .Values.networkPolicy.enabled -}}
+# postgres / redis への ingress を「同一 release の Pod のみ」に絞る。
+# from.podSelector は同一 namespace 内でマッチするため、他 namespace / 他サービス
+# からの接続は（policyType: Ingress を当てた時点で）既定遮断される。
+# 許可されるのは django / migrate Job など selectorLabels を持つ Pod。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "d-party.postgres.fullname" . }}
+  labels:
+    {{- include "d-party.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "d-party.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "d-party.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.postgres.service.port }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "d-party.redis.fullname" . }}
+  labels:
+    {{- include "d-party.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "d-party.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "d-party.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.redis.service.port }}
+{{- end -}}

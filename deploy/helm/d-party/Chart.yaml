@@ -1,0 +1,28 @@
+apiVersion: v2
+name: d-party
+description: >-
+  d-party (dアニメストア「同時視聴」) のサーバ一式 — nginx(HTTP ルーティング) ·
+  Django(ASGI/Channels) · Next.js フロント · PostgreSQL · Redis。
+  TLS 終端とドメイン(複数ドメイン含む)・cloudflared は本 chart の範囲外で、
+  クラスタ運用リポジトリ側で受け持つ前提（本 chart は単一サービスの再利用可能な
+  デプロイ単位）。
+type: application
+
+# chart 自体のバージョン。テンプレート/values 構造を変えたら上げる。
+version: 0.1.0
+
+# 内包するアプリ(d-party)の代表バージョン。イメージ tag とは独立。
+appVersion: "1.0.0"
+
+keywords:
+  - d-party
+  - django
+  - channels
+  - websocket
+  - k3s
+home: https://github.com/d-party
+sources:
+  - https://github.com/d-party/backend
+  - https://github.com/d-party/frontend
+maintainers:
+  - name: d-party

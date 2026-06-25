@@ -1,0 +1,55 @@
+{{- if .Values.migrate.enabled -}}
+# DB マイグレーションは Helm hook（post-install / post-upgrade）で 1 回だけ実行する。
+# 各 django Pod で migrate を走らせない（並行 migrate を避ける）。
+# post-install にするのは、同 chart に同梱の postgres StatefulSet が起動した後でないと
+# DB Service が解決できないため。
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "d-party.fullname" . }}-migrate-{{ .Release.Revision }}
+  labels:
+    {{- include "d-party.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migrate.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        {{- include "d-party.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      {{- with (include "d-party.priorityClassName.app" .) }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migrate
+          image: "{{ .Values.django.image.repository }}:{{ .Values.django.image.tag }}"
+          imagePullPolicy: {{ .Values.django.image.pullPolicy }}
+          command: ["python", "manage.py", "migrate", "--noinput"]
+          envFrom:
+            - secretRef:
+                name: {{ include "d-party.secretName" . }}
+          env:
+            {{- include "d-party.connectionEnv" . | nindent 12 }}
+            {{- range $k, $v := .Values.config }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+{{- end -}}

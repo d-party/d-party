@@ -1,0 +1,71 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# backend イメージを「クラスタ内」でビルドし、ローカルレジストリへ push する Job。
+#
+# - moby/buildkit（rootless / daemonless）で、上流リポジトリの Git context から直接ビルド。
+#   ソースの mount 不要。RPi(arm64) 上でネイティブビルド（QEMU 不要）。
+# - push 先は in-cluster の registry（HTTP / insecure）。
+#
+# 実行（再ビルドのたびに新しい Job を作る）:
+#   kubectl create -f deploy/build/buildkit-backend-job.yaml
+#   kubectl -n registry logs -f job/<生成された名前>
+#
+# 注意: ノードで user namespace が有効である必要がある（Ubuntu 24.04 等では
+#   kernel.apparmor_restrict_unprivileged_userns=0 / user.max_user_namespaces>0）。
+#   詳細は deploy/README.md「クラスタ内ビルド」を参照。
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: build-backend-
+  namespace: registry
+  labels:
+    app.kubernetes.io/part-of: d-party
+    app.kubernetes.io/component: build
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: d-party
+        app.kubernetes.io/component: build
+    spec:
+      restartPolicy: Never
+      # arm64 ノードでネイティブビルドする。
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+        - name: buildkit
+          # 再現性のためタグは固定運用を推奨（例: moby/buildkit:v0.x.y-rootless）。
+          image: moby/buildkit:rootless
+          env:
+            - name: BUILDKITD_FLAGS
+              value: --oci-worker-no-process-sandbox
+          command:
+            - buildctl-daemonless.sh
+          args:
+            - build
+            - --frontend
+            - dockerfile.v0
+            # 上流リポジトリの Git context。#main は固定タグ/SHA に差し替え可。
+            - --opt
+            - context=https://github.com/d-party/backend.git#main
+            - --opt
+            - filename=Dockerfile
+            - --opt
+            - platform=linux/arm64
+            - --output
+            - type=image,name=registry.registry.svc.cluster.local:5000/backend:latest,push=true,registry.insecure=true
+          securityContext:
+            seccompProfile:
+              type: Unconfined
+            appArmorProfile:
+              type: Unconfined
+            runAsUser: 1000
+            runAsGroup: 1000
+          volumeMounts:
+            - name: buildkitd
+              mountPath: /home/user/.local/share/buildkit
+      volumes:
+        - name: buildkitd
+          emptyDir: {}

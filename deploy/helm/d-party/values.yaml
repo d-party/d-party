@@ -1,0 +1,223 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# d-party Helm values — 単一サービス（複数ドメイン非考慮）のクラスタ設定。
+#
+# ドメイン解決 / TLS は Cloudflare Tunnel（cloudflared）がエッジで行う前提のため、
+# 本 chart はクラスタ内 HTTP のみを扱う。cloudflared は nginx Service(:80) を
+# ingress 先に指すだけでよい（その設定は本リポジトリの範囲外＝運用リポジトリ側）。
+#
+# 機微値（SECRET_KEY / DB パスワード）は values に直接書かず、
+#   1) existingSecret に既存 Secret 名を渡す（推奨。SealedSecrets/SOPS 等）
+#   2) もしくは secret.* に平文を入れて chart に生成させる（dev 用）
+# のいずれかを使う。
+# ─────────────────────────────────────────────────────────────────────────────
+
+nameOverride: ""
+fullnameOverride: ""
+
+# 共有の非機微 env（settings.py / nginx upstream 解決が参照）。
+config:
+  DEBUG: "0"
+  # cloudflared が振り分けるホスト名。ALLOWED_HOSTS / CSRF に使われる。
+  MY_DOMAIN: "d-party.example"
+  LANGUAGE_CODE: "ja"
+  TIME_ZONE: "Asia/Tokyo"
+  TZ: "Asia/Tokyo"
+  D_ANIME_STORE_DOMAIN: "animestore.docomo.ne.jp"
+  CHROME_EXTENSION_REQUIRED_VERSION: "1.0.0"
+  DATABASE_ENGINE: "django_prometheus.db.backends.postgresql"
+  # 保持期間クリーンアップ（streamer/cron.py）のしきい値。
+  LOGICAL_DIVIDE_DAY: "3"
+  HARD_DIVIDE_DAY: "365"
+  REACTION_HARD_DIVIDE_DAY: "90"
+
+# 機微値。existingSecret を指定した場合 secret.* は無視される。
+secret:
+  # 既存 Secret 名（SEALEDSECRET 等で別管理する場合に推奨）。
+  # 次のキーを含むこと: SECRET_KEY, POSTGRES_PASSWORD
+  existingSecret: ""
+  # existingSecret 未指定時に chart が生成する平文（dev 用途のみ）。
+  SECRET_KEY: "change-me-please"
+  POSTGRES_PASSWORD: "change-me-please"
+
+# ── Django (ASGI / Channels) ────────────────────────────────────────────────
+django:
+  image:
+    # クラスタ内ローカルレジストリ（deploy/platform/ の共有レジストリへ deploy/build/ で push）。
+    repository: registry.registry.svc.cluster.local:5000/backend
+    tag: "latest"
+    # ローカルレジストリの :latest は更新されるため、毎回 pull する。
+    pullPolicy: Always
+  # WebSocket セッション状態はプロセス内に保持され、close_active_sessions が
+  # 起動時に「全 alive 行」を論理削除するため、レプリカは 1 を維持する
+  # （>1 にすると起動した片方が他方の生きたセッション統計を消す）。
+  # 詳細は deploy/README.md「グレースフル更新」を参照。
+  replicaCount: 1
+  service:
+    port: 8000
+  # グレースフル更新: 新 Pod が Ready になってから旧 Pod を落とす。
+  strategy:
+    maxSurge: 1
+    maxUnavailable: 0
+  # SIGTERM 後、既存 WebSocket をドレインするための猶予。終了時に nginx が
+  # 当該 Pod へ新規接続を流さなくなる時間 + gunicorn graceful を見込む。
+  terminationGracePeriodSeconds: 120
+  # preStop: readiness を落としてから graceful させるためのスリープ秒。
+  preStopSleepSeconds: 5
+  # gunicorn の graceful-timeout / timeout を env で上書き（backend を改変しない）。
+  gunicornGracefulTimeout: 110
+  # gunicorn の workers 数を env で上書き（backend の gunicorn.conf.py は
+  # multiprocessing.cpu_count()+1 を使うため、多 CPU ホストで OOM になりやすい）。
+  # 0 を指定すると --workers を付与せず gunicorn.conf.py の既定に従う。
+  gunicornWorkers: 3
+  resources:
+    requests:
+      cpu: 150m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+# ── マイグレーション（Helm hook Job: post-install/post-upgrade）───────────────
+migrate:
+  enabled: true
+  # backend イメージで migrate を実行（django.image を流用）。
+  backoffLimit: 2
+
+# ── Next.js フロントエンド ───────────────────────────────────────────────────
+frontend:
+  image:
+    repository: registry.registry.svc.cluster.local:5000/frontend
+    tag: "latest"
+    pullPolicy: Always
+  # RPi クラスタで他サービスと相乗りする前提のため既定 1。可用性が要るなら上げる。
+  replicaCount: 1
+  service:
+    port: 3000
+  strategy:
+    maxSurge: 1
+    maxUnavailable: 0
+  terminationGracePeriodSeconds: 30
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+# ── nginx（HTTP ルーティング専用。TLS は cloudflared が終端）────────────────
+nginx:
+  image:
+    repository: nginx
+    tag: "1.27"
+    pullPolicy: IfNotPresent
+  # RPi クラスタで他サービスと相乗りする前提のため既定 1。可用性が要るなら上げる。
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 80
+  strategy:
+    maxSurge: 1
+    maxUnavailable: 0
+  # nginx -s quit による graceful 終了の猶予。
+  terminationGracePeriodSeconds: 60
+  preStopSleepSeconds: 5
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+# ── PostgreSQL（公式イメージ + 自前 StatefulSet。Bitnami chart は使わない）──
+postgres:
+  image:
+    repository: postgres
+    tag: "16"
+    pullPolicy: IfNotPresent
+  auth:
+    database: d_party
+    username: d_party
+  service:
+    port: 5432
+  persistence:
+    enabled: true
+    # k3s 同梱 local-path-provisioner。別の StorageClass を使う場合は上書き。
+    storageClass: "local-path"
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+# ── Redis（Channels レイヤ / キャッシュ。公式イメージ + 自前 StatefulSet）────
+redis:
+  image:
+    repository: redis
+    tag: "7.4"
+    pullPolicy: IfNotPresent
+  service:
+    port: 6379
+  persistence:
+    enabled: false
+    storageClass: "local-path"
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 192Mi
+
+# ── Ingress（既定 OFF。ドメイン/複数ドメインは運用リポジトリ側で扱う）────────
+# cloudflared を使う場合、Ingress は不要（tunnel が直接 nginx Service を指す）。
+# クラスタ内 Ingress を使いたいときのみ有効化する。host はここでは決め打ちしない。
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  # 例:
+  #   - host: chart-consumer-decides.example
+  #     paths:
+  #       - path: /
+  #         pathType: Prefix
+  tls: []
+
+# ── NetworkPolicy（DB/Redis をこの release 内からのみ到達可能にする）──────────
+# 他サービスと同居するクラスタでは、postgres/redis が全 namespace から素通しで
+# 届くのを防ぐ。policyType=Ingress を当てた時点で、同一 release のラベルを持つ
+# Pod（django / migrate Job など）以外からの ingress は既定で遮断される。
+#
+# 注意: k3s 同梱の flannel は NetworkPolicy を強制しない。k3s を
+#   `--flannel-backend=...` 既定のまま使う場合でも、k3s v1.21+ は kube-router
+#   ベースの NetworkPolicy controller を内蔵しており有効。無効化している
+#   (`--disable-network-policy`) クラスタでは別途 CNI が必要。
+networkPolicy:
+  enabled: true
+
+# ── PriorityClass（メモリ逼迫時に DB/Redis を優先して残す）────────────────────
+# 複数サービスが同居するクラスタでは、騒がしい隣人のせいで DB が evict される
+# のを防ぐため stateful を app より高い優先度にする。
+#
+# マルチサービス運用では PriorityClass はクラスタ共有が望ましい。既に共有の
+# PriorityClass がある場合は create=false にし、stateful.name / app.name に
+# 既存名を指定する（このとき .value は無視され、オブジェクトも生成しない）。
+priorityClass:
+  # true: 下記 2 つの PriorityClass を chart が生成して割り当てる。
+  # false: 既存の PriorityClass 名を参照するだけ（name が空なら未指定）。
+  create: true
+  # postgres / redis 用（高め）。
+  stateful:
+    name: d-party-stateful
+    value: 100000
+  # django / frontend / nginx / migrate 用（低め）。
+  app:
+    name: d-party-app
+    value: 10000
+
+# 任意の nodeSelector / tolerations（RPi のラベルでスケジュール先を絞る場合）。
+nodeSelector: {}
+tolerations: []
+affinity: {}
+imagePullSecrets: []

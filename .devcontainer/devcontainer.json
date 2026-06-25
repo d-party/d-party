@@ -21,7 +21,14 @@
       "installDockerComposeSwitch": true,
       "version": "latest",
       "dockerDashComposeVersion": "v2"
-    }
+    },
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "latest",
+      "helm": "latest",
+      "minikube": "none"
+    },
+    "ghcr.io/devcontainers-extra/features/cloudflared:1": {},
+    "ghcr.io/rio/features/k3d:1": {}
   },
   "remoteEnv": {
     "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
@@ -35,6 +42,7 @@
         "ms-python.mypy-type-checker",
         "ms-azuretools.vscode-docker",
         "redhat.vscode-yaml",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
         "tamasfe.even-better-toml",
         "anthropic.claude-code"
       ],
@@ -85,16 +93,49 @@
       }
     }
   },
-  "forwardPorts": [80, 443, 5432, 6379, 8000, 8080, 9090, 9100],
+  "forwardPorts": [
+    80,
+    443,
+    5432,
+    6379,
+    8000,
+    8080,
+    9090,
+    9100
+  ],
   "portsAttributes": {
-    "80": { "label": "Nginx (App)", "onAutoForward": "silent" },
-    "443": { "label": "Nginx (HTTPS)", "onAutoForward": "silent" },
-    "5432": { "label": "PostgreSQL", "onAutoForward": "silent" },
-    "6379": { "label": "Redis", "onAutoForward": "silent" },
-    "8000": { "label": "Django", "onAutoForward": "silent" },
-    "8080": { "label": "Adminer", "onAutoForward": "silent" },
-    "9090": { "label": "Prometheus", "onAutoForward": "silent" },
-    "9100": { "label": "node-exporter", "onAutoForward": "silent" }
+    "80": {
+      "label": "Nginx (App)",
+      "onAutoForward": "silent"
+    },
+    "443": {
+      "label": "Nginx (HTTPS)",
+      "onAutoForward": "silent"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent"
+    },
+    "8000": {
+      "label": "Django",
+      "onAutoForward": "silent"
+    },
+    "8080": {
+      "label": "Adminer",
+      "onAutoForward": "silent"
+    },
+    "9090": {
+      "label": "Prometheus",
+      "onAutoForward": "silent"
+    },
+    "9100": {
+      "label": "node-exporter",
+      "onAutoForward": "silent"
+    }
   },
   "otherPortsAttributes": {
     "onAutoForward": "silent"

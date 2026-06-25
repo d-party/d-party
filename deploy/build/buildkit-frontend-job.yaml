@@ -1,0 +1,70 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# frontend イメージを「クラスタ内」でビルドし、ローカルレジストリへ push する Job。
+#
+# frontend は NEXT_PUBLIC_* を build 時に焼き込む（src/infrastructure/env.ts）。
+# 公開ドメイン（cloudflared が終端する MY_DOMAIN）に合わせて build-arg を渡すこと。
+#
+# 実行:
+#   kubectl create -f deploy/build/buildkit-frontend-job.yaml
+#   kubectl -n registry logs -f job/<生成された名前>
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: build-frontend-
+  namespace: registry
+  labels:
+    app.kubernetes.io/part-of: d-party
+    app.kubernetes.io/component: build
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: d-party
+        app.kubernetes.io/component: build
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+        - name: buildkit
+          image: moby/buildkit:rootless
+          env:
+            - name: BUILDKITD_FLAGS
+              value: --oci-worker-no-process-sandbox
+          command:
+            - buildctl-daemonless.sh
+          args:
+            - build
+            - --frontend
+            - dockerfile.v0
+            - --opt
+            - context=https://github.com/d-party/frontend.git#main
+            - --opt
+            - filename=Dockerfile
+            - --opt
+            - platform=linux/arm64
+            # ↓ 公開ドメインに合わせて編集する（docker-compose.prod.yml と同じ値）。
+            - --opt
+            - build-arg:NEXT_PUBLIC_BACKEND_PROTOCOL=https://
+            - --opt
+            - build-arg:NEXT_PUBLIC_BACKEND_HOST=d-party.example/
+            - --opt
+            - build-arg:NEXT_PUBLIC_WEBSOCKET_PROTOCOL=wss://
+            - --output
+            - type=image,name=registry.registry.svc.cluster.local:5000/frontend:latest,push=true,registry.insecure=true
+          securityContext:
+            seccompProfile:
+              type: Unconfined
+            appArmorProfile:
+              type: Unconfined
+            runAsUser: 1000
+            runAsGroup: 1000
+          volumeMounts:
+            - name: buildkitd
+              mountPath: /home/user/.local/share/buildkit
+      volumes:
+        - name: buildkitd
+          emptyDir: {}

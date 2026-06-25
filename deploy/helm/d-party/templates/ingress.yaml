@@ -1,0 +1,38 @@
+{{- if .Values.ingress.enabled -}}
+# 既定では無効。cloudflared を使う場合は不要（tunnel が nginx Service を直接指す）。
+# ドメイン（複数ドメイン含む）は本 chart では決め打ちせず、values.ingress.hosts で
+# 与えられた分だけ nginx Service の :80 へ流す。
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "d-party.fullname" . }}
+  labels:
+    {{- include "d-party.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "d-party.nginx.fullname" $ }}
+                port:
+                  number: {{ $.Values.nginx.service.port }}
+          {{- end }}
+    {{- end }}
+{{- end -}}

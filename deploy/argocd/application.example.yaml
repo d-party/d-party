@@ -1,0 +1,58 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Argo CD Application（参照例）
+#
+# これは「CD の入口」のサンプルです。実体はクラスタ運用リポジトリ側に置き、
+# ドメインや複数サービスの差異は values の上書きで吸収する想定です（本 chart 自体は
+# 単一ドメイン非考慮のまま再利用する）。
+#
+# 適用:  kubectl apply -n argocd -f deploy/argocd/application.example.yaml
+# 前提:  Argo CD 本体はクラスタにインストール済み（運用リポジトリで管理）。
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: d-party
+  namespace: argocd
+  # イメージ tag の自動追従を使う場合（任意）。argocd-image-updater 導入時のみ有効。
+  # registry 上の semver 最新を検出し、Git(write-back) もしくは Application を更新する。
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: >-
+      backend=ghcr.io/d-party/backend,
+      frontend=ghcr.io/d-party/frontend
+    argocd-image-updater.argoproj.io/backend.update-strategy: semver
+    argocd-image-updater.argoproj.io/frontend.update-strategy: semver
+    argocd-image-updater.argoproj.io/backend.helm.image-tag: django.image.tag
+    argocd-image-updater.argoproj.io/frontend.helm.image-tag: frontend.image.tag
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/d-party/d-party
+    targetRevision: main
+    path: deploy/helm/d-party
+    helm:
+      releaseName: d-party
+      # ドメイン・機微値はここ（運用リポジトリ）で上書きする。
+      # 例: parameters で MY_DOMAIN を、secret は別途 SealedSecret を渡す。
+      valuesObject:
+        config:
+          MY_DOMAIN: d-party.example
+        secret:
+          existingSecret: d-party-secret
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: d-party
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m

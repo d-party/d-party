@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "d-party.nginx.fullname" . }}
+  labels:
+    {{- include "d-party.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nginx
+spec:
+  replicas: {{ .Values.nginx.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ .Values.nginx.strategy.maxSurge }}
+      maxUnavailable: {{ .Values.nginx.strategy.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "d-party.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: nginx
+  template:
+    metadata:
+      labels:
+        {{- include "d-party.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: nginx
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/nginx-configmap.yaml") . | sha256sum }}
+    spec:
+      {{- with (include "d-party.priorityClassName.app" .) }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.nginx.terminationGracePeriodSeconds }}
+      # backend イメージで collectstatic を実行し、emptyDir に出力。
+      # 同 Pod 内の nginx がそれを /static として配信する（クロス Pod 共有を回避）。
+      initContainers:
+        - name: collectstatic
+          image: "{{ .Values.django.image.repository }}:{{ .Values.django.image.tag }}"
+          imagePullPolicy: {{ .Values.django.image.pullPolicy }}
+          command: ["python", "manage.py", "collectstatic", "--noinput"]
+          envFrom:
+            - configMapRef:
+                name: {{ include "d-party.configName" . }}
+            - secretRef:
+                name: {{ include "d-party.secretName" . }}
+          env:
+            {{- include "d-party.connectionEnv" . | nindent 12 }}
+          volumeMounts:
+            - name: static
+              mountPath: /usr/src/app/static
+      containers:
+        - name: nginx
+          image: "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}"
+          imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+          lifecycle:
+            preStop:
+              exec:
+                # readiness 失効の伝播待ち → nginx を graceful 停止（既存接続を捌き切る）。
+                command: ["/bin/sh", "-c", "sleep {{ .Values.nginx.preStopSleepSeconds }}; nginx -s quit"]
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml .Values.nginx.resources | nindent 12 }}
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+            - name: static
+              mountPath: /static
+              readOnly: true
+      volumes:
+        - name: nginx-conf
+          configMap:
+            name: {{ include "d-party.nginx.fullname" . }}
+        - name: static
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "d-party.nginx.fullname" . }}
+  labels:
+    {{- include "d-party.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nginx
+spec:
+  type: {{ .Values.nginx.service.type }}
+  selector:
+    {{- include "d-party.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: nginx
+  ports:
+    - name: http
+      port: {{ .Values.nginx.service.port }}
+      targetPort: http

@@ -1,0 +1,29 @@
+{{- if .Values.priorityClass.create -}}
+# PriorityClass はクラスタスコープ（namespace 非依存）。複数サービスが同居する
+# クラスタでは共有が望ましいので、本オブジェクトは Helm のリリース削除では消さず、
+# 「最初に入れた release が所有する共有資産」として扱う（resource-policy: keep）。
+# 既に共有の PriorityClass を別管理している場合は priorityClass.create=false にする。
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ .Values.priorityClass.stateful.name }}
+  labels:
+    {{- include "d-party.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+value: {{ .Values.priorityClass.stateful.value }}
+globalDefault: false
+description: "d-party stateful workloads (postgres / redis). Higher priority to survive node memory pressure."
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ .Values.priorityClass.app.name }}
+  labels:
+    {{- include "d-party.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+value: {{ .Values.priorityClass.app.value }}
+globalDefault: false
+description: "d-party stateless workloads (django / frontend / nginx / migrate)."
+{{- end -}}
