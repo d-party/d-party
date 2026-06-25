@@ -26,6 +26,9 @@ spec:
         # config/secret 変更時に Pod を確実に巻き直す。
         checksum/config: {{ include (print $.Template.BasePath "/configmap-env.yaml") . | sha256sum }}
     spec:
+      {{- with (include "d-party.priorityClassName.app" .) }}
+      priorityClassName: {{ . }}
+      {{- end }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

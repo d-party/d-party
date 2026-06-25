@@ -24,6 +24,9 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/nginx-configmap.yaml") . | sha256sum }}
     spec:
+      {{- with (include "d-party.priorityClassName.app" .) }}
+      priorityClassName: {{ . }}
+      {{- end }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

@@ -42,7 +42,7 @@ secret:
 # ── Django (ASGI / Channels) ────────────────────────────────────────────────
 django:
   image:
-    # クラスタ内ローカルレジストリ（deploy/registry/ + deploy/build/ で push）。
+    # クラスタ内ローカルレジストリ（deploy/platform/ の共有レジストリへ deploy/build/ で push）。
     repository: registry.registry.svc.cluster.local:5000/backend
     tag: "latest"
     # ローカルレジストリの :latest は更新されるため、毎回 pull する。
@@ -76,7 +76,7 @@ django:
     limits:
       memory: 512Mi
 
-# ── マイグレーション（Helm hook Job: pre-install/pre-upgrade）─────────────────
+# ── マイグレーション（Helm hook Job: post-install/post-upgrade）───────────────
 migrate:
   enabled: true
   # backend イメージで migrate を実行（django.image を流用）。
@@ -88,7 +88,8 @@ frontend:
     repository: registry.registry.svc.cluster.local:5000/frontend
     tag: "latest"
     pullPolicy: Always
-  replicaCount: 2
+  # RPi クラスタで他サービスと相乗りする前提のため既定 1。可用性が要るなら上げる。
+  replicaCount: 1
   service:
     port: 3000
   strategy:
@@ -108,7 +109,8 @@ nginx:
     repository: nginx
     tag: "1.27"
     pullPolicy: IfNotPresent
-  replicaCount: 2
+  # RPi クラスタで他サービスと相乗りする前提のため既定 1。可用性が要るなら上げる。
+  replicaCount: 1
   service:
     type: ClusterIP
     port: 80
@@ -181,6 +183,38 @@ ingress:
   #       - path: /
   #         pathType: Prefix
   tls: []
+
+# ── NetworkPolicy（DB/Redis をこの release 内からのみ到達可能にする）──────────
+# 他サービスと同居するクラスタでは、postgres/redis が全 namespace から素通しで
+# 届くのを防ぐ。policyType=Ingress を当てた時点で、同一 release のラベルを持つ
+# Pod（django / migrate Job など）以外からの ingress は既定で遮断される。
+#
+# 注意: k3s 同梱の flannel は NetworkPolicy を強制しない。k3s を
+#   `--flannel-backend=...` 既定のまま使う場合でも、k3s v1.21+ は kube-router
+#   ベースの NetworkPolicy controller を内蔵しており有効。無効化している
+#   (`--disable-network-policy`) クラスタでは別途 CNI が必要。
+networkPolicy:
+  enabled: true
+
+# ── PriorityClass（メモリ逼迫時に DB/Redis を優先して残す）────────────────────
+# 複数サービスが同居するクラスタでは、騒がしい隣人のせいで DB が evict される
+# のを防ぐため stateful を app より高い優先度にする。
+#
+# マルチサービス運用では PriorityClass はクラスタ共有が望ましい。既に共有の
+# PriorityClass がある場合は create=false にし、stateful.name / app.name に
+# 既存名を指定する（このとき .value は無視され、オブジェクトも生成しない）。
+priorityClass:
+  # true: 下記 2 つの PriorityClass を chart が生成して割り当てる。
+  # false: 既存の PriorityClass 名を参照するだけ（name が空なら未指定）。
+  create: true
+  # postgres / redis 用（高め）。
+  stateful:
+    name: d-party-stateful
+    value: 100000
+  # django / frontend / nginx / migrate 用（低め）。
+  app:
+    name: d-party-app
+    value: 10000
 
 # 任意の nodeSelector / tolerations（RPi のラベルでスケジュール先を絞る場合）。
 nodeSelector: {}

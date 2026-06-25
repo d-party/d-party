@@ -5,11 +5,18 @@
 
 設計方針（重要）:
 
-- このリポジトリが持つのは **「単一サービス d-party・複数ドメイン非考慮」のクラスタ設定だけ**
-  です（Helm chart 1 本）。
+- このリポジトリが持つのは **d-party アプリ単体のクラスタ設定**です（Helm chart 1 本）。
+  d-party は自分専用の postgres / redis を chart に同梱し、**他サービスとは共有しません**
+  （別サービスが DB/Redis を要るなら、そのサービス側で別途立てる）。
 - **ドメイン解決と TLS は Cloudflare Tunnel（cloudflared）がエッジで終端**します。
-  複数ドメインの割り当て・cloudflared・他サービスとの共存・Argo CD 本体の導入は
-  **別の「クラスタ運用リポジトリ」**で扱います（後述）。
+  cloudflared は各サービスの `nginx` Service をホスト名で振り分けるため、**同じ端末で
+  d-party 以外のサービスも同居**できます（マルチテナント）。cloudflared 本体・ドメイン
+  割り当て・Argo CD 本体の導入は **別の「クラスタ運用リポジトリ」**で扱います（後述）。
+- **クラスタ共有の基盤（ローカルレジストリ＋ノードの containerd 設定）は
+  [`platform/`](platform/README.md) に分離**しています。これは d-party 専用ではなく、
+  同居する他サービスからも共用される singleton です（理想は別リポジトリへ切り出し）。
+- DB/Redis は **NetworkPolicy で同 release 内からのみ到達可能**にし、stateful には
+  **PriorityClass** を当てて、同居サービスのメモリ逼迫時にも DB が evict されにくくします。
 - WebSocket を切らさないために **グレースフルなローリング更新**を前提に組んでいます。
 - **CD は Argo CD（GitOps）**。運用リポジトリの `Application` がこの chart を参照します。
 
@@ -17,13 +24,14 @@
 deploy/
   helm/d-party/              ← d-party 単体の Helm chart（このリポジトリの本体）
     Chart.yaml values.yaml
-    templates/               nginx · django · frontend · postgres · redis · migrate(hook) · ingress(任意)
-  registry/
-    registry.yaml            ← クラスタ内ローカルレジストリ（registry:2）
+    templates/               nginx · django · frontend · postgres · redis · migrate(hook)
+                             · networkpolicy · priorityclass · ingress(任意)
+  platform/                  ← クラスタ共有の基盤（d-party 専用ではない。詳細は platform/README.md）
+    registry.yaml            ← クラスタ内ローカルレジストリ（registry:2）＋ NodePort
     k3s-registries.yaml      ← ノードの /etc/rancher/k3s/registries.yaml スニペット
   build/
-    buildkit-backend-job.yaml   ← クラスタ内ビルド Job（backend / rootless BuildKit）
-    buildkit-frontend-job.yaml  ← クラスタ内ビルド Job（frontend）
+    buildkit-backend-job.yaml   ← d-party 固有: backend を共有レジストリへ push する Job
+    buildkit-frontend-job.yaml  ← d-party 固有: frontend を共有レジストリへ push する Job
   argocd/
     application.example.yaml ← CD の入口サンプル（実体は運用リポジトリへ）
   README.md                  ← 本書
@@ -187,11 +195,11 @@ flowchart LR
 #### 手順
 
 ```bash
-# 1) レジストリを 1 回だけ用意（運用リポジトリ管理でも可）
-kubectl apply -f deploy/registry/registry.yaml
+# 1) 共有レジストリを 1 回だけ用意（クラスタ共有基盤。詳細は deploy/platform/README.md）
+kubectl apply -f deploy/platform/registry.yaml
 
 # 2) 全ノードに registries.yaml を配置して k3s を再起動（1 回だけ）
-sudo cp deploy/registry/k3s-registries.yaml /etc/rancher/k3s/registries.yaml
+sudo cp deploy/platform/k3s-registries.yaml /etc/rancher/k3s/registries.yaml
 sudo systemctl restart k3s          # server ノード
 sudo systemctl restart k3s-agent    # agent(worker) ノード
 

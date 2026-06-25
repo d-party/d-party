@@ -6,6 +6,7 @@
     "ms-python.mypy-type-checker",
     "ms-azuretools.vscode-docker",
     "redhat.vscode-yaml",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
     "tamasfe.even-better-toml",
     "anthropic.claude-code"
   ]

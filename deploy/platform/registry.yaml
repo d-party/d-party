@@ -4,7 +4,7 @@
 # in-cluster ビルド（deploy/build/*）の push 先であり、k3s 各ノードの pull 元。
 # - in-cluster からの push: Service の cluster DNS 名で直接到達（HTTP / insecure）。
 # - ノード(containerd)からの pull: NodePort 経由。registries.yaml で
-#   「同じイメージ名 → NodePort エンドポイント」へミラーする（deploy/registry/k3s-registries.yaml）。
+#   「同じイメージ名 → NodePort エンドポイント」へミラーする（deploy/platform/k3s-registries.yaml）。
 #
 # イメージ名は全体で `registry.registry.svc.cluster.local:5000/<name>` に統一する。
 # ─────────────────────────────────────────────────────────────────────────────

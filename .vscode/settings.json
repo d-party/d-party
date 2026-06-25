@@ -8,9 +8,14 @@
   // ── Helm テンプレート ──────────────────────────────────────────────────────
   // {{- ... }} は Go テンプレートなので純 YAML として検証すると誤検知になる。
   // helm 言語に関連付けて YAML バリデーションの対象から外す。
+  // 注意:
+  //  - `helm` 言語は ms-kubernetes-tools.vscode-kubernetes-tools が提供する。
+  //    未インストールだと関連付けは無効（YAML のまま誤検知が出る）。
+  //  - files.associations のパターンは `/` を含むと「絶対パス」にマッチするため、
+  //    先頭は `**/` で始める（`deploy/...` 直書きだと絶対パスに一致しない）。
   "files.associations": {
-    "deploy/helm/**/templates/*.yaml": "helm",
-    "deploy/helm/**/templates/*.tpl": "helm"
+    "**/deploy/helm/**/templates/*.yaml": "helm",
+    "**/deploy/helm/**/templates/*.tpl": "helm"
   },
 
   // ── Python (backend submodule) ────────────────────────────────────────────

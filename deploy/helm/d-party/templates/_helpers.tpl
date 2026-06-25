@@ -52,6 +52,13 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "d-party.configName" -}}{{ include "d-party.fullname" . }}-config{{- end -}}
 
 {{/*
+PriorityClass 名を解決する（stateful / app）。name が空なら何も出力しない
+（pod spec 側で空行にならないよう with でガードして使う）。
+*/}}
+{{- define "d-party.priorityClassName.stateful" -}}{{ .Values.priorityClass.stateful.name }}{{- end -}}
+{{- define "d-party.priorityClassName.app" -}}{{ .Values.priorityClass.app.name }}{{- end -}}
+
+{{/*
 Django/Frontend/migrate が共通で読む env（DB/Redis ホストはコンポーネント名から導出）。
 envFrom(ConfigMap+Secret) に加えて、ここで接続ホストを env として注入する。
 */}}
