@@ -2,16 +2,16 @@
   "name": "d-party Dev Container",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config graphviz && sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*",
-  "postCreateCommand": "git submodule update --init --recursive && (cd backend && pre-commit install --install-hooks)",
+  "postCreateCommand": "git submodule update --init --recursive && (cd backend && uv sync && pre-commit install --install-hooks)",
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.14"
     },
+    "ghcr.io/va-h/devcontainers-features/uv:1": {},
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/node:1": {
       "version": "26"
     },
-    "ghcr.io/devcontainers-extra/features/poetry:2": {},
     "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
     "ghcr.io/devcontainers-extra/features/act:1": {},
     "ghcr.io/devcontainers-extra/features/pre-commit:2": {},
@@ -28,7 +28,10 @@
       "minikube": "none"
     },
     "ghcr.io/devcontainers-extra/features/cloudflared:1": {},
-    "ghcr.io/rio/features/k3d:1": {}
+    "ghcr.io/rio/features/k3d:1": {},
+    "ghcr.io/devcontainers-extra/features/k6:1": {
+      "version": "0.55.0"
+    }
   },
   "remoteEnv": {
     "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
@@ -53,13 +56,17 @@
           "editor.defaultFormatter": "ms-python.black-formatter"
         },
         "chat.tools.terminal.autoApprove": {
-          "poetry": true,
+          "uv": true,
           "python": true,
           "python3": true,
           "pip": true,
           "pytest": true,
           "black": true,
           "act": true,
+          "k6": true,
+          "helm": true,
+          "kubectl": true,
+          "k3d": true,
           "ls": true,
           "cat": true,
           "pwd": true,
@@ -96,6 +103,8 @@
   "forwardPorts": [
     80,
     443,
+    3000,
+    5050,
     5432,
     6379,
     8000,
@@ -110,6 +119,14 @@
     },
     "443": {
       "label": "Nginx (HTTPS)",
+      "onAutoForward": "silent"
+    },
+    "3000": {
+      "label": "Grafana (metrics profile)",
+      "onAutoForward": "silent"
+    },
+    "5050": {
+      "label": "cAdvisor (metrics profile)",
       "onAutoForward": "silent"
     },
     "5432": {

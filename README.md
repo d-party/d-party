@@ -24,7 +24,8 @@
 - **Docker** + Docker Compose v2（バックエンドのフルスタック起動に必須）
 - **Google Chrome**（拡張機能の動作確認用）
 - 個別サービスをローカル開発する場合:
-  - **Python 3.11** + [Poetry](https://python-poetry.org/)（バックエンド）
+  - **Python 3.13** + [uv](https://docs.astral.sh/uv/)（バックエンド）
+  - **Node.js** + [pnpm](https://pnpm.io/)（フロントエンド）
 
 > 推奨: 後述の [Dev Container](#dev-container) を使うと上記ツールが一括で揃います。
 
@@ -153,6 +154,32 @@ reload して新しい証明書を取り込みます。証明書・秘密鍵は 
 
 > 本番は nginx の TLS 終端により https://d-party.net（http は https へリダイレクト）で配信されます。
 
+## 負荷試験（WebSocket 同時視聴）
+
+[k6](https://k6.io/) で、組み上がったスタック（nginx → django(daphne) → Redis / PostgreSQL）に対する
+WebSocket 同時視聴の負荷試験を `loadtest/` に用意しています。compose の `loadtest` profile に
+隔離してあるため、通常の `docker compose up` には影響しません。
+
+```bash
+# 1. まずスタックを起動（dev 既定）
+docker compose up -d
+
+# 2. スモーク（1 ルーム×3 人、30 秒）
+docker compose -f docker-compose.yml -f docker-compose.override.yml \
+  -f docker-compose.loadtest.yml --profile loadtest run --rm k6
+
+# 3. スケール例（20 ルーム×5 人 = 100 接続、2 分）
+LOADTEST_VUS=20 LOADTEST_ROOM_SIZE=5 LOADTEST_DURATION=2m \
+  docker compose -f docker-compose.yml -f docker-compose.override.yml \
+  -f docker-compose.loadtest.yml --profile loadtest run --rm k6
+```
+
+- 結果サマリは `loadtest/results/summary.json`（gitignore）に出力されます。
+- 主なパラメータ（`LOADTEST_*` env）と Grafana/Prometheus 連携、計測メトリクスの詳細は
+  [`loadtest/README.md`](loadtest/README.md) を参照してください。
+- 既定の接続先は nginx 経由（本番に近い経路）。nginx/frontend を介さず django を直接叩く場合は
+  `LOADTEST_TARGET=ws://django:8000/anime-store/party/` を指定します。
+
 ## サブモジュールの扱い
 
 ```bash
@@ -176,8 +203,8 @@ git commit -m "chore: bump submodules"
 
 `.devcontainer/` に VS Code Dev Containers 用の設定を同梱しています。
 VS Code でフォルダを開き **Dev Containers: Reopen in Container** を選ぶと、
-Python 3.11 / Poetry / Docker-in-Docker / GitHub CLI などが揃った Linux 開発環境が
-立ち上がります。
+Python 3.13 / uv / Node.js / pnpm / Docker-in-Docker / GitHub CLI / k6 / helm / k3d などが
+揃った Linux 開発環境が立ち上がります。
 
 ## VS Code ワークスペース
 

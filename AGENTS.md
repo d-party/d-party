@@ -101,6 +101,47 @@ helm upgrade --install d-party deploy/helm/d-party -n d-party --create-namespace
 k3d cluster delete d-party        # 後始末
 ```
 
+## 負荷試験（loadtest/）
+
+backend の **WebSocket（Channels）同時視聴同期** を主対象とした負荷試験。**k6** で
+nginx → django(daphne) → Redis channel layer / PostgreSQL という組み上がったスタックを
+本番に近い経路でブラックボックス的に叩く。詳細は [`loadtest/README.md`](loadtest/README.md)。
+
+```
+loadtest/
+  lib/protocol.js        djcrf エンベロープ（action/request_id）の組み立て・遅延計測の埋め込み
+  lib/participant.js     1 WS 接続を Promise 化（connect / waitFor(action)）
+  scenarios/ws_party.js  1 VU=1 ルーム。create→join→video/reaction→leave のシナリオ
+  results/               k6 サマリ出力（gitignore）
+docker-compose.loadtest.yml   k6 サービス（compose の loadtest profile。通常起動に非干渉）
+```
+
+配置方針（**サブモジュール規約との関係**）:
+
+- 負荷試験は**オーケストレーション層の関心事**（docker-compose / nginx / env を持つルートが対象）
+  なので、`backend/` ではなく**ルートリポジトリ**に置く。`deploy/` と同じカテゴリ。
+- backend のコードではなく「走っているスタックへの外形テスト」なので、サブモジュール規約には反しない。
+- 負荷の本質は **ブロードキャスト増幅**: 1 ルーム N 人で 1 人の操作が `group_send` で N-1 接続へ
+  配信される（O(N) ファンアウト）。単発 RPS ではなく多接続常時接続下の捌きを測る。
+- `consumers.py` の `_pending_room_deletes` は **プロセス内 dict + asyncio.Task で「単一 daphne
+  ワーカー前提」**。マルチワーカー / 水平スケール下でのルーム整合はスケール試験で要確認。
+
+```bash
+# スタックを起動してから loadtest profile を run（スモーク: 1 ルーム×3 人、30s）
+docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.override.yml \
+  -f docker-compose.loadtest.yml --profile loadtest run --rm k6
+
+# パラメータは LOADTEST_* env で上書き（例: 20 ルーム×5 人 = 100 接続、2 分）
+LOADTEST_VUS=20 LOADTEST_ROOM_SIZE=5 LOADTEST_DURATION=2m \
+  docker compose -f docker-compose.yml -f docker-compose.override.yml \
+  -f docker-compose.loadtest.yml --profile loadtest run --rm k6
+
+# スクリプトの静的検証（スタック不要・実行しない）
+docker run --rm -v "$PWD/loadtest:/loadtest" -w /loadtest \
+  grafana/k6:0.55.0 inspect /loadtest/scenarios/ws_party.js
+```
+
 ## backend/（Django）
 
 ```
