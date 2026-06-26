@@ -210,6 +210,22 @@ function StatCard({
 const toBars = (rows: PerDayResultDataItem[]): Bar[] =>
   rows.map((r) => ({ label: String(r.day), value: r.count }));
 
+/**
+ * Trim leading/trailing zero days so the chart zooms to the active range.
+ *
+ * The backend pads the per-day series to a full `days` window (1 year), which in
+ * practice is mostly zeros, squeezing the real bars into invisibility. Focusing
+ * on the populated span makes each bar readable. Returns `[]` when there is no
+ * activity at all (the chart then shows its "no data" message).
+ */
+function trimZeroEdges(bars: Bar[]): Bar[] {
+  const first = bars.findIndex((b) => b.value > 0);
+  if (first === -1) return [];
+  let last = bars.length - 1;
+  while (last > first && bars[last].value === 0) last--;
+  return bars.slice(first, last + 1);
+}
+
 type StatsData = {
   totals: Totals;
   userSeries: Bar[];
@@ -217,8 +233,9 @@ type StatsData = {
   reactions: ReactionRow[];
 };
 
-export function StatsDashboard(): React.JSX.Element {
+export function StatsDashboard({ days }: { days: number }): React.JSX.Element {
   const { loading, error, value } = useAsync(async (): Promise<StatsData> => {
+    // 期間スコープ対象は ``{ days }`` を渡す。接続中（alive）は現在値なので渡さない。
     const [
       userAll,
       roomAll,
@@ -229,14 +246,14 @@ export function StatsDashboard(): React.JSX.Element {
       roomPerDay,
       reactionByType,
     ] = await Promise.all([
-      statsUserAllCount(),
-      statsRoomAllCount(),
-      statsReactionAllCount(),
+      statsUserAllCount({ days }),
+      statsRoomAllCount({ days }),
+      statsReactionAllCount({ days }),
       statsUserAliveCount(),
       statsRoomAliveCount(),
-      statsActiveUserPerDay(),
-      statsActiveRoomPerDay(),
-      statsReactionCount(),
+      statsActiveUserPerDay({ days }),
+      statsActiveRoomPerDay({ days }),
+      statsReactionCount({ days }),
     ]);
     return {
       totals: {
@@ -250,7 +267,7 @@ export function StatsDashboard(): React.JSX.Element {
       roomSeries: toBars(roomPerDay.data.data),
       reactions: reactionByType.data.data,
     };
-  }, []);
+  }, [days]);
 
   if (error) {
     return (
@@ -261,8 +278,9 @@ export function StatsDashboard(): React.JSX.Element {
   }
 
   const totals = value?.totals ?? null;
-  const userSeries = value?.userSeries ?? [];
-  const roomSeries = value?.roomSeries ?? [];
+  // 1 年窓のゼロ埋め端を落とし、データのある範囲へズームして見せる。
+  const userSeries = trimZeroEdges(value?.userSeries ?? []);
+  const roomSeries = trimZeroEdges(value?.roomSeries ?? []);
   const reactions = value?.reactions ?? [];
   const maxReaction = Math.max(1, ...reactions.map((r) => r.count));
 

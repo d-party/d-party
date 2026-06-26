@@ -11,6 +11,12 @@ import type {
   LobbyRedirect,
   PerDayResult,
   ReactionTypeCountResult,
+  StatsActiveRoomPerDayParams,
+  StatsActiveUserPerDayParams,
+  StatsReactionAllCountParams,
+  StatsReactionCountParams,
+  StatsRoomAllCountParams,
+  StatsUserAllCountParams,
   VersionCheckParams,
   VersionCheckResult
 } from './model';
@@ -127,20 +133,27 @@ export type statsUserAllCountResponseSuccess = (statsUserAllCountResponse200) & 
 
 export type statsUserAllCountResponse = (statsUserAllCountResponseSuccess)
 
-export const getStatsUserAllCountUrl = () => {
+export const getStatsUserAllCountUrl = (params?: StatsUserAllCountParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/statistics/anime-store/anime-user-all-count`
+  return stringifiedParams.length > 0 ? `/api/v1/statistics/anime-store/anime-user-all-count?${stringifiedParams}` : `/api/v1/statistics/anime-store/anime-user-all-count`
 }
 
 /**
  * @summary Total user count.
  */
-export const statsUserAllCount = async ( options?: RequestInit): Promise<statsUserAllCountResponse> => {
+export const statsUserAllCount = async (params?: StatsUserAllCountParams, options?: RequestInit): Promise<statsUserAllCountResponse> => {
 
-  return customFetch<statsUserAllCountResponse>(getStatsUserAllCountUrl(),
+  return customFetch<statsUserAllCountResponse>(getStatsUserAllCountUrl(params),
   {
     ...options,
     method: 'GET'
@@ -163,20 +176,27 @@ export type statsRoomAllCountResponseSuccess = (statsRoomAllCountResponse200) & 
 
 export type statsRoomAllCountResponse = (statsRoomAllCountResponseSuccess)
 
-export const getStatsRoomAllCountUrl = () => {
+export const getStatsRoomAllCountUrl = (params?: StatsRoomAllCountParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/statistics/anime-store/anime-room-all-count`
+  return stringifiedParams.length > 0 ? `/api/v1/statistics/anime-store/anime-room-all-count?${stringifiedParams}` : `/api/v1/statistics/anime-store/anime-room-all-count`
 }
 
 /**
  * @summary Total room count.
  */
-export const statsRoomAllCount = async ( options?: RequestInit): Promise<statsRoomAllCountResponse> => {
+export const statsRoomAllCount = async (params?: StatsRoomAllCountParams, options?: RequestInit): Promise<statsRoomAllCountResponse> => {
 
-  return customFetch<statsRoomAllCountResponse>(getStatsRoomAllCountUrl(),
+  return customFetch<statsRoomAllCountResponse>(getStatsRoomAllCountUrl(params),
   {
     ...options,
     method: 'GET'
@@ -199,20 +219,27 @@ export type statsReactionAllCountResponseSuccess = (statsReactionAllCountRespons
 
 export type statsReactionAllCountResponse = (statsReactionAllCountResponseSuccess)
 
-export const getStatsReactionAllCountUrl = () => {
+export const getStatsReactionAllCountUrl = (params?: StatsReactionAllCountParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/statistics/anime-store/anime-reaction-all-count`
+  return stringifiedParams.length > 0 ? `/api/v1/statistics/anime-store/anime-reaction-all-count?${stringifiedParams}` : `/api/v1/statistics/anime-store/anime-reaction-all-count`
 }
 
 /**
  * @summary Total reaction count.
  */
-export const statsReactionAllCount = async ( options?: RequestInit): Promise<statsReactionAllCountResponse> => {
+export const statsReactionAllCount = async (params?: StatsReactionAllCountParams, options?: RequestInit): Promise<statsReactionAllCountResponse> => {
 
-  return customFetch<statsReactionAllCountResponse>(getStatsReactionAllCountUrl(),
+  return customFetch<statsReactionAllCountResponse>(getStatsReactionAllCountUrl(params),
   {
     ...options,
     method: 'GET'
@@ -307,20 +334,27 @@ export type statsActiveUserPerDayResponseSuccess = (statsActiveUserPerDayRespons
 
 export type statsActiveUserPerDayResponse = (statsActiveUserPerDayResponseSuccess)
 
-export const getStatsActiveUserPerDayUrl = () => {
+export const getStatsActiveUserPerDayUrl = (params?: StatsActiveUserPerDayParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/statistics/anime-store/active-user-per-day`
+  return stringifiedParams.length > 0 ? `/api/v1/statistics/anime-store/active-user-per-day?${stringifiedParams}` : `/api/v1/statistics/anime-store/active-user-per-day`
 }
 
 /**
  * @summary Daily count of users.
  */
-export const statsActiveUserPerDay = async ( options?: RequestInit): Promise<statsActiveUserPerDayResponse> => {
+export const statsActiveUserPerDay = async (params?: StatsActiveUserPerDayParams, options?: RequestInit): Promise<statsActiveUserPerDayResponse> => {
 
-  return customFetch<statsActiveUserPerDayResponse>(getStatsActiveUserPerDayUrl(),
+  return customFetch<statsActiveUserPerDayResponse>(getStatsActiveUserPerDayUrl(params),
   {
     ...options,
     method: 'GET'
@@ -343,20 +377,27 @@ export type statsActiveRoomPerDayResponseSuccess = (statsActiveRoomPerDayRespons
 
 export type statsActiveRoomPerDayResponse = (statsActiveRoomPerDayResponseSuccess)
 
-export const getStatsActiveRoomPerDayUrl = () => {
+export const getStatsActiveRoomPerDayUrl = (params?: StatsActiveRoomPerDayParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/statistics/anime-store/active-room-per-day`
+  return stringifiedParams.length > 0 ? `/api/v1/statistics/anime-store/active-room-per-day?${stringifiedParams}` : `/api/v1/statistics/anime-store/active-room-per-day`
 }
 
 /**
  * @summary Daily count of rooms.
  */
-export const statsActiveRoomPerDay = async ( options?: RequestInit): Promise<statsActiveRoomPerDayResponse> => {
+export const statsActiveRoomPerDay = async (params?: StatsActiveRoomPerDayParams, options?: RequestInit): Promise<statsActiveRoomPerDayResponse> => {
 
-  return customFetch<statsActiveRoomPerDayResponse>(getStatsActiveRoomPerDayUrl(),
+  return customFetch<statsActiveRoomPerDayResponse>(getStatsActiveRoomPerDayUrl(params),
   {
     ...options,
     method: 'GET'
@@ -379,20 +420,27 @@ export type statsReactionCountResponseSuccess = (statsReactionCountResponse200) 
 
 export type statsReactionCountResponse = (statsReactionCountResponseSuccess)
 
-export const getStatsReactionCountUrl = () => {
+export const getStatsReactionCountUrl = (params?: StatsReactionCountParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/statistics/anime-store/anime-reaction-count`
+  return stringifiedParams.length > 0 ? `/api/v1/statistics/anime-store/anime-reaction-count?${stringifiedParams}` : `/api/v1/statistics/anime-store/anime-reaction-count`
 }
 
 /**
  * @summary Per-type reaction counts.
  */
-export const statsReactionCount = async ( options?: RequestInit): Promise<statsReactionCountResponse> => {
+export const statsReactionCount = async (params?: StatsReactionCountParams, options?: RequestInit): Promise<statsReactionCountResponse> => {
 
-  return customFetch<statsReactionCountResponse>(getStatsReactionCountUrl(),
+  return customFetch<statsReactionCountResponse>(getStatsReactionCountUrl(params),
   {
     ...options,
     method: 'GET'
