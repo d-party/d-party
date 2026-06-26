@@ -1,0 +1,58 @@
+# 負荷試験オーバーレイ（k6 / WebSocket 同時視聴）。
+#
+# このファイルは既定の `docker compose up` では読み込まれない。`-f` を明示するか、
+# k6 サービスは profile "loadtest" に隔離してあるので、通常の起動には影響しない。
+#
+# 使い方（リポジトリルートで、スタックを起動済みのこと）:
+#   docker compose up -d                                   # 全スタック起動（既定 dev）
+#   docker compose -f docker-compose.yml -f docker-compose.override.yml \
+#                  -f docker-compose.loadtest.yml --profile loadtest run --rm k6
+#
+# パラメータは LOADTEST_* env で上書きできる（例）:
+#   LOADTEST_VUS=20 LOADTEST_ROOM_SIZE=5 LOADTEST_DURATION=2m \
+#     docker compose ... --profile loadtest run --rm k6
+#
+# 既定の TARGET は nginx 経由（本番に近い経路: nginx → django(daphne)）。
+# nginx/frontend を介さず django を直接叩く場合は:
+#   LOADTEST_TARGET=ws://django:8000/anime-store/party/
+#
+# Grafana/Prometheus へ流す場合（metrics profile を併用し、prometheus に
+# remote-write receiver を有効化した状態で）、k6 サービスの environment に
+#   K6_OUT: experimental-prometheus-rw
+#   K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
+#   K6_PROMETHEUS_RW_TREND_STATS: p(95),p(99),avg,max
+# を設定する。prometheus 側は起動コマンドに
+#   --web.enable-remote-write-receiver
+# を追加すること（既定の compose には未付与）。
+
+services:
+  k6:
+    image: grafana/k6:0.55.0
+    container_name: k6
+    profiles: ["loadtest"]
+    # k6 公式イメージは非 root（uid 12345）で動くため、バインドマウントした
+    # ./loadtest（devcontainer の vscode = uid 1000 所有）配下へサマリ JSON を
+    # 書けるよう、実行ユーザーをマウント所有者に合わせる。
+    user: "1000:1000"
+    volumes:
+      - ./loadtest:/loadtest
+    working_dir: /loadtest
+    environment:
+      TARGET: ${LOADTEST_TARGET:-ws://nginx/anime-store/party/}
+      ROOM_SIZE: ${LOADTEST_ROOM_SIZE:-3}
+      VUS: ${LOADTEST_VUS:-1}
+      DURATION: ${LOADTEST_DURATION:-30s}
+      PING_INTERVAL_MS: ${LOADTEST_PING_INTERVAL_MS:-1000}
+      REACTION_INTERVAL_MS: ${LOADTEST_REACTION_INTERVAL_MS:-1500}
+      ROOM_LOAD_MS: ${LOADTEST_ROOM_LOAD_MS:-8000}
+      # 既定は stdout サマリのみ。Prometheus へ流す場合は上のコメント参照。
+      # K6_OUT: experimental-prometheus-rw
+      # K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
+    depends_on:
+      django:
+        condition: service_healthy
+    # k6 イメージの entrypoint は `k6`。サマリ JSON は results/ に書き出す。
+    command:
+      - run
+      - --summary-export=/loadtest/results/summary.json
+      - /loadtest/scenarios/ws_party.js
