@@ -50,10 +50,19 @@ django:
   # WebSocket セッション状態はプロセス内に保持され、close_active_sessions が
   # close_active_sessions は起動時に「updated_at が 1 日以上前の alive 行」だけを
   # 回収する（稼働中セッションは updated_at が新しいので消さない）ため、複数レプリカでも
-  # 安全。既定は RPi 想定で 1。水平スケール時の残課題は consumers.py の
-  # _pending_room_deletes（プロセスローカル。DB ガードで誤動作はしない既知の軽微事項）。
+  # 安全。よって 2 以上に増やせる（別ノードへ分散して可用性を確保する場合など）。既定は
+  # RPi 想定で 1。水平スケール時の残課題は consumers.py の _pending_room_deletes
+  # （プロセスローカル。DB ガードで誤動作はしない既知の軽微事項。なお gunicornWorkers>1 の
+  # 時点で 1 Pod 内でも該当するため、レプリカ数固有の問題ではない）。
   # 詳細は deploy/README.md「グレースフル更新」を参照。
   replicaCount: 1
+  # 配置制御（任意）。未設定ならグローバルの nodeSelector / tolerations / affinity に
+  # フォールバックする。django だけを強いノード（例 Pi5: ラベル node.d-party/role=worker）
+  # へ寄せたい場合は、ここ（or env の valuesObject）で指定する。stateful（postgres/redis）は
+  # PV/優先度で別管理なので、グローバルではなく django 個別に指定するのが安全。
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
   service:
     port: 8000
   # グレースフル更新: 新 Pod が Ready になってから旧 Pod を落とす。
