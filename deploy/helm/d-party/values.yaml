@@ -19,6 +19,9 @@ config:
   DEBUG: "0"
   # cloudflared が振り分けるホスト名。ALLOWED_HOSTS / CSRF に使われる。
   MY_DOMAIN: "d-party.example"
+  # frontend の OGP 絶対 URL（SSR のみ）。未設定なら env.ts 既定 https://d-party.net。
+  # client の API/WS 接続は origin 導出なので、これは OGP の厳密化用途のみ。
+  # SITE_URL: "https://d-party.example"
   LANGUAGE_CODE: "ja"
   TIME_ZONE: "Asia/Tokyo"
   TZ: "Asia/Tokyo"
@@ -42,11 +45,12 @@ secret:
 # ── Django (ASGI / Channels) ────────────────────────────────────────────────
 django:
   image:
-    # クラスタ内ローカルレジストリ（deploy/platform/ の共有レジストリへ deploy/build/ で push）。
-    repository: registry.registry.svc.cluster.local:5000/backend
-    tag: "latest"
-    # ローカルレジストリの :latest は更新されるため、毎回 pull する。
-    pullPolicy: Always
+    # GHCR(public) の不変 semver タグ。argocd-image-updater が django.image.tag を
+    # ops リポジトリの values へ write-back し、Argo CD が sync する（GitOps）。
+    repository: ghcr.io/d-party/backend
+    tag: "v0.0.0"          # 初期値。image-updater が semver で書き換える
+    # 不変タグなので毎回 pull は不要。
+    pullPolicy: IfNotPresent
   # WebSocket セッション状態はプロセス内に保持され、close_active_sessions が
   # 起動時に「全 alive 行」を論理削除するため、レプリカは 1 を維持する
   # （>1 にすると起動した片方が他方の生きたセッション統計を消す）。
@@ -85,9 +89,10 @@ migrate:
 # ── Next.js フロントエンド ───────────────────────────────────────────────────
 frontend:
   image:
-    repository: registry.registry.svc.cluster.local:5000/frontend
-    tag: "latest"
-    pullPolicy: Always
+    # GHCR(public) の不変 semver タグ。image-updater が frontend.image.tag を更新する。
+    repository: ghcr.io/d-party/frontend
+    tag: "v0.0.0"
+    pullPolicy: IfNotPresent
   # RPi クラスタで他サービスと相乗りする前提のため既定 1。可用性が要るなら上げる。
   replicaCount: 1
   service:
