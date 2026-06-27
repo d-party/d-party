@@ -8,11 +8,13 @@ import { withTimeout, pingSentAt } from './protocol.js';
 
 export class Participant {
   // metrics: { connectTime, broadcastLatency, broadcastReceived, wsErrors } を注入
-  constructor(url, { name, metrics, connectTimeoutMs = 5000 }) {
+  // headers: WS ハンドシェイクに付与する追加ヘッダ（本番想定の OriginValidator 越えに Origin 等）
+  constructor(url, { name, metrics, connectTimeoutMs = 5000, headers = null }) {
     this.url = url;
     this.name = name;
     this.metrics = metrics;
     this.connectTimeoutMs = connectTimeoutMs;
+    this.headers = headers;
     this.ws = null;
     this.closed = false;
     // action 待ち受けの登録簿: action -> { resolve }
@@ -21,7 +23,8 @@ export class Participant {
 
   connect() {
     const started = Date.now();
-    const ws = new WebSocket(this.url);
+    const params = this.headers ? { headers: this.headers } : undefined;
+    const ws = new WebSocket(this.url, null, params);
     this.ws = ws;
     const opened = new Promise((resolve, reject) => {
       ws.addEventListener('open', () => {
