@@ -28,6 +28,10 @@ const DURATION = __ENV.DURATION || '30s';
 const PING_INTERVAL_MS = Number(__ENV.PING_INTERVAL_MS || 1000);
 const REACTION_INTERVAL_MS = Number(__ENV.REACTION_INTERVAL_MS || 1500);
 const ROOM_LOAD_MS = Number(__ENV.ROOM_LOAD_MS || 8000); // 1 ルームの負荷フェーズ長
+// 本番相当（DEBUG=0）では OriginValidator が D_ANIME_STORE_DOMAIN 由来 Origin のみ許可するため、
+// 拡張機能と同じ Origin を付ける。dev（全 Origin 許可）では未指定で良い。
+const ORIGIN = __ENV.ORIGIN || '';
+const HEADERS = ORIGIN ? { Origin: ORIGIN } : null;
 // part_id は AnimeRoom.part_id（varchar(16)）に保存されるため 16 文字以内に収める。
 const PART_ID = __ENV.PART_ID || 'loadtest-0001';
 
@@ -75,7 +79,7 @@ function delay(ms) {
 
 async function runRoom() {
   const participants = [];
-  const host = new Participant(TARGET, { name: `host-vu${__VU}`, metrics });
+  const host = new Participant(TARGET, { name: `host-vu${__VU}`, metrics, headers: HEADERS });
   participants.push(host);
 
   try {
@@ -91,7 +95,7 @@ async function runRoom() {
 
     // 2) guest を順次 join
     for (let i = 1; i < ROOM_SIZE; i += 1) {
-      const guest = new Participant(TARGET, { name: `guest${i}-vu${__VU}`, metrics });
+      const guest = new Participant(TARGET, { name: `guest${i}-vu${__VU}`, metrics, headers: HEADERS });
       await guest.connect();
       const joinedP = guest.waitFor('join');
       const tj = Date.now();
