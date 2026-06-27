@@ -6,7 +6,9 @@ metadata:
     {{- include "d-party.labels" . | nindent 4 }}
     app.kubernetes.io/component: django
 spec:
-  # replicas は 1 を維持する（values.django.replicaCount のコメント参照）。
+  # replicas は >1 にできる（close_active_sessions が 1 日以上前の alive 行のみ
+  # 回収するため複数レプリカでも稼働中セッション統計を消さない）。既定は RPi 想定の 1。
+  # 詳細は values.django.replicaCount のコメント参照。
   replicas: {{ .Values.django.replicaCount }}
   strategy:
     type: RollingUpdate
@@ -33,15 +35,17 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.nodeSelector }}
+      {{- /* django 固有の配置指定を優先し、未設定ならグローバルへフォールバック。
+             stateful(postgres/redis) を巻き込まず django だけ強ノードへ寄せられる。 */}}
+      {{- with (.Values.django.nodeSelector | default .Values.nodeSelector) }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with (.Values.django.tolerations | default .Values.tolerations) }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with (.Values.django.affinity | default .Values.affinity) }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
