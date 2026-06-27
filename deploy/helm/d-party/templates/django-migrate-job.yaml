@@ -38,6 +38,15 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      # postgres StatefulSet が Ready になる前に migrate が走ると
+      # `failed to resolve host` で落ちるため、解決＋接続できるまで待つ（冪等）。
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - 'until nc -z {{ include "d-party.postgres.fullname" . }} {{ .Values.postgres.service.port }}; do echo "waiting for postgres"; sleep 2; done'
       containers:
         - name: migrate
           image: "{{ .Values.django.image.repository }}:{{ .Values.django.image.tag }}"

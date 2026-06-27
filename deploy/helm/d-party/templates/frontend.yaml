@@ -49,6 +49,19 @@ spec:
           ports:
             - name: http
               containerPort: 3000
+          env:
+            # SSR（lobby の generateMetadata / OG 画像）が backend を叩く内部オリジン。
+            # ブラウザは window.location から origin 導出するが、サーバ側は NAT ヘアピンを
+            # 避けてクラスタ内 django を直接指す（docker-compose の .env.global と同役割）。
+            # 未設定だと SSR が localhost/ にフォールバックし、ルーム個別の OGP が出ない。
+            - name: BACKEND_INTERNAL_ORIGIN
+              value: "http://{{ include "d-party.django.fullname" . }}:{{ .Values.django.service.port }}"
+            {{- if .Values.config.SITE_URL }}
+            # OGP/Twitter カードの絶対 URL（SSR）。client の API/WS 接続は origin 導出
+            # なので未設定でも機能する。設定時のみ env.ts の SSR 既定を上書きする。
+            - name: SITE_URL
+              value: {{ .Values.config.SITE_URL | quote }}
+            {{- end }}
           readinessProbe:
             httpGet:
               path: /
