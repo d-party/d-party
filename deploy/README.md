@@ -150,11 +150,19 @@ sequenceDiagram
 | nginx graceful | preStop `nginx -s quit` + `nginx.terminationGracePeriodSeconds` | 60s |
 | WS 長時間タイムアウト | nginx `proxy_read/send_timeout 3600s` | 有効 |
 
-> **注意（django は replicas=1 固定）**：`close_active_sessions` が起動時に
-> 「全 alive 行」を論理削除する設計のため、django を 2 つ以上に増やすと、起動した
-> 片方がもう片方の生きたセッション統計を消します。スケールが必要になったら
-> backend 側でセッション状態を Redis 等に外出しする改修が前提です（本 chart の範囲外）。
-> 現状は「新旧 1 個ずつの短時間並走 → 利用者は再接続で復帰」で運用します。
+> **ghost セッションの後始末**：グレースフル更新では旧 Pod の各 WS で `disconnect` が
+> 発火し `leave_party` が DB を後始末します。ハードクラッシュ（OOM / ノード障害 /
+> SIGKILL）では `disconnect` が走らず alive 行が残るため、起動時の
+> `close_active_sessions` が **`updated_at` が 1 日以上前の alive 行だけ**を回収します
+> （稼働中セッションは更新が新しいので消さない）。旧来の「全 alive 行を削除」設計と異なり
+> **複数レプリカでも他 Pod の生きたセッションを巻き込まない**ので、`replicaCount` を増やしても
+> 安全です（既定は RPi 想定で 1）。時間ベースの保持期間 cron は廃止しました（リアクションは
+> ルーム終了時に `ReactionStat` へ畳み込み）。
+>
+> 完全な水平スケール時の残課題は `consumers.py` の `_pending_room_deletes`（猶予削除を
+> プロセスローカルの dict + asyncio.Task で持つ点）のみ。再参加が別ワーカーに着地すると
+> 旧ワーカーのタイマーを cancel できませんが、削除前に生存ユーザーを DB で確認するため
+> 誤削除には至りません。厳密化するなら猶予を Redis TTL キーへ外出しします（別タスク）。
 
 ---
 

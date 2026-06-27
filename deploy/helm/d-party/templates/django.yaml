@@ -53,8 +53,8 @@ spec:
         - name: django
           image: "{{ .Values.django.image.repository }}:{{ .Values.django.image.tag }}"
           imagePullPolicy: {{ .Values.django.image.pullPolicy }}
-          # 既定 CMD(sh entrypoint.sh) をそのまま使う（cron 登録 →
-          # close_active_sessions → gunicorn）。backend は改変しない。
+          # 既定 CMD(sh entrypoint.sh) をそのまま使う（close_active_sessions で
+          # >1日経過の ghost のみ回収 → gunicorn）。backend は改変しない。
           ports:
             - name: http
               containerPort: 8000
