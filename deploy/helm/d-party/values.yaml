@@ -28,10 +28,6 @@ config:
   D_ANIME_STORE_DOMAIN: "animestore.docomo.ne.jp"
   CHROME_EXTENSION_REQUIRED_VERSION: "1.0.0"
   DATABASE_ENGINE: "django_prometheus.db.backends.postgresql"
-  # 保持期間クリーンアップ（streamer/cron.py）のしきい値。
-  LOGICAL_DIVIDE_DAY: "3"
-  HARD_DIVIDE_DAY: "365"
-  REACTION_HARD_DIVIDE_DAY: "90"
 
 # 機微値。existingSecret を指定した場合 secret.* は無視される。
 secret:
@@ -52,8 +48,10 @@ django:
     # 不変タグなので毎回 pull は不要。
     pullPolicy: IfNotPresent
   # WebSocket セッション状態はプロセス内に保持され、close_active_sessions が
-  # 起動時に「全 alive 行」を論理削除するため、レプリカは 1 を維持する
-  # （>1 にすると起動した片方が他方の生きたセッション統計を消す）。
+  # close_active_sessions は起動時に「updated_at が 1 日以上前の alive 行」だけを
+  # 回収する（稼働中セッションは updated_at が新しいので消さない）ため、複数レプリカでも
+  # 安全。既定は RPi 想定で 1。水平スケール時の残課題は consumers.py の
+  # _pending_room_deletes（プロセスローカル。DB ガードで誤動作はしない既知の軽微事項）。
   # 詳細は deploy/README.md「グレースフル更新」を参照。
   replicaCount: 1
   service:
