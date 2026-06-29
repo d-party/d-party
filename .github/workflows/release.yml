@@ -68,7 +68,21 @@ jobs:
         id: version
         run: |
           set -euo pipefail
-          LATEST=$(git tag --list 'v*.*.*' --sort=-v:refname | head -n1 || true)
+          # ルートのタグと各サブモジュールのタグの最大値を基準にする。
+          # 過去にサブモジュール側の release は成功したがルートの bump が走らず
+          # ルートタグだけ取り残された場合に、次の patch でバージョンが
+          # 巻き戻ってしまう事故（CWS が 400 を返す）を防ぐため。
+          for sub in backend frontend chrome-extension; do
+            git -C "$sub" fetch --tags --quiet origin || true
+          done
+          LATEST=$(
+            {
+              git tag --list 'v*.*.*'
+              git -C backend tag --list 'v*.*.*'
+              git -C frontend tag --list 'v*.*.*'
+              git -C chrome-extension tag --list 'v*.*.*'
+            } | sort -V | tail -n1
+          )
           if [ -z "${LATEST}" ]; then
             # 初回リリースは chrome-extension に合わせて v2.3.0 から開始する
             VER="2.3.0"
