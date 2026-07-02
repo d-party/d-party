@@ -73,6 +73,22 @@ export function leaveMsg() {
   return { action: 'leave', request_id: requestId() };
 }
 
+// ルーム詳細設定の更新（オーナー限定。バックエンドはホスト以外の update_setting を無視する）。
+// 一方通行(アクセラレーター)モードでは非オーナーの video_operation がブロードキャストされない。
+export function updateSettingMsg({
+  oneWay = false,
+  ownerLeaveDelete = false,
+  disableReaction = false,
+} = {}) {
+  return {
+    action: 'update_setting',
+    request_id: requestId(),
+    one_way: oneWay,
+    owner_leave_delete: ownerLeaveDelete,
+    disable_reaction: disableReaction,
+  };
+}
+
 // 受信した video_operation ブロードキャストが loadtest ping なら、送信時刻(ms)を返す。
 // それ以外（実プレイヤー操作の形）なら null。
 export function pingSentAt(msg) {
