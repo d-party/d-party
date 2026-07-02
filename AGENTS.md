@@ -112,6 +112,7 @@ loadtest/
   lib/protocol.js        djcrf エンベロープ（action/request_id）の組み立て・遅延計測の埋め込み
   lib/participant.js     1 WS 接続を Promise 化（connect / waitFor(action)）
   scenarios/ws_party.js  1 VU=1 ルーム。create→join→video/reaction→leave のシナリオ
+  scenarios/ws_timer.js  タイマー（観覧専用）。host のみ配信し spectate 参加者へ配信増幅
   results/               k6 サマリ出力（gitignore）
 docker-compose.loadtest.yml   k6 サービス（compose の loadtest profile。通常起動に非干渉）
 ```
