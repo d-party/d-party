@@ -73,6 +73,17 @@ export function leaveMsg() {
   return { action: 'leave', request_id: requestId() };
 }
 
+// 観覧専用（spectator / タイマー）参加。AnimeUser を作らず、既存の video_operation
+// ブロードキャストを受信するだけの読み取り専用参加。サーバは spectate 受理応答
+// （action:"spectate"）を返す。存在しないルームは server_message(failed_spectate)。
+export function spectateMsg({ roomId }) {
+  return {
+    action: 'spectate',
+    request_id: requestId(),
+    room_id: roomId,
+  };
+}
+
 // ルーム詳細設定の更新（オーナー限定。バックエンドはホスト以外の update_setting を無視する）。
 // 一方通行(アクセラレーター)モードでは非オーナーの video_operation がブロードキャストされない。
 export function updateSettingMsg({
