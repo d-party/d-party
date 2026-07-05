@@ -178,7 +178,11 @@ function LobbyContent(): React.JSX.Element {
         class name and writes "true"/"false" into it. Must stay present and keep
         this exact class. Visually hidden but not display:none so innerText works.
       */}
-      <div className="chrome_extension_field sr-only" aria-hidden />
+      <div
+        className="chrome_extension_field sr-only"
+        aria-hidden
+        suppressHydrationWarning
+      />
 
       <AnimatePresence mode="wait">
         {phase === "checking" ? (
