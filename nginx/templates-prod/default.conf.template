@@ -85,6 +85,10 @@ server {
     location /anime-store/party/ {
         try_files $uri @proxy_to_app;
     }
+    # DMM TV の同時視聴 WebSocket。party/ は Django、/dmm-tv/lobby/ はフロント。
+    location /dmm-tv/party/ {
+        try_files $uri @proxy_to_app;
+    }
 
     # ── React フロントエンド: 公開ページ + 静的アセット ──
     location / {
