@@ -66,7 +66,7 @@ function LobbyFallback(): React.JSX.Element {
 
 // useSyncExternalStore で「クライアントかどうか」を得る（サーバー=false / クライアント=true）。
 // effect 内 setState を避けつつ hydration 後にのみ true になる。
-const subscribeNoop = () => () => {};
+const subscribeNoop = () => () => { };
 
 function LobbyContent(): React.JSX.Element {
   const { roomId } = useParams<{ roomId: string }>();
