@@ -53,6 +53,7 @@ services:
         condition: service_healthy
     # k6 イメージの entrypoint は `k6`。サマリ JSON は results/ に書き出す。
     # 実行シナリオは LOADTEST_SCENARIO で切替可能（既定は ws_party.js）。
+    #   例: LOADTEST_SCENARIO=ws_oneway.js docker compose ... run --rm k6
     #   例: LOADTEST_SCENARIO=ws_timer.js docker compose ... run --rm k6
     command:
       - run

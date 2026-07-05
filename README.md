@@ -149,8 +149,12 @@ reload して新しい証明書を取り込みます。証明書・秘密鍵は 
 | ------------------------------ | --------------------- |
 | アプリ（Nginx 経由）           | http://localhost      |
 | Django（直接 / debug-toolbar） | http://localhost:8000 |
-| Adminer（PostgreSQL 管理）     | http://localhost:8080 |
 | Prometheus                     | http://localhost:9090 |
+
+> PostgreSQL の閲覧・操作は Adminer を廃止し、**VSCode の SQLTools 拡張**へ移行しました。
+> Dev Container に SQLTools + PostgreSQL ドライバを同梱し、`d-party (compose postgres)` 接続を
+> 事前定義済みです。`docker compose up -d` 後、SQLTools サイドバーから接続するだけで開けます
+> （追加設定不要。接続先は `localhost:5432` / DB・ユーザー `d_party`）。
 
 > 本番は nginx の TLS 終端により https://d-party.net（http は https へリダイレクト）で配信されます。
 

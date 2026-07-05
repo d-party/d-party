@@ -15,8 +15,12 @@ dアニメストア同時視聴サービスの **WebSocket（Channels）同期**
 - **モデル**: 1 VU = 1 ルーム。VU 内で host 1 + guest (`ROOM_SIZE`-1) を張る。
   同時ルーム数 = `VUS`、総接続数 = `VUS × ROOM_SIZE`。
 - **シナリオ**（`LOADTEST_SCENARIO` で切替。既定 `ws_party.js`）:
-  - [`scenarios/ws_party.js`](scenarios/ws_party.js): `create` → guest が `join` → 各参加者が
+  - [`scenarios/ws_party.js`](scenarios/ws_party.js)（既定）: `create` → guest が `join` → 各参加者が
     `video_operation`(ping)/`reaction` を生成 → `leave`。全員が送信元。
+  - [`scenarios/ws_oneway.js`](scenarios/ws_oneway.js): 一方通行(アクセラレーター)モード。host が
+    詳細設定で `update_setting(one_way)` を送り、host のみが `video_operation` を配信、guest の操作は
+    サーバでブロックされる。**配信者 1 + 視聴者多数**の配信型ルームの負荷プロファイル（送信元は host のみ）。
+    非オーナー操作が確実にブロックされること（`one_way_enforced`）も併せて検証する。
   - [`scenarios/ws_timer.js`](scenarios/ws_timer.js): タイマー（観覧専用）。host のみが `video_operation`
     を配信し、`spectate` で参加した観覧者（AnimeUser を作らない読み取り専用）へ配信増幅する。
     **配信者 1 + タイマー視聴者多数**の負荷プロファイル。`spectate_success` で受理を検証。
@@ -47,6 +51,11 @@ docker compose -f docker-compose.yml -f docker-compose.override.yml \
 
 # スケール例（20 ルーム×5 人 = 100 接続、2 分）
 LOADTEST_VUS=20 LOADTEST_ROOM_SIZE=5 LOADTEST_DURATION=2m \
+  docker compose -f docker-compose.yml -f docker-compose.override.yml \
+  -f docker-compose.loadtest.yml --profile loadtest run --rm k6
+
+# シナリオ切替（一方通行モード: 配信者 1 + 視聴者 3）
+LOADTEST_SCENARIO=ws_oneway.js LOADTEST_ROOM_SIZE=4 \
   docker compose -f docker-compose.yml -f docker-compose.override.yml \
   -f docker-compose.loadtest.yml --profile loadtest run --rm k6
 

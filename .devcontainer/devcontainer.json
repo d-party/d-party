@@ -47,7 +47,10 @@
         "redhat.vscode-yaml",
         "ms-kubernetes-tools.vscode-kubernetes-tools",
         "tamasfe.even-better-toml",
-        "anthropic.claude-code"
+        "anthropic.claude-code",
+        "mtxr.sqltools",
+        "mtxr.sqltools-driver-pg",
+        "lottiefiles.vscode-lottie"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python",
@@ -55,6 +58,20 @@
         "[python]": {
           "editor.defaultFormatter": "ms-python.black-formatter"
         },
+        "sqltools.connections": [
+          {
+            "name": "d-party (compose postgres)",
+            "driver": "PostgreSQL",
+            "server": "localhost",
+            "port": 5432,
+            "database": "d_party",
+            "username": "d_party",
+            "password": "password",
+            "connectionTimeout": 30
+          }
+        ],
+        "sqltools.autoOpenSession": false,
+        "sqltools.useNodeRuntime": true,
         "chat.tools.terminal.autoApprove": {
           "uv": true,
           "python": true,
@@ -108,7 +125,6 @@
     5432,
     6379,
     8000,
-    8080,
     9090,
     9100
   ],
@@ -139,10 +155,6 @@
     },
     "8000": {
       "label": "Django",
-      "onAutoForward": "silent"
-    },
-    "8080": {
-      "label": "Adminer",
       "onAutoForward": "silent"
     },
     "9090": {
