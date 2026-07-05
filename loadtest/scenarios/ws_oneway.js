@@ -132,7 +132,9 @@ async function runRoom() {
     await delay(ROOM_LOAD_MS);
     stop();
 
-    // 5) 後片付け: 一方通行モードは host 退室でルーム自動削除（owner_leave_delete 含意）。
+    // 5) 後片付け: 一方通行モード単体では host 退室でルームは自動削除されない
+    //    （owner_leave_delete は含意しない）。host が抜けると viewer の 1 人が
+    //    ホストへ昇格し、finally の close で全員が切断されるとルームが回収される。
     host.send(leaveMsg());
     await delay(200);
   } catch (e) {
