@@ -200,7 +200,7 @@ chrome-extension/
 ```
 frontend/
   src/
-    app/                 App Router（layout / page / usage / anime-store/lobby/[roomId] / not-found）
+    app/                 App Router（layout / page / usage / anime-store/lobby/[roomId] / dmm-tv/lobby/[roomId] / stats / not-found）
     components/ui/        shadcn コンポーネント（chrome-extension と共通）
     infrastructure/       env.ts（接続先）・api/（orval 生成 REST クライアント）
     lib/utils.ts          cn()
@@ -214,6 +214,12 @@ frontend/
 - ルーム遷移 `/anime-store/lobby/[roomId]` は拡張機能の `.chrome_extension_field` DOM 契約を維持しつつ、
   `room_id → リダイレクト URL` を新バックエンド API `GET /api/v1/anime-store/lobby/{room_id}` で解決する
   （backend サブモジュール側に別途実装が必要。`frontend/docs/backend-lobby-endpoint.md` 参照）。
+- DMM TV も同じ DOM 契約で `/dmm-tv/lobby/[roomId]` を提供し、`GET /api/v1/dmm-tv/lobby/{room_id}` で
+  再生ページ（`/vod/playback/on-demand/?season=..&content=..&party=join`）へ解決する。DMM のタイマー
+  画面は後続対応。
+- 統計ダッシュボード（`/stats`）はバックエンドが全サービス合算（dアニメ + DMM）で集計するため、
+  フロント側は無改修で両サービスの合計を表示する。
+- 表記はランディング等で「dアニメストア・DMM TV」を併記。
 - 接続先は `src/infrastructure/env.ts`（`NEXT_PUBLIC_*` で上書き、既定 `localhost`）。
 
 ## 開発フロー（GitHub Flow）
