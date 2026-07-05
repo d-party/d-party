@@ -4,9 +4,18 @@
 
 ## What this is
 
-`d-party` は **dアニメストアでの「同時視聴」** を提供するサービスです。
+`d-party` は **dアニメストア** および **DMM TV** での「同時視聴」を提供するサービスです。
 このリポジトリは複数の Git サブモジュールを束ねた **疑似 monorepo** であり、
 各サービスを 1 か所からクローン・開発できるようにまとめたものです。
+
+**マルチサービス設計:** 同時視聴の同期コア（WebSocket プロトコル・consumer の同期処理・
+stats・grace 削除、拡張側の `RoomSession`/`PartyWebSocketClient`/`protocol`）はサービス
+非依存で共通化する。サービス固有なのは「プレイヤー駆動 DOM（`PlayerController`）」「一覧/
+詳細ページへのアイコン注入」「lobby URL 解決」のみ。バックエンドは dアニメ（`anime_*`
+テーブル・`anime-store/party/`）と DMM（`dmm_*` テーブル・`dmm-tv/party/`）で**データを
+分離**しつつ、抽象基底モデル + パラメータ化 consumer でロジックを共有する。
+> DMM TV のプレイヤー同期（再生ページの操作結線）は後続対応。現状は詳細ページへの
+> パーティー作成アイコン注入と、バックエンド/拡張の共通化基盤までを提供する。
 
 **重要:** このリポジトリ自身が管理するのは「サブモジュールの参照（コミット SHA）」と
 「開発環境の設定ファイル」だけです。サービスの実装コードは各サブモジュール内にあり、
@@ -25,12 +34,12 @@
 ### Request / data flow
 
 ```
-Chrome 拡張機能 (dアニメストアのページに content script を注入)
+Chrome 拡張機能 (dアニメストア / DMM TV のページに content script を注入)
         │  WebSocket (wss://d-party.net, 既定)
         ▼
 Nginx :80/443 ──▶ Django (daphne/uvicorn, Channels)
         ├─ REST API (DRF)            : /api/*
-        ├─ WebSocket (Channels)      : 同時視聴の同期
+        ├─ WebSocket (Channels)      : 同時視聴の同期 (anime-store/party/ · dmm-tv/party/)
         └─ 管理画面 (Jazzmin)        : /admin/*
 Django ──▶ PostgreSQL 16（永続化） / Redis 7（Channels レイヤ・キャッシュ）
 監視: Prometheus + Grafana + cadvisor + node-exporter（django-prometheus 経由）
@@ -181,7 +190,9 @@ chrome-extension/
   「パッケージ化されていない拡張機能を読み込む」でそのまま読み込める。
 - 接続先は `js/common/settings.js` の `D_PARTY_BACKEND_HOST` /
   `D_PARTY_BACKEND_PROTOCOL` / `D_PARTY_WEBSOCKET_PROTOCOL` で変更する（既定 `wss://d-party.net`）。
-- 対象サイト: `https://anime.dmkt-sp.jp/animestore/*` および `https://d-party.net/anime-store/lobby/*`。
+- 対象サイト: `https://anime.dmkt-sp.jp/animestore/*`（dアニメ一覧/プレイヤー）、
+  `https://tv.dmm.com/vod/detail/*`（DMM TV 作品詳細: パーティー作成アイコン注入）、
+  および `https://d-party.net/anime-store/lobby/*`（バージョン確認）。
 - CI（上流リポジトリ側）: codeql-analysis · release。
 
 ## frontend/（Next.js）
