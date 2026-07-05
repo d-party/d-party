@@ -63,7 +63,25 @@ pnpm lint             # eslint .
    このエンドポイントは **backend サブモジュール側で別途実装が必要**。仕様は
    [docs/backend-lobby-endpoint.md](./docs/backend-lobby-endpoint.md)。`openapi/openapi.json` に定義済みで
    `pnpm api:generate` でクライアント生成済み。
-3. リダイレクト判定: `"true"`→ dアニメストアへ / `"false"`→ webstore（要アップデート）/ 10秒無応答 → webstore（未インストール）。
+3. リダイレクト判定: `"true"`→ dアニメストアへ / `"false"`→（旧: webstore 自動遷移）**選択 UI** / 30秒無応答 →（旧: webstore 自動遷移）**選択 UI**。
+   拡張機能が無い/非対応のときは、ウェブストアへ自動遷移する代わりに「**タイマーを見る**（`?timer=true`）or **インストール/アップデート**（webstore）」を提示する。`.chrome_extension_field` の DOM 契約・1秒ポーリングは不変。
+
+### タイマー画面（`?timer=true`）
+
+拡張機能なし・dアニメストア不要のユーザー向けに、**新規 URL を発行せず**ロビー URL に
+`?timer=true` を付けたものをタイマー画面にする（`components/timer/TimerView.tsx`）。バックエンドの
+`spectate`（観覧専用参加）で WS 接続し、既存の `video_operation` ブロードキャストを受信して
+**計算で再生位置を再現**する（追加の WS 通信は行わない。`infrastructure/ws/timerClient.ts`）。
+初期タイトルは `lobbyResolve` から、以後は `video_operation.title` で更新。WS は `MY_DOMAIN` の
+オリジンから張るため、バックエンドの `OriginValidator` に `MY_DOMAIN` 許可が必要（backend 側で対応）。
+`useSearchParams` を使うため、ページは `Suspense` 境界で包む（Next のビルド要件）。
+
+**ポップアップ表示（`?timer=true&popup=1`）**: ロビーの選択 UI と、タイマー画面（`TimerView`、
+別窓表示中を除く）の「別窓（ポップアップ）で開く」ボタンから、共通の `openTimerPopup(roomId)`
+（`components/timer/openTimerPopup.ts`）で `window.open` する。タイマーを小さな別窓（380×280）
+として開き、常に手前へ浮かせて再生状況を見られるようにする（ポップアップブロック時は同タブへ
+フォールバック）。`popup=1` のとき `TimerView` は `fixed inset-0` の全面表示になり、レイアウトの
+Header/Footer を覆って小窓に収める。
 
 ## 拡張機能とのスタック共通化
 
