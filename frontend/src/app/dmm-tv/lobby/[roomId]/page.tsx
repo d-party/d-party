@@ -1,6 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import {
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -59,11 +65,26 @@ function LobbyFallback(): React.JSX.Element {
   );
 }
 
+// useSyncExternalStore で「クライアントかどうか」を得る（サーバー=false / クライアント=true）。
+// effect 内 setState を避けつつ hydration 後にのみ true になる。
+const subscribeNoop = () => () => {};
+
 function LobbyContent(): React.JSX.Element {
   const { roomId } = useParams<{ roomId: string }>();
 
   const [phase, setPhase] = useState<Phase>("checking");
   const [loaderText, setLoaderText] = useState("ルームに接続しています");
+
+  // 拡張機能は hydration 前に `.chrome_extension_field` の innerText を書き換えるため、
+  // SSR で出力すると必ず hydration mismatch になる（suppressHydrationWarning でも
+  // 完全には抑止できない）。そこでこの要素はマウント後にクライアント限定で描画する
+  // ＝ SSR HTML に一切含めない。拡張機能は 1 秒間隔でポーリングするので、マウント直後に
+  // 現れれば問題なく検出される。
+  const mounted = useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  );
 
   const redirectUrlRef = useRef<string | null>(null);
   const redirectPendingRef = useRef(false);
@@ -156,12 +177,12 @@ function LobbyContent(): React.JSX.Element {
         Extension contract: the content-version script locates this element by
         class name and writes "true"/"false" into it. Must stay present and keep
         this exact class. Visually hidden but not display:none so innerText works.
+        Rendered client-only (mounted) so the extension's pre-hydration write can
+        never cause a hydration mismatch.
       */}
-      <div
-        className="chrome_extension_field sr-only"
-        aria-hidden
-        suppressHydrationWarning
-      />
+      {mounted && (
+        <div className="chrome_extension_field sr-only" aria-hidden />
+      )}
 
       <AnimatePresence mode="wait">
         {phase === "checking" ? (
