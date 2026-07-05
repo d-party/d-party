@@ -149,9 +149,11 @@ jobs:
       - name: Bump submodule references
         run: |
           set -euo pipefail
-          git submodule update --remote --merge
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          # 各サブモジュールを、リリースでタグ付けされた origin/main の最新コミットへ
+          # detached HEAD で checkout するだけ（マージコミットは作らない）。
+          git submodule update --remote
           git add backend frontend chrome-extension
           git commit -m "chore: release ${{ steps.version.outputs.tag }} (bump submodules) [skip ci]"
           git push origin HEAD:main
