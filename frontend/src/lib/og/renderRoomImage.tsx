@@ -7,7 +7,7 @@ import { OG_SIZE, RoomOgImage } from "@/components/og/RoomOgImage";
 import { resolveRoom } from "@/infrastructure/lobby";
 
 /** Shared `alt` text for the room OG / Twitter images. */
-export const OG_ALT = "d-party — dアニメストアで同時視聴";
+export const OG_ALT = "d-party — dアニメストア・DMM TV で同時視聴";
 
 const FONT_FAMILY = "Noto Sans JP";
 

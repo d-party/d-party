@@ -142,7 +142,9 @@ export function RoomOgImage({
             marginBottom: 20,
           }}
         >
-          {hasTitle ? "この作品を一緒に視聴中" : "dアニメストアで同時視聴"}
+          {hasTitle
+            ? "この作品を一緒に視聴中"
+            : "dアニメストア・DMM TV で同時視聴"}
         </div>
 
         <div
@@ -187,7 +189,9 @@ export function RoomOgImage({
           color: COLORS.muted,
         }}
       >
-        <div style={{ display: "flex" }}>dアニメストアを友だちと同時視聴</div>
+        <div style={{ display: "flex" }}>
+          dアニメストア・DMM TV を友だちと同時視聴
+        </div>
         <div style={{ display: "flex", fontWeight: 700, color: COLORS.text }}>
           d-party.net
         </div>

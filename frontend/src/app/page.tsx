@@ -12,9 +12,15 @@ const STEPS = [
     title: "Google Chrome / Microsoft Edge に追加",
     text: "Chrome ウェブストアから d-party をインストール（Edge でも利用できます）。",
   },
-  { title: "アニメを開く", text: "dアニメストアで一緒に観たい作品のプレイヤーを開く。" },
+  {
+    title: "アニメを開く",
+    text: "dアニメストアや DMM TV で一緒に観たい作品のプレイヤーを開く。",
+  },
   { title: "リンクを共有", text: "生成されたルームリンクを友達に送るだけ。" },
-  { title: "一緒に視聴", text: "全員そろったら再生。あとは自動でシンクします。" },
+  {
+    title: "一緒に視聴",
+    text: "全員そろったら再生。あとは自動でシンクします。",
+  },
 ];
 
 /** Landing page — modernised port of web/templates/index.html. */
@@ -28,8 +34,12 @@ export default function HomePage(): React.JSX.Element {
       {/* How it works (summary → links to the full usage guide). */}
       <section className="mx-auto max-w-5xl px-4 py-16">
         <Reveal className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight">使い方はかんたん</h2>
-          <p className="mt-3 text-muted-foreground">4 ステップで始められます。</p>
+          <h2 className="text-3xl font-bold tracking-tight">
+            使い方はかんたん
+          </h2>
+          <p className="mt-3 text-muted-foreground">
+            4 ステップで始められます。
+          </p>
         </Reveal>
 
         <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -40,7 +50,9 @@ export default function HomePage(): React.JSX.Element {
                   {i + 1}
                 </span>
                 <h3 className="mt-4 font-semibold">{step.title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{step.text}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {step.text}
+                </p>
               </li>
             </Reveal>
           ))}
@@ -68,7 +80,8 @@ export default function HomePage(): React.JSX.Element {
               さあ、みんなでアニメを観よう
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-              完全無料・広告なし。dアニメストアの作品を、離れた友達と同時視聴。
+              完全無料・広告なし。dアニメストア・DMM TV
+              の作品を、離れた友達と同時視聴。
             </p>
             <div className="mt-8">
               <Button asChild size="lg" className="h-12 px-8 text-base">
