@@ -31,7 +31,7 @@ Chrome 拡張機能 (dアニメストアのページに content script を注入
 Nginx :80/443 ──▶ Django (daphne/uvicorn, Channels)
         ├─ REST API (DRF)            : /api/*
         ├─ WebSocket (Channels)      : 同時視聴の同期
-        └─ 管理画面 (Jazzmin)        : /admin/*
+        └─ 管理画面 (Unfold)         : /admin/*
 Django ──▶ PostgreSQL 16（永続化） / Redis 7（Channels レイヤ・キャッシュ）
 監視: Prometheus + Grafana + cadvisor + node-exporter（django-prometheus 経由）
 ```
