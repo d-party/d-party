@@ -299,7 +299,7 @@ cd backend && act push        # backend のワークフローを実行
 | URL                     | 内容                                |
 | ----------------------- | ----------------------------------- |
 | `http://localhost`      | アプリ（Nginx 経由）                |
-| `http://localhost:8000` | Django 直接（debug-toolbar 有効時） |
+| `http://localhost:8000` | Django 直接（DEBUG 有効時）          |
 | `http://localhost:9090` | Prometheus                          |
 
 > PostgreSQL の閲覧は Adminer を廃止し、**VSCode SQLTools 拡張**へ移行（Dev Container 同梱・
