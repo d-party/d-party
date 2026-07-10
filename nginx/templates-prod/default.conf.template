@@ -75,6 +75,11 @@ server {
         proxy_redirect off;
         proxy_pass http://app_server;
     }
+    # /admin（末尾スラッシュなし）はこの prefix にマッチせず location / へ落ちて
+    # フロントの 404 になるため、Django admin の /admin/ へ明示的にリダイレクトする。
+    location = /admin {
+        return 301 /admin/;
+    }
     location /admin/ {
         try_files $uri @proxy_to_app;
     }
