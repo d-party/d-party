@@ -3,11 +3,14 @@ import Link from "next/link";
 
 import { Faq, type FaqEntry } from "@/components/qa/Faq";
 import { D_ANIME_STORE_URL } from "@/infrastructure/env";
+import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/qa",
   title: "Q&A",
-  description: "d-party のよくある質問と回答。",
-};
+  description:
+    "d-party のよくある質問と回答。料金、対応ブラウザ、dアニメストアの契約、同時視聴できる人数、うまく同期しないときの対処法などをまとめています。",
+});
 
 const ENTRIES: FaqEntry[] = [
   {

@@ -29,11 +29,23 @@ export const metadata: Metadata = {
     ],
     apple: "/favicon/apple-touch-icon.png",
   },
+  // Defaults for any route that does not set its own (see lib/metadata.ts).
+  // The card images come from the `opengraph-image` / `twitter-image` file
+  // conventions: the site-wide card at the app root, a per-room card in the lobby.
   openGraph: {
     title: "d-party",
+    description:
+      "dアニメストアでもウォッチパーティーができる、完全無料の Google Chrome 向け拡張機能 d-party。",
     siteName: "d-party",
     type: "website",
     locale: "ja_JP",
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "d-party",
+    description:
+      "dアニメストアでもウォッチパーティーができる、完全無料の Google Chrome 向け拡張機能 d-party。",
   },
 };
 

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
-import { OG_SIZE, RoomOgImage } from "./RoomOgImage";
+import { ogPreview } from "./ogPreview";
+import { RoomOgImage } from "./RoomOgImage";
 
 /**
  * Preview of the room Open Graph image (1200×630). The exact same component is
@@ -16,25 +17,7 @@ const meta: Meta<typeof RoomOgImage> = {
     layout: "centered",
     backgrounds: { default: "light" },
   },
-  decorators: [
-    (Story) => (
-      <div
-        style={{
-          width: OG_SIZE.width,
-          height: OG_SIZE.height,
-          transform: "scale(0.5)",
-          transformOrigin: "top left",
-          // Keep the surrounding layout sized to the scaled box.
-          marginBottom: -OG_SIZE.height / 2,
-          marginRight: -OG_SIZE.width / 2,
-          boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
-          overflow: "hidden",
-        }}
-      >
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [ogPreview],
   argTypes: {
     title: { control: "text" },
   },

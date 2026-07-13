@@ -17,11 +17,14 @@ import {
   GOOGLE_CHROME_URL,
   MICROSOFT_EDGE_URL,
 } from "@/infrastructure/env";
+import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/usage",
   title: "使い方",
-  description: "d-party でウォッチパーティーを始めるまでのステップガイド。",
-};
+  description:
+    "d-party でウォッチパーティーを始めるまでのステップガイド。Chrome / Edge への拡張機能のインストールから、dアニメストアで作品を開き、ルームのリンクを友だちに共有して一緒に視聴するまでを画像つきで解説します。",
+});
 
 type Step = {
   title: string;

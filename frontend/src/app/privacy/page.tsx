@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata: Metadata = {
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = pageMetadata({
+  path: "/privacy",
   title: "プライバシーポリシー",
   description:
-    "d-party のプライバシーポリシー。取得する情報、利用目的、保存期間等を定めます。",
-};
+    "d-party のプライバシーポリシー。取得する情報、利用目的、第三者提供、保存期間、および問い合わせ先を定めます。",
+});
 
 const UPDATED_AT = "2026-06-21";
 

@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { FaRegHand } from "react-icons/fa6";
 
 import { Button } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  title: "404 Not Found",
+  description: "お探しのページは見つかりませんでした。",
+  robots: { index: false, follow: true },
+};
 
 /** Ported from web/templates/404.html. */
 export default function NotFound(): React.JSX.Element {

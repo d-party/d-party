@@ -25,17 +25,24 @@ src/
     anime-store/lobby/[roomId]/page.tsx
                              ルーム遷移（旧 lobby_redirect.html）— client component
     not-found.tsx            404（旧 404.html）
+    opengraph-image.tsx twitter-image.tsx
+                             サイト共通 OGP 画像（ビルド時に PNG 化）
     globals.css              Tailwind + shadcn テーマトークン（拡張機能 popup から移植、ダーク専用）
   components/
     layout/Header.tsx Footer.tsx
     landing/                 Hero / Features（framer-motion アニメーション）
     motion/Reveal.tsx        スクロール表示アニメ（prefers-reduced-motion 対応）
     qa/Faq.tsx               アコーディオン（client）
+    og/                      OGP カード: OgCard（共通シェル）/ SiteOgImage / RoomOgImage
+                             + brand.ts（配色・ロゴ）/ ogPreview.tsx（Storybook デコレータ）
     ui/                      shadcn コンポーネント（拡張機能と共通の Button 等）
   infrastructure/
     env.ts                   接続先設定（NEXT_PUBLIC_* で上書き可、旧 settings.js 相当）
     api/fetcher.ts           orval mutator（customFetch）
     api/generated/           orval 生成クライアント（コミット対象外でなく生成物を含む）
+  lib/metadata.ts            各ページの meta / OGP テキストを組み立てる pageMetadata()
+  lib/og/                    card.ts（サイズ・alt・画像ルートのパス）/ fonts.ts /
+                             renderSiteImage・renderRoomImage（next/og で PNG 化）
   lib/utils.ts               cn()
 openapi/openapi.json         REST スキーマ（拡張機能と同期 + lobby エンドポイント追加）
 ```
@@ -50,6 +57,27 @@ pnpm build            # next build --turbopack（standalone）
 pnpm typecheck        # tsc --noEmit
 pnpm lint             # eslint .
 ```
+
+## OGP / meta 情報
+
+カードは 2 種類。どちらも `components/og/OgCard.tsx`（ブランドヘッダ + eyebrow/headline/sub +
+フッタ）を共通シェルとして使うので、サイトのリンクとルームのリンクは同じ見た目になる。
+
+- **サイト共通**（`SiteOgImage`）: `app/opengraph-image.tsx` / `app/twitter-image.tsx`。
+  リクエスト依存が無いのでビルド時に 1 枚 PNG 化され、静的配信される。
+- **ルーム個別**（`RoomOgImage`）: `app/anime-store/lobby/[roomId]/{opengraph,twitter}-image.tsx`。
+  作品名をバックエンドから引いて描画するため動的。
+
+Satori（`next/og`）の制約でカードは**インラインスタイル + flexbox のみ**（Tailwind 不可）。
+そのぶん同じコンポーネントを **Storybook**（`OGP/SiteOgImage`・`OGP/RoomOgImage`）で
+そのままプレビューできる。`pnpm storybook` で確認すること。日本語グリフは
+`public/fonts/NotoSansJP-*.ttf` をディスクから読む（`lib/og/fonts.ts`）ので外部フェッチ無し。
+
+各ページの meta テキストは `lib/metadata.ts` の `pageMetadata()` で組み立てる
+（title / description / canonical / og / twitter）。**Next の落とし穴**: ページが自前の
+`openGraph` を定義すると親から解決済みの `openGraph` を**丸ごと置き換える**ため、
+`app/opengraph-image.tsx` のファイル規約で付く画像も消える。よって `pageMetadata()` は
+画像 URL（`/opengraph-image`・`/twitter-image`）を明示的に指定している。
 
 ## ルーム遷移（ロビー）の契約 — 変更厳禁
 

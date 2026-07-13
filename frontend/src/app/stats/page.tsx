@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 
 import { StatsDashboard } from "@/components/stats/StatsDashboard";
+import { pageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/stats",
   title: "統計",
-  description: "d-party の利用統計（ユーザー数・ルーム数・リアクション数）。",
-};
+  description:
+    "d-party の利用統計。直近 1 年間のユーザー数・ルーム数・リアクション数の推移を公開しています。",
+});
 
 /** 既定の集計期間（日）。フロントは直近 1 年を固定表示する。 */
 const DEFAULT_DAYS = 365;

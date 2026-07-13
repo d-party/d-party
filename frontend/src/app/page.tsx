@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ArrowRight, Download } from "lucide-react";
 import Link from "next/link";
 
@@ -6,6 +7,15 @@ import { Hero } from "@/components/landing/Hero";
 import { Reveal } from "@/components/motion/Reveal";
 import { Button } from "@/components/ui/button";
 import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = pageMetadata({
+  path: "/",
+  title: "d-party — dアニメストアで友だちと同時視聴",
+  titleIsBranded: true,
+  description:
+    "dアニメストアの作品を友だちと同時視聴できる、完全無料の Chrome 拡張機能 d-party。再生・一時停止・シークが自動で同期し、リアクションで一緒に盛り上がれます。インストールしてルームのリンクを共有するだけ。",
+});
 
 const STEPS = [
   {
