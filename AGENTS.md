@@ -307,5 +307,8 @@ cd backend && act push        # backend のワークフローを実行
 > PostgreSQL の閲覧は Adminer を廃止し、**VSCode SQLTools 拡張**へ移行（Dev Container 同梱・
 > `d-party (compose postgres)` 接続を事前定義。追加設定なしで `localhost:5432` に接続）。
 
+> Redis の閲覧は **Redis for VS Code 拡張**（Dev Container 同梱）。接続の事前定義に対応しない拡張なので、
+> 初回だけ「+ Connect database」で `127.0.0.1:6379`（既定値のまま）を登録する。以降は保存される。
+
 > 外部サービス（Google 等）は bot 検出でブロックされることがある。外部調査には
 > `WebSearch` / `WebFetch` を優先し、ブラウザ検証は localhost に集中させること。

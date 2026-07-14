@@ -156,6 +156,11 @@ reload して新しい証明書を取り込みます。証明書・秘密鍵は 
 > 事前定義済みです。`docker compose up -d` 後、SQLTools サイドバーから接続するだけで開けます
 > （追加設定不要。接続先は `localhost:5432` / DB・ユーザー `d_party`）。
 
+> Redis（Channels レイヤ・キャッシュ）の閲覧は **VSCode の Redis 拡張（Redis for VS Code）** を
+> Dev Container に同梱しています。この拡張は接続情報を settings.json で事前定義できないため、
+> 初回のみサイドバーの Redis アイコン →「+ Connect database」で `127.0.0.1:6379`（フォームの既定値の
+> まま）を登録してください。以降は拡張側に保存され、再接続の操作は不要です。
+
 > 本番は nginx の TLS 終端により https://d-party.net（http は https へリダイレクト）で配信されます。
 
 ## 負荷試験（WebSocket 同時視聴）

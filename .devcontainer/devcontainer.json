@@ -50,6 +50,7 @@
         "anthropic.claude-code",
         "mtxr.sqltools",
         "mtxr.sqltools-driver-pg",
+        "Redis.redis-for-vscode",
         "lottiefiles.vscode-lottie"
       ],
       "settings": {
