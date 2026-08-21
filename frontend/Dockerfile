@@ -4,15 +4,21 @@
 # Build:  docker build -t d-party-frontend .
 # Run:    docker run -p 3000:3000 d-party-frontend
 
-FROM node:22-alpine AS base
+FROM node:26-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+# node:26-alpine 以降、corepack はイメージに同梱されなくなった（node:24-alpine
+# までは /usr/local/bin/corepack がある）。npm から入れて有効化することで、
+# pnpm のバージョンは package.json の packageManager 一箇所のままにできる。
+RUN npm install --global corepack@latest && corepack enable
 
 # --- Dependencies -----------------------------------------------------------
 FROM base AS deps
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
+# pnpm-workspace.yaml も要る。pnpm 10.28 以降は overrides / onlyBuiltDependencies
+# がここに置かれ、欠けると --frozen-lockfile が
+# ERR_PNPM_LOCKFILE_CONFIG_MISMATCH で落ちる。
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # --- Build ------------------------------------------------------------------
