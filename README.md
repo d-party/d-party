@@ -12,7 +12,7 @@
 
 | パス                | サービス            | スタック                                                        | リポジトリ                                                                        |
 | ------------------- | ------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `backend/`          | Django バックエンド | Python 3.13 · Django 5 · Channels · DRF · PostgreSQL · Redis · Nginx | [backend](https://github.com/d-party/backend)                     |
+| `backend/`          | Django バックエンド | Python 3.13 · Django 6 · Channels · DRF · PostgreSQL · Redis · Nginx | [backend](https://github.com/d-party/backend)                     |
 | `chrome-extension/` | Chrome 拡張機能     | Manifest V3 · Vanilla JS · jQuery 3.6                           | [chrome-extension](https://github.com/d-party/chrome-extension) |
 | `frontend/`         | ユーザー向けフロントエンド | Next.js 15 · React 19 · TypeScript · Tailwind CSS v4 · shadcn/ui · pnpm | [frontend](https://github.com/d-party/frontend)                   |
 

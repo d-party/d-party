@@ -17,7 +17,7 @@ services:
       - ./.env.dev
 
   frontend:
-    image: node:22-alpine
+    image: node:26-alpine
     working_dir: /app
     env_file:
       - ./.env.dev
@@ -37,7 +37,9 @@ services:
     command:
       - sh
       - -c
-      - corepack enable && pnpm install --frozen-lockfile && exec pnpm dev -p 3000 -H 0.0.0.0
+      # node:26-alpine 以降、corepack はイメージに同梱されない。npm から入れて
+      # 有効化する（frontend の Dockerfile と同じ扱い）。
+      - npm install --global corepack@latest && corepack enable && pnpm install --frozen-lockfile && exec pnpm dev -p 3000 -H 0.0.0.0
     # 初回は pnpm install + 初回コンパイルがあるため起動猶予を長めにとる。
     healthcheck:
       start_period: 180s
