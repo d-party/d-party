@@ -53,3 +53,59 @@ jobs:
       # well keeps a broken story from reaching main and breaking that deploy.
       - name: Build Storybook
         run: pnpm build-storybook
+
+  docker:
+    name: Build & smoke-test the runtime image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # 本番配信は Dockerfile（Next standalone）だが、上の build ジョブは pnpm を
+    # 直接叩くだけでイメージを作らない。dev の compose も Dockerfile を使わない
+    # （node イメージで pnpm dev を回す）ため、Dockerfile 側だけが壊れても
+    # どこにも引っかからない。実際に corepack 同梱の廃止と
+    # pnpm-workspace.yaml のコピー漏れの 2 件がこのすき間を通り抜けた。
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Build the runtime image
+        run: docker build -t d-party-frontend:ci .
+
+      - name: Start the container
+        run: docker run -d --name frontend-ci -p 3000:3000 d-party-frontend:ci
+
+      # standalone サーバの起動を待つ。60 秒待っても応答しなければ失敗させる。
+      - name: Wait for the server
+        run: |
+          for _ in $(seq 1 30); do
+            # 起動待ちの間の接続エラーはノイズなので捨てる。上がらなかった
+            # ときの診断は下の Container logs ステップで足りる。
+            if curl -fsS -o /dev/null http://localhost:3000/ 2>/dev/null; then
+              echo "server is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "server did not become ready in time"
+          exit 1
+
+      # ビルドが通ってもページが 500 になる壊れ方があるので、実際に引いて確認する。
+      - name: Check the pages render
+        run: |
+          for path in / /usage /qa /privacy; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:3000$path")
+            echo "$path -> $code"
+            [ "$code" = "200" ] || exit 1
+          done
+          # not-found ルートが 404 を返すこと（500 との取り違えを拾う）。
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/__does_not_exist__)
+          echo "/__does_not_exist__ -> $code"
+          [ "$code" = "404" ] || exit 1
+
+      - name: Container logs
+        if: always()
+        run: docker logs frontend-ci
+
+      - name: Stop the container
+        if: always()
+        run: docker rm -f frontend-ci
