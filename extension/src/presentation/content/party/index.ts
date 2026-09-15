@@ -9,7 +9,7 @@ import { ChromeStorageSettingsRepository } from "@/infrastructure/storage/Chrome
 import { WEBSOCKET_ENDPOINT } from "@/infrastructure/env";
 import { PartyWebSocketClient } from "@/infrastructure/ws/PartyWebSocketClient";
 
-import { getParam } from "../dom/utils";
+import { getParam, toHttpUrl } from "../dom/utils";
 import { PlayerControllerDom } from "./PlayerControllerDom";
 import { mountSidebar } from "./react/mountSidebar";
 import { mountPipButton } from "./react/PipButton";
@@ -486,7 +486,11 @@ function nextPageAnotherTab(): void {
     // been removed. We rebind onclick directly on the page elements instead.)
     document.querySelectorAll<HTMLElement>(".recommend").forEach((item) => {
       item.onclick = () => {
-        const next = item.querySelector("input")?.getAttribute("value");
+        // 遷移先はページ自身の DOM から読む。content script からの
+        // location.href 代入はページのコンテキストで実行されるため、
+        // javascript: のようなスキームを踏まないよう http(s) に限定する。
+        const raw = item.querySelector("input")?.getAttribute("value");
+        const next = raw ? toHttpUrl(raw) : null;
         if (next) window.location.href = next;
       };
     });
