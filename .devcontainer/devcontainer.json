@@ -100,7 +100,7 @@
           "find": true,
           "grep": true,
           "rg": true,
-          "/^git (status|log|diff|branch|show|fetch|remote|submodule|rev-parse)\\b/": true,
+          "/^git (status|log|diff|branch|show|fetch|remote|rev-parse)\\b/": true,
           "/^docker(\\s+compose)?\\s+(ps|logs|images|version|config)\\b/": true,
           "rm": false,
           "rmdir": false,

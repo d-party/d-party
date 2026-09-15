@@ -1,11 +1,8 @@
 # Storybook を GitHub Pages へ公開する。
 #
-# モノレポ化前は chrome-extension と frontend がそれぞれ同名のワークフローを持ち、
-# どちらも `concurrency: group: pages` で **同じ Pages サイトのルート**へ配信して
-# いた（別リポジトリなので別サイトだった）。1 リポジトリになった今、そのまま
-# 2 本残すと後から走った方が先の Storybook を上書きしてしまう。
-#
-# そこで両方をビルドし、1 回の Pages デプロイにサブパスとしてまとめる:
+# **GitHub Pages は 1 リポジトリにつき 1 サイト**なので、パッケージごとに
+# デプロイを分けると後から走った方が先の Storybook を上書きしてしまう。
+# 両方をビルドし、1 回の Pages デプロイにサブパスとしてまとめる:
 #
 #   https://<org>.github.io/<repo>/extension/   ← 拡張機能の Storybook
 #   https://<org>.github.io/<repo>/frontend/    ← フロントエンドの Storybook

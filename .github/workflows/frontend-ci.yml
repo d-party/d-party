@@ -1,8 +1,7 @@
 # frontend/ の CI。
 #
-# モノレポ化前は d-party/frontend が持っていた ci.yml + license-check.yml。
-# pnpm workspace へ統合したので、依存のインストールはルートで 1 回、タスクは
-# turbo に --filter を渡して frontend のぶんだけ回す。
+# 依存は pnpm workspace なのでインストールはルートで 1 回、タスクは turbo に
+# --filter を渡して frontend のぶんだけ回す。
 name: Frontend/CI
 
 on:
@@ -146,9 +145,9 @@ jobs:
     # どこにも引っかからない。実際に corepack 同梱の廃止と
     # pnpm-workspace.yaml のコピー漏れの 2 件がこのすき間を通り抜けた。
     #
-    # モノレポ化でここはさらに壊れやすくなった: ビルドコンテキストがルートになり、
-    # Next の outputFileTracingRoot がワークスペースのルートへ動くため
-    # standalone の中身の形が変わる（standalone/frontend/server.js）。
+    # ビルドコンテキストがリポジトリのルートで、standalone の中身も
+    # workspace の形（standalone/frontend/server.js）になるため、ここは特に
+    # 手元の `pnpm build` では検出できない壊れ方をしやすい。
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7

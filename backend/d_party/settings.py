@@ -294,9 +294,9 @@ UNFOLD = {
 
 STATIC_URL = "static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "static/")
-# 公開ページ（LP・使い方・統計など）は frontend サブモジュールへ移行済みのため、
-# Django 側のアプリ static は持たない。管理画面（Jazzmin）のロゴ等のブランディング
-# 素材だけをここから配信する。
+# 公開ページ（LP・使い方・統計など）は frontend が担当するため、Django 側は
+# アプリ static を持たない。管理画面（Unfold）のロゴ等のブランディング素材だけを
+# ここから配信する。
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "assets")]
 
 # Default primary key field type

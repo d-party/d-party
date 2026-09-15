@@ -1,8 +1,7 @@
 # infra/（k3s / Helm）の CI。
 #
-# モノレポ化前 infra/ は deploy/ という名前で、CI は一切無かった。ルートの一部に
-# なり、chart が壊れると Raspberry Pi へのリリースがそのまま止まるため、
-# クラスタ無しでできる静的検証だけ入れている。
+# chart が壊れると Raspberry Pi へのリリースがそのまま止まるため、クラスタ無しで
+# できる静的検証（helm lint / helm template）をここで回す。
 name: Infra/CI
 
 on:

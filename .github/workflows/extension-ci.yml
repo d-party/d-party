@@ -1,8 +1,7 @@
 # extension/ の CI。
 #
-# モノレポ化前は d-party/extension が持っていた ci.yml + license-check.yml。
-# pnpm workspace へ統合したので、依存のインストールはルートで 1 回、タスクは
-# turbo に --filter を渡して extension のぶんだけ回す。
+# 依存は pnpm workspace なのでインストールはルートで 1 回、タスクは turbo に
+# --filter を渡して extension のぶんだけ回す。
 name: Extension/CI
 
 on:

@@ -1,10 +1,9 @@
-# pre-commit hooks（モノレポのルート）。
+# pre-commit hooks。
 # Install: `pre-commit install`（リポジトリのルートで実行する）
 # Run on everything: `pre-commit run --all-files`
 #
-# もとは backend/.pre-commit-config.yaml だった。pre-commit はフックを
-# `git rev-parse --git-dir`（= モノレポのルート）へ入れ、実行時の設定ファイルも
-# ルートから探すため、モノレポ化にあわせてここへ移した。
+# pre-commit はフックを `git rev-parse --git-dir` へ入れ、実行時の設定ファイルも
+# リポジトリのルートから探すため、この設定はルートに置く必要がある。
 #
 # 適用範囲は **backend/ のみ**（`files: ^backend/`）。extension / frontend は
 # prettier + eslint が担当しており、二重に整形すると衝突するため対象外にしている。
@@ -38,5 +37,5 @@ repos:
       # Lint（flake8 / flake8-django / flake8-bandit 等を ruff で再現。設定は pyproject.toml）
       - id: ruff-check
         args: [--fix]
-      # Format（旧 black の置き換え。black 互換のスタイル）
+      # Format（black 互換のスタイル）
       - id: ruff-format

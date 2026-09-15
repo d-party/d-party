@@ -1,8 +1,6 @@
 version: 2
 
-# モノレポ化前は backend / chrome-extension / frontend がそれぞれ
-# .github/dependabot.yml を持っていた。ここへ統合し、directory で
-# パッケージを指し分ける。グループ名・スケジュール・prefix は元の設定を踏襲。
+# directory でパッケージを指し分ける。
 updates:
   # ── backend（Django / uv）───────────────────────────────────────────────
   # Python 依存は uv（pyproject.toml + uv.lock）で管理している。
