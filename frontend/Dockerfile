@@ -20,13 +20,14 @@ RUN npm install --global corepack@latest && corepack enable
 # --- Dependencies -----------------------------------------------------------
 FROM base AS deps
 WORKDIR /app
-# workspace の manifest 一式を先に置く。extension/package.json も要る:
-# 欠けると pnpm-workspace.yaml の glob が外れ、ロックファイルの importers と
+# workspace の manifest 一式を先に置く。frontend が使わない extension/package.json も
+# 要る: 欠けると pnpm-workspace.yaml の glob が外れ、ロックファイルの importers と
 # 食い違って --frozen-lockfile が ERR_PNPM_OUTDATED_LOCKFILE で落ちる。
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY frontend/package.json frontend/
 COPY extension/package.json extension/
-# frontend とその依存だけを入れる（extension の storybook 等は入れない）。
+COPY packages/ui/package.json packages/ui/
+# frontend とその依存（共有 UI を含む）だけを入れる。
 RUN pnpm install --frozen-lockfile --filter d-party-frontend...
 
 # --- Build ------------------------------------------------------------------
@@ -34,7 +35,11 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/frontend/node_modules ./frontend/node_modules
+COPY --from=deps /app/packages/ui/node_modules ./packages/ui/node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# 共有 UI は TypeScript のソースのまま取り込むので、ソースごとコピーする
+# （next.config.ts の transpilePackages でビルド時に変換される）。
+COPY packages/ui packages/ui
 COPY frontend frontend
 # Backend connection is baked in at build time via NEXT_PUBLIC_* (see env.ts).
 ARG NEXT_PUBLIC_BACKEND_HOST

@@ -16,6 +16,7 @@
 | `extension/`   | ブラウザ拡張機能           | Manifest V3 · TypeScript · React 19 · rspack · Tailwind CSS v4 · shadcn/ui         |
 | `frontend/`    | ユーザー向けフロントエンド | Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 · shadcn/ui                   |
 | `infra/`       | k3s (Raspberry Pi) デプロイ | Helm chart · Argo CD · rootless BuildKit · クラスタ共有基盤                        |
+| `packages/ui/` | 共有 shadcn/ui プリミティブ | TypeScript · Radix · Tailwind CSS v4                                              |
 | `loadtest/`    | WebSocket 負荷試験         | k6                                                                                |
 | `nginx/` ほか  | オーケストレーション       | docker compose · nginx · postgres · redis · prometheus · grafana                  |
 
@@ -23,8 +24,9 @@
 > そのまま読み込めるため、ブラウザ名を含まない名前にしています。
 > `infra/` は旧 `deploy/` です。
 
-`extension/` と `frontend/` は **pnpm workspace** の 2 パッケージで、ロックファイルは
-ルートの `pnpm-lock.yaml` 1 本です。ビルド・lint・型検査のオーケストレーションは
+`extension/` · `frontend/` · `packages/ui/` は **pnpm workspace** の 3 パッケージで、
+ロックファイルはルートの `pnpm-lock.yaml` 1 本です。共有 UI は `workspace:*` 依存で
+参照します（`@d-party/ui`）。ビルド・lint・型検査のオーケストレーションは
 [Turborepo](https://turborepo.com/)（`turbo.json`）が行います。
 
 ## 必要要件

@@ -5,7 +5,7 @@ import type {
   HealthCheckRequest,
   HealthCheckResponse,
 } from "@/infrastructure/messages";
-import { PortalContainerContext } from "@/lib/portalContainer";
+import { PortalContainerContext } from "@d-party/ui";
 
 import { Sidebar } from "./Sidebar";
 import {

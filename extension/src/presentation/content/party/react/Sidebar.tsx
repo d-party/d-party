@@ -10,8 +10,8 @@ import {
 import { useSyncExternalStore } from "react";
 
 import { Logo } from "@/components/Logo";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@d-party/ui";
+import { TooltipProvider } from "@d-party/ui";
 import type { RoomSettings as RoomSettingsValue } from "@/domain/roomSettings";
 
 import {

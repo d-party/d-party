@@ -6,7 +6,12 @@ import type { StorybookConfig } from "@storybook/nextjs-vite";
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const config: StorybookConfig = {
-  stories: ["../src/**/*.stories.@(ts|tsx|mdx)"],
+  // 共有 UI（@d-party/ui）の story も取り込む。両アプリのテーマトークンが
+  // 異なるので、同じプリミティブを明るい配色と暗い配色の両方で確認できる。
+  stories: [
+    "../src/**/*.stories.@(ts|tsx|mdx)",
+    "../../packages/ui/src/**/*.stories.@(ts|tsx)",
+  ],
   addons: ["@storybook/addon-docs"],
   framework: {
     name: "@storybook/nextjs-vite",

@@ -5,6 +5,13 @@
  */
 @import "tailwindcss";
 
+/*
+ * Tailwind v4 は CSS のある位置を起点にソースを自動検出するため、リポジトリの
+ * 別パッケージにあるクラスは見つけられない。共有 UI（@d-party/ui）のクラスが
+ * purge されないよう、明示的にスキャン対象へ加える。
+ */
+@source "../../../packages/ui/src";
+
 @custom-variant dark (&:is(.dark *));
 
 /*

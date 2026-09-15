@@ -7,13 +7,13 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
+} from "@d-party/ui";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@d-party/ui";
 import type { RoomSettings as RoomSettingsValue } from "@/domain/roomSettings";
 
 import type { SidebarState } from "../sidebarStore";

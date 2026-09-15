@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/react";
 import { History, LogOut, Share2, Users } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";

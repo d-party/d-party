@@ -22,16 +22,16 @@ import { useEffect, useRef, useState } from "react";
 
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@d-party/ui";
+import { Label } from "@d-party/ui";
+import { Switch } from "@d-party/ui";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@d-party/ui";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@d-party/ui";
 import {
   type ReactionDisplayMode,
   type Settings,

@@ -8,13 +8,13 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
+} from "@d-party/ui";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@d-party/ui";
 import { FACEBOOK_APP_ID } from "@/infrastructure/env";
 
 import type { SidebarState } from "../sidebarStore";

@@ -6,7 +6,12 @@ import type { StorybookConfig } from "@storybook/react-vite";
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const config: StorybookConfig = {
-  stories: ["../src/**/*.stories.@(ts|tsx)"],
+  // 共有 UI（@d-party/ui）の story も取り込む。両アプリのテーマトークンが
+  // 異なるので、同じプリミティブを明るい配色と暗い配色の両方で確認できる。
+  stories: [
+    "../src/**/*.stories.@(ts|tsx)",
+    "../../packages/ui/src/**/*.stories.@(ts|tsx)",
+  ],
   addons: ["@storybook/addon-docs"],
   framework: {
     name: "@storybook/react-vite",

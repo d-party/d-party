@@ -1,7 +1,7 @@
 import * as React from "react";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
 
-import { cn } from "@/lib/utils";
+import { cn } from "./lib/utils";
 
 /**
  * 汎用アコーディオン（Radix ベース）。shadcn 流儀だが、トリガのアイコンは組み込まず

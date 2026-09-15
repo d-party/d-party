@@ -30,7 +30,7 @@ import {
   statsUserAliveCount,
   statsUserAllCount,
 } from "@/infrastructure/api/generated/d-party";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@d-party/ui";
 import type { PerDayResultDataItem } from "@/infrastructure/api/generated/model";
 
 type Totals = {

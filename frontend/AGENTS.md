@@ -35,7 +35,7 @@ src/
     qa/Faq.tsx               アコーディオン（client）
     og/                      OGP カード: OgCard（共通シェル）/ SiteOgImage / RoomOgImage
                              + brand.ts（配色・ロゴ）/ ogPreview.tsx（Storybook デコレータ）
-    ui/                      shadcn コンポーネント（拡張機能と共通の Button 等）
+    ui/button.tsx            Button（このアプリ専用。共有 UI は @d-party/ui）
   infrastructure/
     env.ts                   接続先設定（NEXT_PUBLIC_* で上書き可、旧 settings.js 相当）
     api/fetcher.ts           orval mutator（customFetch）
@@ -43,7 +43,6 @@ src/
   lib/metadata.ts            各ページの meta / OGP テキストを組み立てる pageMetadata()
   lib/og/                    card.ts（サイズ・alt・画像ルートのパス）/ fonts.ts /
                              renderSiteImage・renderRoomImage（next/og で PNG 化）
-  lib/utils.ts               cn()
 openapi/openapi.json         REST スキーマ（拡張機能と同期 + lobby エンドポイント追加）
 ```
 
@@ -113,8 +112,16 @@ Header/Footer を覆って小窓に収める。
 
 ## 拡張機能とのスタック共通化
 
-UI コンポーネント（`components/ui/*`）・`lib/utils.ts`・テーマトークン（`globals.css`）・orval 設定は
-Chrome 拡張機能リポジトリと意図的に同一にしている。変更する際は両者の整合に留意すること。
+shadcn/ui のプリミティブと `cn` は **`@d-party/ui`（`../packages/ui`）** に切り出して
+拡張機能と共有している。追加する shadcn コンポーネントもそちらへ置くこと。
+テーマトークン（`globals.css`）と orval 設定は意図的に同一に保っている。
+
+`Button` だけは共有していない。拡張機能側は hover の浮き上がりと押し込みの演出を
+持っており、意図的にスタイルが異なる（`src/components/ui/button.tsx`）。
+
+共有 UI は TypeScript のソースのまま配布されるので、`next.config.ts` の
+`transpilePackages` と `globals.css` の `@source` が要る。どちらかを外すと
+ビルドが通らない / クラスが purge される。
 
 > 注意: ロビーの拡張機能結合（`content-version` の DOM 書き込み）は `d-party.net` 実ホスト、または拡張機能
 > manifest の一時的な match 追加でしか完全検証できない。それ以外の挙動（webstore フォールバック等）はローカルで検証可能。

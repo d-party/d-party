@@ -18,7 +18,7 @@ import { useToggle } from "react-use";
 
 import { Logo } from "@/components/Logo";
 import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
-import { cn } from "@/lib/utils";
+import { cn } from "@d-party/ui";
 
 type NavLink = {
   label: string;
