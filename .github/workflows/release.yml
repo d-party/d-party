@@ -30,7 +30,7 @@
 #
 #   ★ Chrome Web Store 用の secrets（従来どおり）
 #     EXTENSION_ID / CLIENT_ID / CLIENT_SECRET / REFRESH_TOKEN
-name: release
+name: Release
 
 on:
   workflow_dispatch:

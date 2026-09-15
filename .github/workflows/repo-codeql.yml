@@ -3,7 +3,7 @@
 # モノレポ化前は backend が python を（ci.yml の codeql ジョブ）、
 # chrome-extension が javascript を（codeql-analysis.yml）それぞれ解析していた。
 # 1 リポジトリになったので、言語を matrix にまとめて 1 本で回す。
-name: CodeQL
+name: Repo/CodeQL
 
 on:
   push:

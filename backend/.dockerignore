@@ -18,7 +18,4 @@ static/
 # Docs and repo meta
 *.md
 LICENSE
-.yamllint
-.textlintrc.json
-.dockleignore
 .dockerignore

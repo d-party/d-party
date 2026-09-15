@@ -4,11 +4,7 @@
 # ci.yml に入っていたが、対象は「そのリポジトリ全体」だった。モノレポでは
 # ワークフローもシェルスクリプトも YAML もルートに集まるので、backend 専用の
 # CI から切り離してここへ移した。
-#
-# helm のチェックは新規。infra/ がサブモジュールではなくルートの一部になり、
-# chart が壊れると Raspberry Pi へのリリースがそのまま止まるため、クラスタ
-# 無しでできる静的検証だけ CI に入れている。
-name: CI (repo)
+name: Repo/CI
 
 on:
   push:
@@ -63,26 +59,3 @@ jobs:
           persist-credentials: false
       - name: yaml-lint
         uses: ibiqlik/action-yamllint@v3
-
-  helm:
-    name: Helm chart (lint & template)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - uses: azure/setup-helm@v4
-      - name: helm lint
-        run: helm lint infra/helm/d-party
-      # values の既定だけでなく、実運用に近い上書き（外部 Secret + 独自ドメイン）でも
-      # マニフェストが組み上がることを確認する。
-      - name: helm template (defaults)
-        run: helm template d-party infra/helm/d-party > /dev/null
-      - name: helm template (existingSecret + domain)
-        run: |
-          helm template d-party infra/helm/d-party \
-            --set config.MY_DOMAIN=d-party.example \
-            --set secret.existingSecret=d-party-secret > /dev/null
