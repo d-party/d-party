@@ -1,0 +1,34 @@
+# モノレポの pnpm workspace 定義。
+#
+# 旧 extension/ と frontend/ はそれぞれ独立したリポジトリで、各々が
+# pnpm-workspace.yaml と pnpm-lock.yaml を持っていた。モノレポ化で
+# **ロックファイルをこの 1 本に統合**し、両パッケージが同じ解決結果を
+# 共有するようにした（react / tailwind / storybook 等の重複バージョンが
+# 発生しなくなる）。
+packages:
+  - "extension"
+  - "frontend"
+
+# pnpm 10.28 以降、package.json の "pnpm" フィールドは読まれない。
+# 設定はこのファイルへ置く（https://pnpm.io/settings）。
+#
+# ビルドスクリプトの実行を許可する依存。旧 extension/ の設定を引き継ぐ
+# （旧 frontend/ 側は空だった）。
+onlyBuiltDependencies:
+  - "esbuild"
+
+# 脆弱性のある推移的依存を、親パッケージのレンジに縛られずに修正版へ引き上げる。
+# 左辺のレンジ（= 脆弱なバージョン）に該当する解決結果だけを書き換えるため、
+# 別メジャーを要求する親には影響しない。
+#
+# 旧 extension/ と旧 frontend/ の overrides の**和**。ロックファイルが 1 本に
+# なったので、ここが両パッケージに一律で効く。
+overrides:
+  "brace-expansion@>=3.0.0 <5.0.9": ">=5.0.9"
+  "esbuild@>=0.27.3 <0.28.1": ">=0.28.1"
+  "fast-uri@>=3.0.0 <3.1.5": ">=3.1.5"
+  "js-yaml@>=4.0.0 <4.3.1": ">=4.3.1"
+  "linkify-it@<=5.0.1": ">=5.0.2"
+  "nanoid@<3.3.18": ">=3.3.18"
+  "postcss@<=8.5.22": ">=8.5.23"
+  "sharp@<0.35.0": ">=0.35.0"

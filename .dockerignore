@@ -1,0 +1,19 @@
+# モノレポのルートをビルドコンテキストにする frontend/Dockerfile 用。
+# backend/ は自前の .dockerignore を持ち context: ./backend でビルドするため、
+# ここの指定は影響しない。
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/storybook-static
+**/out
+.git
+.venv
+**/__pycache__
+**/*.log
+**/.env*.local
+# 実行時に生成され、イメージへ持ち込む意味がないもの
+certbot/
+postgres/data/
+grafana/data/
+loadtest/results/

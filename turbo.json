@@ -1,0 +1,64 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "stream",
+  "tasks": {
+    "api:generate": {
+      "inputs": [
+        "openapi/**",
+        "orval.config.ts",
+        "src/infrastructure/api/fetcher.ts"
+      ],
+      "outputs": ["src/infrastructure/api/generated/**"]
+    },
+
+    "typecheck": {
+      "dependsOn": ["api:generate"],
+      "inputs": [
+        "src/**",
+        "*.ts",
+        "*.mjs",
+        "tsconfig.json",
+        ".storybook/**",
+        "next-env.d.ts"
+      ]
+    },
+
+    "lint": {
+      "dependsOn": ["api:generate"],
+      "inputs": ["src/**", "*.ts", "*.mjs", "eslint.config.mjs", ".storybook/**"]
+    },
+
+    "lint:fix": {
+      "dependsOn": ["api:generate"],
+      "cache": false
+    },
+
+    "build": {
+      "dependsOn": ["api:generate"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+
+    "build:prod": {
+      "dependsOn": ["api:generate"],
+      "outputs": ["dist/**"]
+    },
+
+    "build-storybook": {
+      "dependsOn": ["api:generate"],
+      "outputs": ["storybook-static/**"]
+    },
+
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+
+    "format": {
+      "cache": false
+    },
+
+    "license:check": {
+      "cache": false
+    }
+  }
+}

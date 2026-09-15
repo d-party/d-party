@@ -2,7 +2,7 @@
   "name": "d-party Dev Container",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config graphviz && sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*",
-  "postCreateCommand": "git submodule update --init --recursive && (cd backend && uv sync && pre-commit install --install-hooks)",
+  "postCreateCommand": "(cd backend && uv sync) && pre-commit install --install-hooks && corepack enable && pnpm install --frozen-lockfile",
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.14"
@@ -41,7 +41,7 @@
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "ms-python.black-formatter",
+        "charliermarsh.ruff",
         "ms-python.mypy-type-checker",
         "ms-azuretools.vscode-docker",
         "redhat.vscode-yaml",
@@ -54,10 +54,10 @@
         "lottiefiles.vscode-lottie"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
         "editor.formatOnSave": true,
         "[python]": {
-          "editor.defaultFormatter": "ms-python.black-formatter"
+          "editor.defaultFormatter": "charliermarsh.ruff"
         },
         "sqltools.connections": [
           {
@@ -79,7 +79,10 @@
           "python3": true,
           "pip": true,
           "pytest": true,
-          "black": true,
+          "ruff": true,
+          "pnpm": true,
+          "turbo": true,
+          "pre-commit": true,
           "act": true,
           "k6": true,
           "helm": true,

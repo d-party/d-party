@@ -1,7 +1,12 @@
 # syntax=docker/dockerfile:1
 
 # d-party frontend — Next.js (standalone output) served by a Node runtime.
-# Build:  docker build -t d-party-frontend .
+#
+# ビルドコンテキストは **モノレポのルート**（frontend/ ではない）。pnpm workspace の
+# ロックファイルがルートにあり、frontend 単体のコンテキストでは
+# --frozen-lockfile を満たせないため。
+#
+# Build:  docker build -f frontend/Dockerfile -t d-party-frontend .
 # Run:    docker run -p 3000:3000 d-party-frontend
 
 FROM node:26-alpine AS base
@@ -15,22 +20,28 @@ RUN npm install --global corepack@latest && corepack enable
 # --- Dependencies -----------------------------------------------------------
 FROM base AS deps
 WORKDIR /app
-# pnpm-workspace.yaml も要る。pnpm 10.28 以降は overrides / onlyBuiltDependencies
-# がここに置かれ、欠けると --frozen-lockfile が
-# ERR_PNPM_LOCKFILE_CONFIG_MISMATCH で落ちる。
+# workspace の manifest 一式を先に置く。extension/package.json も要る:
+# 欠けると pnpm-workspace.yaml の glob が外れ、ロックファイルの importers と
+# 食い違って --frozen-lockfile が ERR_PNPM_OUTDATED_LOCKFILE で落ちる。
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY frontend/package.json frontend/
+COPY extension/package.json extension/
+# frontend とその依存だけを入れる（extension の storybook 等は入れない）。
+RUN pnpm install --frozen-lockfile --filter d-party-frontend...
 
 # --- Build ------------------------------------------------------------------
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY --from=deps /app/frontend/node_modules ./frontend/node_modules
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY frontend frontend
 # Backend connection is baked in at build time via NEXT_PUBLIC_* (see env.ts).
 ARG NEXT_PUBLIC_BACKEND_HOST
 ARG NEXT_PUBLIC_BACKEND_PROTOCOL
 ARG NEXT_PUBLIC_WEBSOCKET_PROTOCOL
 ENV NEXT_TELEMETRY_DISABLED=1
+WORKDIR /app/frontend
 RUN pnpm build
 
 # --- Runtime ----------------------------------------------------------------
@@ -41,12 +52,17 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# workspace 配下でビルドすると Next は「ロックファイルのある位置」を
+# outputFileTracingRoot とみなすため、standalone の中身は
+#   standalone/node_modules/…  +  standalone/frontend/server.js
+# というモノレポの形になる。展開先もその形に合わせる。
+COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/static ./frontend/.next/static
+# public/ は standalone に丸ごとは入らない（参照されたファイルだけ traced される）。
+COPY --from=builder /app/frontend/public ./frontend/public
 
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-CMD ["node", "server.js"]
+CMD ["node", "frontend/server.js"]
