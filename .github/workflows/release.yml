@@ -231,6 +231,18 @@ jobs:
           context: ${{ matrix.image == 'backend' && 'backend' || '.' }}
           file: ${{ matrix.image }}/Dockerfile
           platforms: ${{ matrix.platform }}
+          # OCI の標準ラベル。`org.opencontainers.image.source` は GHCR が
+          # 「どのリポジトリのパッケージか」を判断するのに使う。
+          # これらのパッケージは旧 d-party/backend · d-party/frontend から
+          # 作られたため、いまもそちらにリンクされている（どちらも archive 済み）。
+          # ラベルでこのリポジトリを指しておく。
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.url=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.version.outputs.tag }}
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.title=d-party ${{ matrix.image }}
           outputs: >-
             type=image,name=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }},push-by-digest=true,name-canonical=true,push=true
 
@@ -285,11 +297,19 @@ jobs:
         env:
           IMAGE: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
           TAG: ${{ needs.version.outputs.tag }}
+          SOURCE: ${{ github.server_url }}/${{ github.repository }}
         run: |
           set -euo pipefail
+          # ラベルは各アーキのイメージ config に載るが、pull 側がまず見るのは
+          # index なので、index にも同じ annotation を付けておく。
           # shellcheck disable=SC2046
           # 各ダイジェストを引数へ展開したいので、ここは意図的にクォートしない。
           docker buildx imagetools create -t "${IMAGE}:${TAG}" \
+            --annotation "index:org.opencontainers.image.source=${SOURCE}" \
+            --annotation "index:org.opencontainers.image.url=${SOURCE}" \
+            --annotation "index:org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --annotation "index:org.opencontainers.image.version=${TAG}" \
+            --annotation "index:org.opencontainers.image.licenses=MIT" \
             $(printf "${IMAGE}@sha256:%s " *)
 
       - name: Inspect the published image
