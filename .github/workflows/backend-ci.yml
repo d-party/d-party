@@ -1,11 +1,12 @@
-# backend（Django）の CI。
+# backend（Django）の静的検査とテスト。イメージが組み上がって起動するかは
+# Backend/Build が見る。
 #
 # uv / pytest / ruff / mypy の設定はすべて backend/ にあるので、
 # `defaults.run.working-directory: backend` でシェルを回すステップはその中で実行する。
 # `paths` により backend/ に触れた変更のときだけ起動する。
 #
-# リポジトリ横断の lint（actionlint / shellcheck / yamllint）は repo-ci.yml、
-# CodeQL は言語横断の repo-codeql.yml が担当する。
+# リポジトリ横断の lint（actionlint / shellcheck / yamllint）と CodeQL は
+# repo-ci.yml が担当する。
 name: Backend/CI
 
 on:
@@ -234,58 +235,3 @@ jobs:
           --with-system
           --partial-match
           --allow-only="$(grep -v '^[[:space:]]*#' license-whitelist-python.txt | grep -v '^[[:space:]]*$' | paste -sd ';')"
-
-  dockerlint:
-    name: dockerlint
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - name: Setup node/npm
-        uses: actions/setup-node@v7
-        with:
-          node-version: "20"
-      - name: install dockerlint
-        run: |
-          npm install -g dockerlint
-      - run: |
-          dockerlint ./Dockerfile
-
-  hadolint:
-    name: hadolint
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - uses: hadolint/hadolint-action@v3.5.0
-        with:
-          dockerfile: backend/Dockerfile
-          ignore: "DL3008,SC2174,DL3009,DL3059,SC3009"
-
-  dockle:
-    name: Dockle (image lint)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - run: |
-          docker build -t backend-django .
-      - name: Run Dockle
-        uses: erzz/dockle-action@v1
-        with:
-          image: backend-django
-          exit-code: 1
-          failure-threshold: fatal

@@ -339,16 +339,25 @@ monorepo になったので、**backend と frontend と拡張機能にまたが
 
 | ワークフロー           | name               | 対象                                                          | paths |
 | ---------------------- | ------------------ | ------------------------------------------------------------- | ----- |
-| `backend-ci.yml`       | `Backend/CI`       | ruff · pytest · mypy · license · dockerlint · hadolint · dockle | `backend/**` |
-| `frontend-ci.yml`      | `Frontend/CI`      | turbo lint/typecheck/build/storybook · license · イメージ疎通 | `frontend/**` + workspace 設定 |
-| `extension-ci.yml`     | `Extension/CI`     | turbo lint/typecheck/build/storybook · license                | `extension/**` + workspace 設定 |
+| `backend-ci.yml`       | `Backend/CI`       | ruff · pytest · mypy · license-check                          | `backend/**` |
+| `backend-build.yml`    | `Backend/Build`    | hadolint · dockerlint · イメージ build → dockle → migrate → 起動 → API 応答 | `backend/**` |
+| `frontend-ci.yml`      | `Frontend/CI`      | 生成物の drift · typecheck · lint · license-check              | `frontend/**` `packages/**` + workspace 設定 |
+| `frontend-build.yml`   | `Frontend/Build`   | next build（standalone 出力の確認）· storybook · イメージ build → 起動 → ページ疎通 | 同上 |
+| `extension-ci.yml`     | `Extension/CI`     | 生成物の drift · typecheck · lint · license-check              | `extension/**` `packages/**` + workspace 設定 |
+| `extension-build.yml`  | `Extension/Build`  | build:prod（manifest の参照先が実在するか）· zip · storybook   | 同上 |
 | `infra-ci.yml`         | `Infra/CI`         | helm lint · helm template                                     | `infra/**` |
 | `nginx-ci.yml`         | `Nginx/CI`         | nginx テンプレートの構文チェック                               | `nginx/**` |
-| `repo-ci.yml`          | `Repo/CI`          | actionlint · shellcheck · yamllint                            | 全体  |
-| `repo-codeql.yml`      | `Repo/CodeQL`      | CodeQL（python / javascript-typescript）                       | 全体  |
-| `repo-review.yml`      | `Repo/Review`      | reviewdog（mypy / actionlint / textlint）                      | PR のみ |
+| `repo-ci.yml`          | `Repo/CI`          | actionlint · shellcheck · yamllint · CodeQL · reviewdog       | 全体  |
 | `storybook-deploy.yml` | `Storybook/Deploy` | 両 Storybook を GitHub Pages のサブパスへ公開                  | main のみ |
 | `release.yml`          | `Release`          | 統一リリース                                                   | 手動  |
+
+**`<Scope>/CI` と `<Scope>/Build` を分ける。** CI は lint と型検査とテスト、Build は
+「出荷するものが実際に組み上がって動くか」。lint が通ってもイメージが起動しない、
+バンドルが空、という壊れ方は CI だけでは拾えない。
+
+`Repo/CI` は横断の lint に加えて CodeQL と reviewdog も持つ。reviewdog のジョブは
+PR の差分へコメントするのが目的なので `if: github.event_name == 'pull_request'` で
+PR のときしか動かさない。
 
 ワークフローの `name` は `<Scope>/<Kind>` で揃えている。PR のチェック一覧で
 どの領域のものか一目で分かるようにするため。

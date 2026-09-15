@@ -1,4 +1,4 @@
-# extension/ の CI。
+# extension/ の静的検査。成果物が組み上がるかは Extension/Build が見る。
 #
 # 依存は pnpm workspace なのでインストールはルートで 1 回、タスクは turbo に
 # --filter を渡して extension のぶんだけ回す。
@@ -10,9 +10,10 @@ on:
       - main
     # GitHub Actions は YAML のアンカー/エイリアスを解釈しないので、
     # push と pull_request で同じリストを書き下している。
-    # workspace の設定（ロックファイル等）が動くと解決結果が変わりうるので含める。
+    # 共有パッケージと workspace の設定が動くと解決結果が変わりうるので含める。
     paths:
       - "extension/**"
+      - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -21,6 +22,7 @@ on:
   pull_request:
     paths:
       - "extension/**"
+      - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -36,8 +38,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Lint, typecheck & build
+  checks:
+    name: Lint & typecheck
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -60,8 +62,7 @@ jobs:
 
       # Turborepo のローカルキャッシュ（.turbo/cache）を実行間で持ち越す。
       # キーの主軸は pnpm-lock.yaml のハッシュ: ロックファイルが変われば依存が
-      # 変わりタスクのハッシュも総入れ替えになるので、キャッシュも分ける。
-      # 同じロックファイルのあいだは restore-keys で直前の実行結果を引き継ぐ。
+      # 変わりタスクのハッシュも総入れ替えになるので、キャッシュもそこで切る。
       - name: Restore the Turborepo cache
         uses: actions/cache@v4
         with:
@@ -87,14 +88,6 @@ jobs:
 
       - name: Lint
         run: pnpm exec turbo run lint --filter=d-party-chrome-extension
-
-      - name: Build
-        run: pnpm exec turbo run build --filter=d-party-chrome-extension
-
-      # storybook のワークフローは main でしかビルドしない（Pages へ公開するため）。
-      # ここでも建てて、壊れた story が main に入って公開を落とすのを防ぐ。
-      - name: Build Storybook
-        run: pnpm exec turbo run build-storybook --filter=d-party-chrome-extension
 
   license-check:
     name: Check dependency licenses

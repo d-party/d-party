@@ -257,18 +257,22 @@ monorepo になったので、backend と frontend にまたがる変更も **1 
 ワークフローはルートの `.github/workflows/` に集約されています。
 `paths` フィルタで、触ったディレクトリに対応するものだけが回ります。
 
-| ワークフロー             | name              | 対象                                                          |
-| ------------------------ | ----------------- | ------------------------------------------------------------- |
-| `backend-ci.yml`         | `Backend/CI`      | ruff · pytest · mypy · license · dockerlint · hadolint · dockle |
-| `frontend-ci.yml`        | `Frontend/CI`     | turbo lint/typecheck/build/storybook · license · イメージ疎通 |
-| `extension-ci.yml`       | `Extension/CI`    | turbo lint/typecheck/build/storybook · license                |
-| `infra-ci.yml`           | `Infra/CI`        | helm lint · helm template                                     |
-| `nginx-ci.yml`           | `Nginx/CI`        | nginx テンプレートの構文チェック                               |
-| `repo-ci.yml`            | `Repo/CI`         | actionlint · shellcheck · yamllint                            |
-| `repo-codeql.yml`        | `Repo/CodeQL`     | CodeQL（python / javascript-typescript）                       |
-| `repo-review.yml`        | `Repo/Review`     | reviewdog で PR へインラインコメント                           |
-| `storybook-deploy.yml`   | `Storybook/Deploy`| 両 Storybook を GitHub Pages のサブパスへ公開                  |
-| `release.yml`            | `Release`         | 統一リリース（手動実行）                                       |
+| ワークフロー            | name               | 対象                                                          |
+| ----------------------- | ------------------ | ------------------------------------------------------------- |
+| `backend-ci.yml`        | `Backend/CI`       | ruff · pytest · mypy · license-check                          |
+| `backend-build.yml`     | `Backend/Build`    | イメージを組んで migrate し、起動して API が応答するまで確認   |
+| `frontend-ci.yml`       | `Frontend/CI`      | 生成物の drift · typecheck · lint · license-check              |
+| `frontend-build.yml`    | `Frontend/Build`   | next build · storybook · イメージを起動してページ疎通          |
+| `extension-ci.yml`      | `Extension/CI`     | 生成物の drift · typecheck · lint · license-check              |
+| `extension-build.yml`   | `Extension/Build`  | 本番ビルド · manifest の参照先の実在確認 · zip · storybook     |
+| `infra-ci.yml`          | `Infra/CI`         | helm lint · helm template                                     |
+| `nginx-ci.yml`          | `Nginx/CI`         | nginx テンプレートの構文チェック                               |
+| `repo-ci.yml`           | `Repo/CI`          | actionlint · shellcheck · yamllint · CodeQL · reviewdog       |
+| `storybook-deploy.yml`  | `Storybook/Deploy` | 両 Storybook を GitHub Pages のサブパスへ公開                  |
+| `release.yml`           | `Release`          | 統一リリース（手動実行）                                       |
+
+`<Scope>/CI` は lint と型検査とテスト、`<Scope>/Build` は「出荷するものが実際に
+組み上がって動くか」を見ます。
 
 依存のキャッシュはロックファイルのハッシュをキーにしています。pnpm ストアは
 `actions/setup-node` の `cache: pnpm`（`pnpm-lock.yaml`）、Python は
