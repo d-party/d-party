@@ -436,6 +436,7 @@ fork や新しいリポジトリでは改めて必要になる。
 | --- | --- | --- |
 | **GitHub Pages を有効化し、ソースを「GitHub Actions」にする** | Settings → Pages → Source: GitHub Actions<br>（`gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`） | `Storybook/Deploy` の build は通るのに deploy だけが `Failed to create deployment (status: 404)` で落ちる |
 | **GHCR パッケージへの write を許可する** | `ghcr.io/d-party/backend` と `ghcr.io/d-party/frontend` の Package settings → Manage Actions access → このリポジトリに Write | `Release` の images ジョブが denied で落ちる |
+| **GHCR パッケージをこのリポジトリへ接続する**（旧リポジトリから引き継いだ場合のみ） | 同じ Package settings で接続先リポジトリを選び直す | 動作はするが、パッケージページが旧リポジトリを指したままになる。push し直しても OCI ラベルを付けても**張り替わらない** |
 
 ### キャッシュ
 
@@ -480,16 +481,28 @@ Actions:write を持たせていた。**それは不要になった。**
 `d-party/backend` · `d-party/frontend` リポジトリからしか push できないため。
 イメージ名を変えないことで `infra/helm` の values と Argo CD 側は無改修で済む。
 
-> **パッケージのリンク先は旧リポジトリのまま。** `ghcr.io/d-party/{backend,frontend}`
+> **パッケージのリンク先はパッケージ設定から繋ぎ直す。** `ghcr.io/d-party/{backend,frontend}`
 > は旧リポジトリから push されて作られたため、GHCR 上の「source repository」は
-> いまも archive 済みの `d-party/backend` · `d-party/frontend` を指す。push できて
-> いるのは上記の Write を明示的に付けているからで、継承ではない。
-> リリースでは OCI の `org.opencontainers.image.source` をイメージのラベルと
-> manifest list の annotation の両方へ付け、このリポジトリを指すようにしている。
-> ただし**既にあるパッケージのリンクが張り替わるかは公式ドキュメントに記載がない**。
-> 張り替わらない場合に確実に直すには、パッケージ名自体を変えるしかない
-> （その場合は `infra/helm` の values と、運用リポジトリの argocd-image-updater の
-> annotation も合わせて変える）。
+> archive 済みの `d-party/backend` · `d-party/frontend` を指したままだった。
+> **パッケージ設定ページ（Package settings → リポジトリの接続）から手動で
+> このリポジトリへ繋ぎ直せる。** 対応済み。
+>
+> 同じ状況に遭ったときのために、効かなかった方法を記録しておく。
+>
+> - **`GITHUB_TOKEN` で push し直しても張り替わらない。** 自動リンクはパッケージの
+>   **作成時**にしか効かない。
+> - **OCI の `org.opencontainers.image.source` ラベルでも張り替わらない。** v2.11.10 で
+>   イメージのラベルと manifest list の annotation の両方に焼いたが、リンクは
+>   旧リポジトリのままだった。ラベル自体はイメージから出所・リビジョン・
+>   ライセンスを辿れるので、引き続き付けている。
+> - 消去法として「パッケージを削除して作り直す」「パッケージ名を変える」も
+>   考えられるが、**どちらも不要**だった。削除は全バージョン（backend だけで 35 個）を
+>   失い、作り直したパッケージは既定で private になる。改名は `infra/helm` の values と
+>   運用リポジトリの argocd-image-updater の annotation まで波及する。
+>
+> なお**リポジトリを接続しても権限は自動では継承されない**（GitHub のドキュメント:
+> 接続時に明示的に選ばない限り既存のアクセス権を保つ）。Actions から push できる
+> 状態は、上の Write 付与か、接続時の継承のどちらかで確保すること。
 
 ## Common commands
 
