@@ -278,9 +278,22 @@ monorepo になったので、backend と frontend にまたがる変更も **1 
 
 `.devcontainer/` に VS Code Dev Containers 用の設定を同梱しています。
 VS Code でフォルダを開き **Dev Containers: Reopen in Container** を選ぶと、
-Python 3.14 / uv / Node.js 26 / pnpm / Docker-in-Docker / GitHub CLI / k6 / helm / k3d などが
-揃った Linux 開発環境が立ち上がり、`uv sync` と `pnpm install` と `pre-commit install` まで
-自動で走ります。
+Python 3.14 / uv / Node.js 26 / pnpm / Docker-in-Docker / GitHub CLI / k6 / helm / k3d に加え、
+CI と同じ lint（actionlint / shellcheck / yamllint / pre-commit / act）が揃った Linux 開発環境が
+立ち上がり、`uv sync` と `pnpm install` と `pre-commit install` まで自動で走ります。
+
+CI のゲートはそのまま手元で再現できます。
+
+```bash
+actionlint                      # Repo/CI と同じ
+shellcheck $(git ls-files '*.sh')
+yamllint .
+act push -W .github/workflows/backend-ci.yml   # ワークフロー自体を回す
+```
+
+> ruff は**あえて feature で入れていません**。`backend/uv.lock` にピン留めされた
+> ものを `uv run ruff` で使うためです（グローバルに入れるとバージョンが二重管理に
+> なり、整形結果が CI とズレます）。
 
 ## VS Code ワークスペース
 
