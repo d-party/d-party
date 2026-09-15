@@ -64,7 +64,7 @@ jobs:
       # キーの主軸は pnpm-lock.yaml のハッシュ: ロックファイルが変われば依存が
       # 変わりタスクのハッシュも総入れ替えになるので、キャッシュもそこで切る。
       - name: Restore the Turborepo cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .turbo
           key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}

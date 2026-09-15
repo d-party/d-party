@@ -56,7 +56,7 @@ jobs:
           cache: pnpm
 
       - name: Restore the Turborepo cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .turbo
           key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
@@ -67,7 +67,7 @@ jobs:
       # Next.js のビルドキャッシュ（.next/cache）は turbo の outputs から除いて
       # あるので別枠で持ち越す。こちらも pnpm-lock.yaml のハッシュで区切る。
       - name: Restore the Next.js build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: frontend/.next/cache
           key: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}

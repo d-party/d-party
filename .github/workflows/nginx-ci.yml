@@ -27,7 +27,7 @@ jobs:
   syntax:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # prod テンプレートが参照する letsencrypt 一式をダミーで用意する。
       # nginx -t は ssl_certificate / ssl_dhparam を実際に読み込むため、中身が
