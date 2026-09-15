@@ -1,0 +1,104 @@
+# Storybook を GitHub Pages へ公開する。
+#
+# モノレポ化前は chrome-extension と frontend がそれぞれ同名のワークフローを持ち、
+# どちらも `concurrency: group: pages` で **同じ Pages サイトのルート**へ配信して
+# いた（別リポジトリなので別サイトだった）。1 リポジトリになった今、そのまま
+# 2 本残すと後から走った方が先の Storybook を上書きしてしまう。
+#
+# そこで両方をビルドし、1 回の Pages デプロイにサブパスとしてまとめる:
+#
+#   https://<org>.github.io/<repo>/extension/   ← 拡張機能の Storybook
+#   https://<org>.github.io/<repo>/frontend/    ← フロントエンドの Storybook
+#   https://<org>.github.io/<repo>/             ← 両者への索引
+name: Deploy Storybook to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "extension/**"
+      - "frontend/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".github/workflows/storybook.yml"
+  workflow_dispatch:
+
+# Allow the workflow to publish to GitHub Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one concurrent Pages deployment; don't cancel an in-progress one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # turbo が両パッケージの build-storybook を回す。出力はそれぞれ
+      # extension/storybook-static と frontend/storybook-static。
+      - name: Build both Storybooks
+        run: pnpm run build-storybook
+
+      - name: Assemble the Pages site
+        run: |
+          set -euo pipefail
+          mkdir -p site
+          cp -r extension/storybook-static site/extension
+          cp -r frontend/storybook-static  site/frontend
+          cat > site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="ja">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <title>d-party Storybook</title>
+              <style>
+                body { font-family: system-ui, sans-serif; margin: 4rem auto; max-width: 32rem; padding: 0 1rem; }
+                li { margin: .5rem 0; }
+              </style>
+            </head>
+            <body>
+              <h1>d-party Storybook</h1>
+              <ul>
+                <li><a href="./extension/">extension</a> — Chrome/Edge 拡張機能</li>
+                <li><a href="./frontend/">frontend</a> — ユーザー向けフロントエンド</li>
+              </ul>
+            </body>
+          </html>
+          HTML
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

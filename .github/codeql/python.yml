@@ -1,0 +1,4 @@
+# CodeQL（python）の解析範囲。python のコードは backend/ にしかない。
+name: "CodeQL config (python)"
+paths:
+  - backend
