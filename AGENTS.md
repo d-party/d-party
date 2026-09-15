@@ -17,7 +17,7 @@
 | パス                | サービス            | スタック                                                            | 上流リポジトリ                                                                    |
 | ------------------- | ------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `backend/`          | Django バックエンド | Python 3.13 · Django 6 · Channels · DRF · PostgreSQL 16 · Redis 7 · Nginx | [backend](https://github.com/d-party/backend)                     |
-| `chrome-extension/` | Chrome 拡張機能     | Manifest V3 · Vanilla JS · jQuery 3.6                               | [chrome-extension](https://github.com/d-party/chrome-extension) |
+| `chrome-extension/` | Chrome 拡張機能     | Manifest V3 · TypeScript · React 19 · rspack · Tailwind CSS v4 · shadcn/ui · pnpm | [chrome-extension](https://github.com/d-party/chrome-extension) |
 | `frontend/`         | ユーザー向けフロントエンド | Next.js 15 · React 19 · TypeScript · Tailwind CSS v4 · shadcn/ui · pnpm | [frontend](https://github.com/d-party/frontend)                   |
 
 各サブモジュールとも `main` ブランチを追跡（`.gitmodules`）。
@@ -160,29 +160,48 @@ backend/                  ← リポジトリ直下が django プロジェクト
 - 依存管理は **uv**（`backend/pyproject.toml`）。インフラ設定は backend には無く、ルートが持つ。
 - WebSocket は **Django Channels** + `channels-redis` + `djangochannelsrestframework`、ASGI サーバは daphne/uvicorn。
 - テストは **pytest**（`pytest-django`, `pytest-asyncio`, `factory-boy`, `pytest-cov`）。
-- フォーマッタは **black**（`target-version = py310`）。
-- CI（上流リポジトリ側）: autoblack · code-quality · pytest · security · license-check · release。
+- Lint / フォーマッタ / import 順序はすべて **ruff**（`target-version = py313`）。
+  `[tool.ruff.lint] select` に `I`（isort 相当）を含むため、`ruff check` で import 順序も検査される。
+  型検査は **mypy**（django-stubs / drf-stubs プラグイン）。
+- CI（上流リポジトリ側）: **`ci.yml` に集約**（ruff · pytest · mypy · license-check ·
+  bandit · pyt · CodeQL · lizard · dockerlint · hadolint · dockle · actionlint ·
+  shellcheck · yamllint）。ほかに `code-quality-review`（reviewdog で PR へインラインコメント）
+  と `release`。
+  PR には pytest のカバレッジが自動コメントされ、バッジ用データは
+  `python-coverage-comment-action-data` ブランチに保存される（外部 SaaS 非依存）。
 
 ## chrome-extension/（Chrome 拡張機能）
 
 ```
 chrome-extension/
-  manifest.json           Manifest V3（service_worker, content_scripts）
-  js/
-    background.js         service worker
-    common/settings.js    接続先バックエンド等の設定を集約
-    library/              jQuery / Flickity / Font Awesome 等のサードパーティ
-    d-animestore/         dアニメストア各画面の content script
-    d-party/              d-party.net 側の content script
-  css/ html/ icon/ images/ assets/
+  public/
+    manifest.json         Manifest V3（service_worker, content_scripts）
+    css/ icon/ images/    content script 用 CSS はバンドラではなく manifest の css 配列で注入
+    popup.html
+  src/
+    domain/               プロトコル・設定・リアクションの型（フレームワーク非依存）
+      protocol.ts           WS メッセージ型。backend `streamer/format.py` と1対1で対応
+    application/          ユースケース・ポート（RoomSession / ports / ActionGuard）
+    infrastructure/       外部 I/O（ws/ · storage/ · notifier/ · api/ · env.ts）
+    presentation/         注入対象ごとのエントリ（background / content / popup）
+    components/ui/        shadcn コンポーネント（frontend と共通）
+  rspack.config.ts        エントリ: background · content-store · content-party · content-version · popup
+  orval.config.ts  openapi/  tsconfig.json  eslint.config.mjs
+  dist/                   ビルド成果物（chrome://extensions で読み込む対象）
 ```
 
-- ビルドツールは不使用（Vanilla JS + jQuery 3.6）。`chrome://extensions` で
-  「パッケージ化されていない拡張機能を読み込む」でそのまま読み込める。
-- 接続先は `js/common/settings.js` の `D_PARTY_BACKEND_HOST` /
-  `D_PARTY_BACKEND_PROTOCOL` / `D_PARTY_WEBSOCKET_PROTOCOL` で変更する（既定 `wss://d-party.net`）。
-- 対象サイト: `https://anime.dmkt-sp.jp/animestore/*` および `https://d-party.net/anime-store/lobby/*`。
-- CI（上流リポジトリ側）: codeql-analysis · release。
+- **rspack（swc）でビルドする**。`pnpm build` で `dist/` を生成し、`chrome://extensions` の
+  「パッケージ化されていない拡張機能を読み込む」で **`dist/`** を指定する（リポジトリ直下ではない）。
+- 接続先は `src/infrastructure/env.ts`。**ビルド時の環境変数 `D_PARTY_ENV`** で切り替わる
+  （未指定 = `localhost` / http / ws、`production` = `d-party.net` / https / wss）。
+  `rspack.DefinePlugin` がビルド時にリテラルへ置換するため、実行時の設定変更はできない。
+- REST クライアントは **orval** で生成（`openapi/openapi.json` → `src/infrastructure/api/generated/`）。
+  生成物はコミットされ、CI が差分ゼロを検証する。
+- 対象サイト: `https://animestore.docomo.ne.jp/animestore/*` および
+  `https://anime.dmkt-sp.jp/animestore/*`、ロビーは `https://d-party.net/anime-store/lobby/*`
+  （dev は `http://localhost/anime-store/lobby/*`）。
+- CI（上流リポジトリ側）: ci（lint · typecheck · build · storybook）· codeql-analysis ·
+  license-check · storybook · release。
 
 ## frontend/（Next.js）
 
@@ -283,13 +302,21 @@ uv run pip-licenses
 ### chrome-extension（`cd chrome-extension`）
 
 ```bash
-# ビルド不要。chrome://extensions →「パッケージ化されていない拡張機能を読み込む」
-# 接続先の変更は js/common/settings.js を編集する
+pnpm install
+pnpm build                    # dev ビルド（localhost 向け）→ dist/
+D_PARTY_ENV=production pnpm build   # 本番ビルド（d-party.net 向け）。= pnpm build:prod
+pnpm dev                      # rspack --watch
+
+pnpm typecheck && pnpm lint   # CI と同じゲート
+pnpm api:generate             # openapi/openapi.json から REST クライアントを再生成
+pnpm storybook                # UI コンポーネントの確認
+
+# chrome://extensions →「パッケージ化されていない拡張機能を読み込む」→ dist/ を指定
 ```
 
 ## ローカル CI（act）
 
-両サブモジュールとも GitHub Actions を持つ。Dev Container には `act` が入っているので、
+各サブモジュールとも GitHub Actions を持つ。Dev Container には `act` が入っているので、
 各サブモジュールディレクトリで `act` を実行すればローカルでワークフローを再現できる。
 
 ```bash
