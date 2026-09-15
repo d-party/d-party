@@ -16,19 +16,6 @@
 [![user-par-day](https://img.shields.io/endpoint?url=https://d-party.net/api/shields/user-par-day)](https://d-party.net/stats)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[![Python](https://img.shields.io/badge/Python-3.14-F9DC3E.svg?logo=python&logoColor=white&style=flat)](https://www.python.org/)
-[![Django](https://img.shields.io/badge/Django-6-092E20.svg?logo=django&logoColor=white&style=flat)](https://www.djangoproject.com/)
-[![Next.js](https://img.shields.io/badge/Next.js-16-000000.svg?logo=nextdotjs&style=flat)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&logoColor=black&style=flat)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6.svg?logo=typescript&logoColor=white&style=flat)](https://www.typescriptlang.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791.svg?logo=postgresql&logoColor=white&style=flat)](https://www.postgresql.org/)
-[![Redis](https://img.shields.io/badge/Redis-7-FF4438.svg?logo=redis&logoColor=white&style=flat)](https://redis.io/)
-[![Nginx](https://img.shields.io/badge/Nginx-009639.svg?logo=nginx&logoColor=white&style=flat)](https://nginx.org/)
-[![Docker](https://img.shields.io/badge/Docker-2496ED.svg?logo=docker&logoColor=white&style=flat)](https://www.docker.com/)
-[![uv](https://img.shields.io/badge/uv-managed-DE5FE9.svg?logo=uv&logoColor=white&style=flat)](https://docs.astral.sh/uv/)
-[![pnpm](https://img.shields.io/badge/pnpm-workspace-F69220.svg?logo=pnpm&logoColor=white&style=flat)](https://pnpm.io/)
-[![Turborepo](https://img.shields.io/badge/Turborepo-EF4444.svg?logo=turborepo&logoColor=white&style=flat)](https://turborepo.com/)
-
 [d-party.net](https://d-party.net) ・ [使い方](https://d-party.net/usage) ・ [Q&A](https://d-party.net/qa) ・ [統計](https://d-party.net/stats) ・ [Storybook](https://d-party.github.io/d-party/)
 
 </div>
@@ -45,36 +32,6 @@ dアニメストアには「一緒に観る」機能がありません。d-party
 - **動画は各自のブラウザが再生します。** サーバが中継するのは「誰がどこを観ているか」という
   同期メッセージだけで、映像そのものは一切扱いません。
 
-### 使う側の流れ
-
-1. 拡張機能をインストールする
-2. dアニメストアで作品を開き、プレイヤー横の **パーティー作成** を押す
-3. 出てきた `https://d-party.net/anime-store/lobby/<room-id>` を友だちに送る
-4. 相手がリンクを開くと、同じ再生位置から一緒に視聴が始まる
-
-拡張機能を入れていない人向けに、再生位置だけを追える**タイマー画面**（`?timer=true`）も
-用意しています。
-
-## 仕組み
-
-```
-ブラウザ拡張機能（dアニメストアのページへ content script を注入）
-        │  WebSocket (wss://d-party.net)
-        ▼
-  Nginx :80/443
-        ├──▶ Next.js         公開ページ（/ · /usage · /qa · /stats · ロビー）
-        └──▶ Django (ASGI)
-               ├─ REST API (DRF)      : /api/*
-               ├─ WebSocket (Channels): 同時視聴の同期
-               └─ 管理画面 (Unfold)   : /admin/*
-                        │
-                        ├──▶ PostgreSQL 16   ルーム・参加者・統計
-                        └──▶ Redis 7         Channels レイヤ / キャッシュ
-```
-
-負荷の本質は **ブロードキャスト増幅**です。1 ルーム N 人で 1 人が操作すると、`group_send` で
-N-1 接続へ配信されます（O(N) ファンアウト）。この特性を測る k6 の負荷試験を
-[`loadtest/`](loadtest/README.md) に用意しています。
 
 ## リポジトリ構成
 
@@ -304,24 +261,3 @@ LOADTEST_VUS=20 LOADTEST_ROOM_SIZE=5 LOADTEST_DURATION=2m \
 ```
 
 パラメータと計測メトリクスの詳細は [`loadtest/README.md`](loadtest/README.md) を参照してください。
-
-## コントリビュート
-
-**GitHub Flow** です。`main` から短命なブランチを切り、`main` に対して PR を出します。
-monorepo なので、backend と frontend と拡張機能にまたがる変更も 1 本の PR で出せます。
-詳細は [CONTRIBUTING.md](CONTRIBUTING.md)、設計とコードの約束ごとは [AGENTS.md](AGENTS.md)
-を参照してください。
-
-## サードパーティ素材
-
-リアクションのアニメーションは **Google Noto Emoji**
-（[noto-emoji-animation](https://googlefonts.github.io/noto-emoji-animation/)）の Lottie を
-使用しています（Apache License 2.0）。静的アイコンは
-[react-icons](https://react-icons.github.io/react-icons/) と [lucide](https://lucide.dev/) です。
-
-> エクストラリアクション 200 種の Lottie を `content-party` バンドルへ静的 import している
-> ため、当該バンドルは十数 MB あります（オフラインで動く代わりにサイズが大きい）。
-
-## ライセンス
-
-MIT License（[LICENSE](LICENSE)）。Copyright (c) 2026 d-party.
