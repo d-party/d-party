@@ -93,7 +93,7 @@ docker compose up -d postgres redis     # リポジトリルートで
 cd backend
 export SECRET_KEY=django-insecure-local-test DEBUG=1 MY_DOMAIN=localhost \
   D_ANIME_STORE_DOMAIN=animestore.docomo.ne.jp TIME_ZONE=Asia/Tokyo LANGUAGE_CODE=ja \
-  DATABASE_ENGINE=django_prometheus.db.backends.postgresql DATABASE_USER=d_party \
+  DATABASE_ENGINE=django.db.backends.postgresql DATABASE_USER=d_party \
   DATABASE_HOST=localhost DATABASE_PORT=5432 POSTGRES_DB=d_party POSTGRES_PASSWORD=password \
   REDIS_HOST=localhost REDIS_PORT=6379 CHROME_EXTENSION_REQUIRED_VERSION=1.0.0
 

@@ -131,11 +131,9 @@
     80,
     443,
     3000,
-    5050,
     5432,
     6379,
     8000,
-    9090,
     9100
   ],
   "portsAttributes": {
@@ -148,11 +146,7 @@
       "onAutoForward": "silent"
     },
     "3000": {
-      "label": "Grafana (metrics profile)",
-      "onAutoForward": "silent"
-    },
-    "5050": {
-      "label": "cAdvisor (metrics profile)",
+      "label": "Frontend (dev server)",
       "onAutoForward": "silent"
     },
     "5432": {
@@ -167,14 +161,6 @@
       "label": "Django",
       "onAutoForward": "silent"
     },
-    "9090": {
-      "label": "Prometheus",
-      "onAutoForward": "silent"
-    },
-    "9100": {
-      "label": "node-exporter",
-      "onAutoForward": "silent"
-    }
   },
   "otherPortsAttributes": {
     "onAutoForward": "silent"

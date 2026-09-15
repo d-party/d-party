@@ -21,7 +21,6 @@ env:
   MY_DOMAIN: localhost
   DJANGO_UPSTREAM: 127.0.0.1:8000
   FRONTEND_UPSTREAM: 127.0.0.1:3000
-  GRAFANA_UPSTREAM: 127.0.0.1:3001
   NGINX_IMAGE: nginx:1.27-alpine
 
 jobs:
@@ -46,22 +45,22 @@ jobs:
       - name: Validate dev template (templates/http.conf.template)
         run: |
           docker run --rm \
-            -e MY_DOMAIN -e DJANGO_UPSTREAM -e FRONTEND_UPSTREAM -e GRAFANA_UPSTREAM \
+            -e MY_DOMAIN -e DJANGO_UPSTREAM -e FRONTEND_UPSTREAM \
             -v "$PWD/nginx/templates/http.conf.template:/etc/nginx/templates/default.conf.template:ro" \
             -v "$PWD/nginx/mime.types:/etc/nginx/mime.types:ro" \
             --entrypoint sh "$NGINX_IMAGE" -c '
-              envsubst "\$MY_DOMAIN \$DJANGO_UPSTREAM \$FRONTEND_UPSTREAM \$GRAFANA_UPSTREAM" \
+              envsubst "\$MY_DOMAIN \$DJANGO_UPSTREAM \$FRONTEND_UPSTREAM" \
                 < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
               nginx -t'
 
       - name: Validate prod template (templates-prod/default.conf.template)
         run: |
           docker run --rm \
-            -e MY_DOMAIN -e DJANGO_UPSTREAM -e FRONTEND_UPSTREAM -e GRAFANA_UPSTREAM \
+            -e MY_DOMAIN -e DJANGO_UPSTREAM -e FRONTEND_UPSTREAM \
             -v "$PWD/nginx/templates-prod/default.conf.template:/etc/nginx/templates/default.conf.template:ro" \
             -v "$PWD/nginx/mime.types:/etc/nginx/mime.types:ro" \
             -v "$PWD/certs:/etc/letsencrypt:ro" \
             --entrypoint sh "$NGINX_IMAGE" -c '
-              envsubst "\$MY_DOMAIN \$DJANGO_UPSTREAM \$FRONTEND_UPSTREAM \$GRAFANA_UPSTREAM" \
+              envsubst "\$MY_DOMAIN \$DJANGO_UPSTREAM \$FRONTEND_UPSTREAM" \
                 < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
               nginx -t'

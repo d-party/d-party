@@ -46,7 +46,6 @@
     "**/storybook-static": true,
     "backend/static": true,
     "postgres/data": true,
-    "grafana/data": true,
     "pnpm-lock.yaml": true,
     "backend/uv.lock": true
   },
@@ -55,7 +54,6 @@
     "**/.venv/**": true,
     "**/.next/**": true,
     "**/.turbo/**": true,
-    "postgres/data/**": true,
-    "grafana/data/**": true
+    "postgres/data/**": true
   }
 }

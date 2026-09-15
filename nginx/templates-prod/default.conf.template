@@ -1,6 +1,6 @@
 # 本番 server ブロック（TLS 終端 + HTTP→HTTPS リダイレクト + ACME http-01 チャレンジ）。
 # nginx 公式イメージの envsubst（/etc/nginx/templates-prod/*.template）で
-#   ${MY_DOMAIN} ${DJANGO_UPSTREAM} ${FRONTEND_UPSTREAM} ${GRAFANA_UPSTREAM}
+#   ${MY_DOMAIN} ${DJANGO_UPSTREAM} ${FRONTEND_UPSTREAM}
 # を .env.global から差し込み、conf.prod.d/default.conf として展開する。
 # nginx の $host / $uri 等は同名の環境変数が無いため置換されない。
 
@@ -46,12 +46,6 @@ server {
         alias /static/;
     }
 
-    # grafana は任意（metrics profile）。リクエスト時解決で、コンテナ不在でも nginx を起動させる。
-    location /grafana/ {
-        set $monitor_upstream "${GRAFANA_UPSTREAM}";
-        proxy_set_header Host $host;
-        proxy_pass http://$monitor_upstream;
-    }
 
     # ── Django (ASGI): REST API・管理画面・統計・メトリクス・WebSocket ──
     location /api/ {

@@ -27,6 +27,7 @@ stats・grace 削除、拡張側の `RoomSession` / `PartyWebSocketClient` / `pr
 | `backend/`   | Django バックエンド        | Python 3.14 · Django 6 · Channels · DRF · PostgreSQL 16 · Redis 7 · Nginx    |
 | `extension/` | ブラウザ拡張機能           | Manifest V3 · TypeScript · React 19 · rspack · Tailwind CSS v4 · shadcn/ui   |
 | `frontend/`  | ユーザー向けフロントエンド | Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 · shadcn/ui             |
+| `packages/ui/` | 共有 shadcn/ui プリミティブ | TypeScript · Radix · Tailwind CSS v4                                       |
 | `infra/`     | k3s (Raspberry Pi) デプロイ | Helm chart · Argo CD · rootless BuildKit                                     |
 | `loadtest/`  | WebSocket 負荷試験         | k6                                                                           |
 
@@ -45,8 +46,17 @@ Nginx :80/443 ──▶ Django (daphne/uvicorn, Channels)
         ├─ WebSocket (Channels)      : 同時視聴の同期 (anime-store/party/ · dmm-tv/party/)
         └─ 管理画面 (Unfold)         : /admin/*
 Django ──▶ PostgreSQL 16（永続化） / Redis 7（Channels レイヤ・キャッシュ）
-監視: Prometheus + Grafana + cadvisor + node-exporter（django-prometheus 経由）
 ```
+
+負荷の本質は **ブロードキャスト増幅**。1 ルーム N 人で 1 人の操作が `group_send` で
+N-1 接続へ配信される（O(N) ファンアウト）。単発 RPS ではなく、多接続を常時つないだ
+状態での捌きを測ること。
+
+> **計測基盤は持っていない。** 以前は compose の `metrics` profile に Prometheus /
+> Grafana / cadvisor / node-exporter を、backend に django-prometheus を積んでいたが、
+> 実際には使っていなかったので一式削除した。`DATABASE_ENGINE` も素の
+> `django.db.backends.postgresql` に戻っている。再導入するなら、まず何を見たいのかを
+> 決めてから入れること。
 
 ## Orchestration（docker-compose はこのルートにある）
 
@@ -54,11 +64,16 @@ Django ──▶ PostgreSQL 16（永続化） / Redis 7（Channels レイヤ・�
 
 ```
 d-party/                  ← このリポジトリ（ルート）
-  docker-compose.yml      nginx · django · frontend · postgres · redis · prometheus · grafana · cadvisor · node-exporter
-  .env.global             共有 env（ドメイン・Postgres 認証情報・DEBUG・各 upstream）
-  nginx/ postgres/ redis/ prometheus/ grafana/   各サービス設定（runtime data は gitignore）
+  docker-compose.yml      nginx · django · frontend · postgres · redis
+  docker-compose.override.yml   dev（既定。frontend は pnpm dev で HMR）
+  docker-compose.prod.yml       prod（frontend は standalone・nginx は TLS 終端・certbot）
+  docker-compose.loadtest.yml   k6（loadtest profile。通常起動に非干渉）
+  .env.global             共有 env（ドメイン・Postgres 認証情報・各 upstream）
+  .env.dev / .env.prod    環境固有値（DEBUG・MY_DOMAIN・NEXT_PUBLIC_*）
+  nginx/ postgres/ redis/ 各サービス設定（runtime data は gitignore）
   package.json  pnpm-workspace.yaml  pnpm-lock.yaml  turbo.json   pnpm workspace
-  backend/  extension/  frontend/  infra/  loadtest/
+  LICENSE                 MIT（リポジトリで 1 本。パッケージごとには置かない）
+  backend/  extension/  frontend/  packages/ui/  infra/  loadtest/
 ```
 
 - django は `build.context: ./backend`。
@@ -66,8 +81,9 @@ d-party/                  ← このリポジトリ（ルート）
   pnpm workspace のロックファイルがルートにあり、`frontend/` 単体では
   `--frozen-lockfile` を満たせないため。dev の frontend コンテナも同じ理由で
   リポジトリ全体をマウントする。
-- 監視系（prometheus/grafana/cadvisor/node-exporter）は compose の `metrics` profile。
-  起動は `docker compose --profile metrics up -d`。
+- 環境固有値（`DEBUG` / `MY_DOMAIN` など）は **`.env.global` に置かないこと**。
+  backend の `manage.py` が `/env_files/.env.global` を `override=True` で読むため、
+  ここに残すと本番起動時に dev の値で上書きされる。
 
 ## pnpm workspace と Turborepo
 
@@ -229,15 +245,17 @@ backend/                  ← このディレクトリ直下が django プロジ
 - 依存管理は **uv**（`backend/pyproject.toml`）。インフラ設定は backend には無く、ルートが持つ。
 - WebSocket は **Django Channels** + `channels-redis` + `djangochannelsrestframework`、ASGI サーバは daphne/uvicorn。
 - テストは **pytest**（`pytest-django`, `pytest-asyncio`, `factory-boy`, `pytest-cov`）。
-- Lint / フォーマッタ / import 順序はすべて **ruff**（`target-version = py313`）。
-  `[tool.ruff.lint] select` に `I`（isort 相当）を含むため、`ruff check` で import 順序も検査される。
-  型検査は **mypy**（django-stubs / drf-stubs プラグイン）。
-- CI は **`.github/workflows/backend-ci.yml`**（ruff · pytest · mypy · license-check ·
-  bandit · pyt · lizard · dockerlint · hadolint · dockle）。`defaults.run.working-directory`
-  が `backend` なので、各ステップは `backend/` の中で走る。`paths` フィルタにより
-  backend/ に触れた変更のときだけ起動する。
-  リポジトリ横断の lint（actionlint / shellcheck / yamllint）は `repo-ci.yml`、
-  CodeQL は `repo-codeql.yml` へ分離した。
+- Lint / フォーマッタ / import 順序 / SAST / 複雑度はすべて **ruff** に集約する
+  （<https://docs.astral.sh/ruff/rules/>）。単体 linter を別プロセスで回さない。
+  - `S` が flake8-bandit 相当、`C90`（`max-complexity = 10`）と `PLR09xx` が複雑度。
+    そのため bandit / lizard の専用ジョブは持たない。
+  - `I` が isort 相当なので、import 順序も `ruff check` で検査される。
+  - taint 解析だけは ruff の守備範囲外。`repo-ci.yml` の CodeQL（python）が担当する。
+  - 型検査は **mypy**（django-stubs / drf-stubs プラグイン）。
+- CI は **`backend-ci.yml`**（`Backend/CI`: ruff · pytest · mypy · license-check）。
+  `defaults.run.working-directory` が `backend` なので、各ステップは `backend/` の中で
+  走る。`paths` フィルタにより backend/ に触れた変更のときだけ起動する。
+  イメージ側は **`backend-build.yml`**（`Backend/Build`）が見る。
   PR には pytest のカバレッジが自動コメントされ、バッジ用データは
   `python-coverage-comment-action-data` ブランチに保存される（外部 SaaS 非依存）。
 - pre-commit の設定は**ルートの `.pre-commit-config.yaml`**（`files: ^backend/` で
@@ -257,7 +275,7 @@ extension/
     application/          ユースケース・ポート（RoomSession / ports / ActionGuard）
     infrastructure/       外部 I/O（ws/ · storage/ · notifier/ · api/ · env.ts）
     presentation/         注入対象ごとのエントリ（background / content / popup）
-    components/ui/        shadcn コンポーネント（frontend と同じものを各自が持つ。共有化はしていない）
+    components/ui/button.tsx  Button のみ自前（他の primitive は @d-party/ui）
   rspack.config.ts        エントリ: background · content-store · content-party · content-version · popup
   orval.config.ts  openapi/  tsconfig.json  eslint.config.mjs
   dist/                   ビルド成果物（chrome://extensions で読み込む対象）
@@ -277,11 +295,45 @@ extension/
     `https://tv.dmm.com/vod/playback/on-demand/*`（再生ページのプレイヤー同期）
   - ロビー（バージョン確認）: `https://d-party.net/{anime-store,dmm-tv}/lobby/*`
     （dev は `http://localhost/...`）
-- CI は **`.github/workflows/extension-ci.yml`**（`Extension/CI`。turbo 経由で
-  lint · typecheck · build · storybook · license-check）。Storybook の Pages 公開は
+- CI は **`extension-ci.yml`**（`Extension/CI`: 生成物の drift · typecheck · lint ·
+  license-check）と **`extension-build.yml`**（`Extension/Build`: `build:prod` と
+  manifest の参照先の実在確認 · zip · storybook）。Storybook の Pages 公開は
   `storybook-deploy.yml` が両パッケージぶんをまとめて 1 回でデプロイする
   （GitHub Pages は 1 リポジトリ 1 サイトなので、`/extension/` と `/frontend/` の
   サブパスに分けている）。
+
+## packages/ui/（共有 shadcn/ui）
+
+```
+packages/ui/
+  src/
+    index.ts              barrel。消費側は `import { Tabs, cn } from "@d-party/ui"`
+    accordion input label skeleton switch tabs toast tooltip   （+ 各 story）
+    lib/utils.ts          cn
+    lib/portalContainer.ts  Shadow DOM 内の Radix portal 先（tooltip が使う）
+  package.json  tsconfig.json  eslint.config.mjs
+```
+
+- **ビルド成果物を持たない。** TypeScript のソースのまま公開し、消費側がそれぞれ
+  トランスパイルする。ここが他の monorepo と違うので、消費側の設定を壊さないこと:
+  - extension … rspack。pnpm の symlink を解決した実パスが `node_modules` の外に
+    なるので、ローダの `exclude: /node_modules/` に引っかからない（設定変更は不要）。
+  - frontend … `next.config.ts` の `transpilePackages: ["@d-party/ui"]`。
+  - Tailwind … v4 は CSS のある位置からソースを自動検出するため、別パッケージは
+    見つけられない。**3 つの CSS エントリすべてに `@source` を書く**
+    （`extension/src/presentation/popup/styles.css` · `extension/src/styles/sidebar.css` ·
+    `frontend/src/app/globals.css`）。外すと共有 UI のクラスが 6KB ほど purge される。
+  - frontend/Dockerfile … `packages/ui` の manifest とソースをコンテキストへコピーする。
+    無いとイメージのビルドが落ちる。
+  - Storybook … 両アプリの `.storybook/main.ts` が `packages/ui` の story も拾う。
+    テーマトークンが異なるので、同じプリミティブを popup の明るい配色とサイトの
+    暗い配色の両方で確認できる。story は特定フレームワークに縛れないので
+    `@storybook/react` から型を取り、`storybook/no-renderer-packages` だけ無効化している。
+- **`button` はここに無い。** 両アプリで意図的にスタイルが違う（拡張側は hover の
+  浮き上がりと押し込みの演出を持つ）ため、それぞれが `src/components/ui/button.tsx` を
+  自前で持つ。`cn` は `@d-party/ui` から import する。
+- 新しく shadcn コンポーネントを足すときは、**まずここへ置く**。片方でしか使わない
+  ものも含めて 1 か所に集める。
 
 ## frontend/（Next.js）
 
@@ -290,7 +342,7 @@ frontend/
   src/
     app/                 App Router（layout / page / usage / qa / privacy / stats /
                          anime-store/lobby/[roomId] / dmm-tv/lobby/[roomId] / not-found）
-    components/ui/        shadcn コンポーネント（extension と同じものを各自が持つ）
+    components/ui/button.tsx  Button のみ自前（他の primitive は @d-party/ui）
     infrastructure/       env.ts（接続先）・api/（orval 生成 REST クライアント）
     lib/utils.ts          cn()
   openapi/openapi.json    REST スキーマ（extension と同期 + lobby エンドポイント）
@@ -345,7 +397,10 @@ monorepo になったので、**backend と frontend と拡張機能にまたが
    `pnpm-lock.yaml` や `pnpm-workspace.yaml` を作らない。
 4. **CI のワークフローはルートの `.github/workflows/` にしか置けない。**
    GitHub は入れ子の `.github/workflows/` を読まない。
-5. バージョンは全パッケージで揃える。`release` ワークフローが
+5. **README はリポジトリのルートに 1 本だけ。** パッケージごとの README は置かない
+   （サービスの紹介と開発環境の立ち上げはルートの `README.md` が持ち、設計とコードの
+   約束ごとは各ディレクトリの `AGENTS.md` が持つ）。`LICENSE` も同様にルートの 1 本。
+6. バージョンは全パッケージで揃える。`release` ワークフローが
    `backend/pyproject.toml` · `extension/package.json` ·
    `extension/public/manifest.json` · `frontend/package.json` · ルートの
    `package.json` を同じ値へ書き換え、タグを 1 本打つ。手で個別に上げない。
@@ -507,11 +562,11 @@ act pull_request -W .github/workflows/frontend-ci.yml
 
 ## 動作確認 URL（ローカル backend 起動時）
 
-| URL                     | 内容                                |
-| ----------------------- | ----------------------------------- |
-| `http://localhost`      | アプリ（Nginx 経由）                |
-| `http://localhost:8000` | Django 直接（DEBUG 有効時）          |
-| `http://localhost:9090` | Prometheus                          |
+| URL                            | 内容                       |
+| ------------------------------ | -------------------------- |
+| `http://localhost`             | アプリ（Nginx 経由）       |
+| `http://localhost:8000`        | Django 直接（DEBUG 有効時）|
+| `http://localhost:8000/admin/` | 管理画面（Unfold）         |
 
 > PostgreSQL の閲覧は Adminer を廃止し、**VSCode SQLTools 拡張**へ移行（Dev Container 同梱・
 > `d-party (compose postgres)` 接続を事前定義。追加設定なしで `localhost:5432` に接続）。

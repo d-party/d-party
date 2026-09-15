@@ -88,3 +88,23 @@ pnpm storybook        # Storybook 起動 (:6006)
 
 > 注意: content script の DOM 動作は有料の dアニメストア実ページでしか完全検証できない。
 > ロジック層（domain/application）は移植で挙動を保持しているが、UI結合の最終確認は実機で行うこと。
+
+## リアクション素材（サードパーティ）
+
+リアクションのアニメーションは **Google Noto Emoji**
+（[noto-emoji-animation](https://googlefonts.github.io/noto-emoji-animation/)）の Lottie。
+ライセンスは **Apache License 2.0**。
+
+- デフォルト 5 種とエクストラのカタログ（最大 200 種、肌色は黄色のみ）を
+  `src/presentation/content/party/react/reactions/lottie/`（エクストラは `extra/`）へ同梱する。
+- 静的アイコンは [react-icons](https://react-icons.github.io/react-icons/)（Font Awesome 6）と
+  [lucide](https://lucide.dev/)。
+- **注意**: エクストラ 200 種を `content-party` バンドルへ静的 import しているため、
+  当該バンドルは十数 MB になる（オフラインで動く代わりにサイズが大きい）。将来的には
+  id ごとの動的 import チャンク化 + `web_accessible_resources` の遅延読み込みで縮小できる。
+
+## ローカルバックエンドへ繋ぐときの注意
+
+dアニメストアの実ページから `localhost` のバックエンドへ接続するには、Chrome の
+Private Network Access ブロックを無効化する必要がある
+（`chrome://flags/#block-insecure-private-network-requests` を Disabled）。
