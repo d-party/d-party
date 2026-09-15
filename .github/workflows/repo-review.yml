@@ -1,7 +1,7 @@
 # reviewdog で PR にインラインコメントを付けるためのワークフロー。
 # 検査そのもの（mypy / actionlint）は ci-backend.yml と ci-repo.yml が回しており、
 # ここは「PR の差分にコメントを載せる」ことだけが目的。
-name: Code Quality Review
+name: Repo/Review
 
 on:
   pull_request:
@@ -43,6 +43,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           working-directory: backend
+          enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
       # action-mypy は v4 以降 setup_method の既定が "nothing" になり、自前では
       # mypy を入れなくなった（v3 は入れていた）。requirements.txt を吐くだけでは
@@ -86,8 +87,11 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "20"
+      # --no-save: モノレポのルートには workspace の package.json があるので、
+      # ここで --save-dev すると依存が書き込まれ、reviewdog がその差分まで
+      # 指摘してしまう。ルールは .textlintrc.json（ルート）から読む。
       - run: |
-          npm install --save-dev textlint textlint-rule-write-good
+          npm install --no-save textlint textlint-rule-write-good
       - name: textlint-github-pr-review
         uses: tsuyoshicho/action-textlint@v3
         with:

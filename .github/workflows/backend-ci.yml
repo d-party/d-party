@@ -9,7 +9,7 @@
 #
 # リポジトリ横断の lint（actionlint / shellcheck / yamllint）は ci-repo.yml へ、
 # CodeQL は言語横断の codeql.yml へ移した。
-name: CI (backend)
+name: Backend/CI
 
 on:
   push:
@@ -17,12 +17,12 @@ on:
       - main
     paths:
       - "backend/**"
-      - ".github/workflows/ci-backend.yml"
+      - ".github/workflows/backend-ci.yml"
       - ".github/bandit.yml"
   pull_request:
     paths:
       - "backend/**"
-      - ".github/workflows/ci-backend.yml"
+      - ".github/workflows/backend-ci.yml"
       - ".github/bandit.yml"
   workflow_dispatch:
   schedule:
@@ -56,6 +56,9 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           working-directory: backend
+          # 依存キャッシュのキーはロックファイルのハッシュ。uv.lock が変わった
+          # ときだけ解決し直し、それ以外は復元して使う。
+          enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
       - name: install dependencies
         run: uv sync --frozen
@@ -127,6 +130,9 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           working-directory: backend
+          # 依存キャッシュのキーはロックファイルのハッシュ。uv.lock が変わった
+          # ときだけ解決し直し、それ以外は復元して使う。
+          enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
       - name: install dependencies
         run: uv sync --frozen
@@ -197,6 +203,9 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           working-directory: backend
+          # 依存キャッシュのキーはロックファイルのハッシュ。uv.lock が変わった
+          # ときだけ解決し直し、それ以外は復元して使う。
+          enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
       - name: install dependencies
         run: uv sync --frozen
@@ -217,6 +226,9 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           working-directory: backend
+          # 依存キャッシュのキーはロックファイルのハッシュ。uv.lock が変わった
+          # ときだけ解決し直し、それ以外は復元して使う。
+          enable-cache: true
           cache-dependency-glob: "backend/uv.lock"
       - name: install dependencies
         run: uv sync --frozen
@@ -266,6 +278,12 @@ jobs:
     permissions:
       contents: read
     steps:
+      # checkout を先頭に置くこと。defaults.run.working-directory が backend なので、
+      # checkout 前に run ステップを置くと「そのディレクトリが無い」で落ちる。
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: install utils
         run: |
           sudo apt-get update
@@ -275,10 +293,6 @@ jobs:
           python-version: "3.9"
       - name: install python-taint
         run: pip install python-taint
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
       - name: run pyt
         run: |
           pyt -a D -o pyt.txt .

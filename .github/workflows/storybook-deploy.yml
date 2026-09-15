@@ -10,7 +10,7 @@
 #   https://<org>.github.io/<repo>/extension/   ← 拡張機能の Storybook
 #   https://<org>.github.io/<repo>/frontend/    ← フロントエンドの Storybook
 #   https://<org>.github.io/<repo>/             ← 両者への索引
-name: Deploy Storybook to GitHub Pages
+name: Storybook/Deploy
 
 on:
   push:
@@ -22,7 +22,7 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "turbo.json"
-      - ".github/workflows/storybook.yml"
+      - ".github/workflows/storybook-deploy.yml"
   workflow_dispatch:
 
 # Allow the workflow to publish to GitHub Pages.
@@ -51,6 +51,21 @@ jobs:
         with:
           node-version: 26
           cache: pnpm
+
+      # Turborepo のローカルキャッシュ（.turbo/cache）を実行間で持ち越す。
+      # キーの主軸は **pnpm-lock.yaml のハッシュ**: ロックファイルが変われば
+      # 依存が変わりタスクのハッシュも総入れ替えになるので、キャッシュも分ける。
+      # 同じロックファイルのあいだは restore-keys で直前の実行結果を引き継ぎ、
+      # 変更のないパッケージのタスクは丸ごとスキップされる。
+      - name: Restore the Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            turbo-${{ runner.os }}-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

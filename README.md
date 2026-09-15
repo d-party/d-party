@@ -255,16 +255,24 @@ monorepo になったので、backend と frontend にまたがる変更も **1 
 ワークフローはルートの `.github/workflows/` に集約されています。
 `paths` フィルタで、触ったディレクトリに対応するものだけが回ります。
 
-| ワークフロー             | 対象                                                        |
-| ------------------------ | ----------------------------------------------------------- |
-| `ci-backend.yml`         | ruff · pytest · mypy · license · bandit · hadolint · dockle |
-| `ci-node.yml`            | turbo lint/typecheck/build/storybook · license · イメージ疎通 |
-| `ci-repo.yml`            | actionlint · shellcheck · yamllint · helm lint/template     |
-| `codeql.yml`             | CodeQL（python / javascript-typescript）                     |
-| `nginx.yml`              | nginx テンプレートの構文チェック                             |
-| `storybook.yml`          | 両 Storybook を GitHub Pages のサブパスへ公開                |
-| `code-quality-review.yml`| reviewdog で PR へインラインコメント                         |
-| `release.yml`            | 統一リリース（手動実行）                                     |
+| ワークフロー             | name              | 対象                                                          |
+| ------------------------ | ----------------- | ------------------------------------------------------------- |
+| `backend-ci.yml`         | `Backend/CI`      | ruff · pytest · mypy · license · bandit · hadolint · dockle   |
+| `frontend-ci.yml`        | `Frontend/CI`     | turbo lint/typecheck/build/storybook · license · イメージ疎通 |
+| `extension-ci.yml`       | `Extension/CI`    | turbo lint/typecheck/build/storybook · license                |
+| `infra-ci.yml`           | `Infra/CI`        | helm lint · helm template                                     |
+| `nginx-ci.yml`           | `Nginx/CI`        | nginx テンプレートの構文チェック                               |
+| `repo-ci.yml`            | `Repo/CI`         | actionlint · shellcheck · yamllint                            |
+| `repo-codeql.yml`        | `Repo/CodeQL`     | CodeQL（python / javascript-typescript）                       |
+| `repo-review.yml`        | `Repo/Review`     | reviewdog で PR へインラインコメント                           |
+| `storybook-deploy.yml`   | `Storybook/Deploy`| 両 Storybook を GitHub Pages のサブパスへ公開                  |
+| `release.yml`            | `Release`         | 統一リリース（手動実行）                                       |
+
+依存のキャッシュはロックファイルのハッシュをキーにしています。pnpm ストアは
+`actions/setup-node` の `cache: pnpm`（`pnpm-lock.yaml`）、Python は
+`astral-sh/setup-uv` の `cache-dependency-glob`（`backend/uv.lock`）、Turborepo の
+ローカルキャッシュと Next.js の `.next/cache` は `actions/cache` で
+`hashFiles('pnpm-lock.yaml')` を主キーに持ち越します。
 
 ## Dev Container
 

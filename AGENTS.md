@@ -202,12 +202,12 @@ backend/                  ← このディレクトリ直下が django プロジ
 - Lint / フォーマッタ / import 順序はすべて **ruff**（`target-version = py313`）。
   `[tool.ruff.lint] select` に `I`（isort 相当）を含むため、`ruff check` で import 順序も検査される。
   型検査は **mypy**（django-stubs / drf-stubs プラグイン）。
-- CI は **`.github/workflows/ci-backend.yml`**（ruff · pytest · mypy · license-check ·
+- CI は **`.github/workflows/backend-ci.yml`**（ruff · pytest · mypy · license-check ·
   bandit · pyt · lizard · dockerlint · hadolint · dockle）。`defaults.run.working-directory`
   が `backend` なので、各ステップは `backend/` の中で走る。`paths` フィルタにより
   backend/ に触れた変更のときだけ起動する。
-  リポジトリ横断の lint（actionlint / shellcheck / yamllint）は `ci-repo.yml`、
-  CodeQL は `codeql.yml` へ分離した。
+  リポジトリ横断の lint（actionlint / shellcheck / yamllint）は `repo-ci.yml`、
+  CodeQL は `repo-codeql.yml` へ分離した。
   PR には pytest のカバレッジが自動コメントされ、バッジ用データは
   `python-coverage-comment-action-data` ブランチに保存される（外部 SaaS 非依存）。
 - pre-commit の設定は**ルートの `.pre-commit-config.yaml`**（`files: ^backend/` で
@@ -243,9 +243,9 @@ extension/
 - 対象サイト: `https://animestore.docomo.ne.jp/animestore/*` および
   `https://anime.dmkt-sp.jp/animestore/*`、ロビーは `https://d-party.net/anime-store/lobby/*`
   （dev は `http://localhost/anime-store/lobby/*`）。
-- CI は frontend と共通の **`.github/workflows/ci-node.yml`**（turbo 経由で
+- CI は frontend と共通の **`.github/workflows/frontend-ci.yml / extension-ci.yml`**（turbo 経由で
   lint · typecheck · build · storybook · license-check）。Storybook の Pages 公開は
-  `storybook.yml` が両パッケージぶんをまとめて 1 回でデプロイする
+  `storybook-deploy.yml` が両パッケージぶんをまとめて 1 回でデプロイする
   （GitHub Pages は 1 リポジトリ 1 サイトなので、`/extension/` と `/frontend/` の
   サブパスに分けている）。
 
@@ -314,16 +314,40 @@ monorepo になったので、**backend と frontend と拡張機能にまたが
 ワークフローはルートの `.github/workflows/` に集約。`paths` フィルタで、触った
 ディレクトリに対応するものだけが回る。
 
-| ワークフロー              | 対象                                                          | paths          |
-| ------------------------- | ------------------------------------------------------------- | -------------- |
-| `ci-backend.yml`          | ruff · pytest · mypy · license · bandit · pyt · lizard · hadolint · dockle | `backend/**` |
-| `ci-node.yml`             | turbo lint/typecheck/build/storybook · license · イメージ疎通 | `extension/**` `frontend/**` workspace 設定 |
-| `ci-repo.yml`             | actionlint · shellcheck · yamllint · helm lint/template       | 全体           |
-| `codeql.yml`              | CodeQL（python / javascript-typescript）                       | 全体           |
-| `nginx.yml`               | nginx テンプレートの構文チェック                               | `nginx/**`     |
-| `storybook.yml`           | 両 Storybook を GitHub Pages のサブパスへ公開                  | main のみ      |
-| `code-quality-review.yml` | reviewdog（mypy / actionlint / textlint）                      | PR のみ        |
-| `release.yml`             | 統一リリース                                                   | 手動           |
+| ワークフロー           | name               | 対象                                                          | paths |
+| ---------------------- | ------------------ | ------------------------------------------------------------- | ----- |
+| `backend-ci.yml`       | `Backend/CI`       | ruff · pytest · mypy · license · bandit · pyt · lizard · hadolint · dockle | `backend/**` |
+| `frontend-ci.yml`      | `Frontend/CI`      | turbo lint/typecheck/build/storybook · license · イメージ疎通 | `frontend/**` + workspace 設定 |
+| `extension-ci.yml`     | `Extension/CI`     | turbo lint/typecheck/build/storybook · license                | `extension/**` + workspace 設定 |
+| `infra-ci.yml`         | `Infra/CI`         | helm lint · helm template                                     | `infra/**` |
+| `nginx-ci.yml`         | `Nginx/CI`         | nginx テンプレートの構文チェック                               | `nginx/**` |
+| `repo-ci.yml`          | `Repo/CI`          | actionlint · shellcheck · yamllint                            | 全体  |
+| `repo-codeql.yml`      | `Repo/CodeQL`      | CodeQL（python / javascript-typescript）                       | 全体  |
+| `repo-review.yml`      | `Repo/Review`      | reviewdog（mypy / actionlint / textlint）                      | PR のみ |
+| `storybook-deploy.yml` | `Storybook/Deploy` | 両 Storybook を GitHub Pages のサブパスへ公開                  | main のみ |
+| `release.yml`          | `Release`          | 統一リリース                                                   | 手動  |
+
+ワークフローの `name` は `<Scope>/<Kind>` で揃えている。PR のチェック一覧で
+どの領域のものか一目で分かるようにするため。
+
+ルートから走るツールの設定ファイルもルートに置く（`.yamllint` · `.textlintrc.json` ·
+`.dockleignore` · `.pre-commit-config.yaml`）。これらは元々 backend リポジトリの直下に
+あり、そのリポジトリのルート = カレントディレクトリだったので効いていた。
+
+### キャッシュ
+
+依存のキャッシュはすべて**ロックファイルのハッシュ**をキーにしている。
+
+| 対象 | 仕組み | キー |
+| --- | --- | --- |
+| pnpm ストア | `actions/setup-node` の `cache: pnpm` | `pnpm-lock.yaml` |
+| uv（Python） | `astral-sh/setup-uv` の `enable-cache` + `cache-dependency-glob` | `backend/uv.lock` |
+| Turborepo（`.turbo`） | `actions/cache` | `turbo-<os>-${{ hashFiles('pnpm-lock.yaml') }}-<sha>`（restore-keys で前回分へフォールバック） |
+| Next.js（`frontend/.next/cache`） | `actions/cache` | `next-<os>-${{ hashFiles('pnpm-lock.yaml') }}-<sha>` |
+
+ロックファイルが変われば依存の解決結果が変わり、turbo のタスクハッシュも総入れ替えに
+なるので、キャッシュもそこで切る。同じロックファイルのあいだは `restore-keys` で
+直前の実行結果を引き継ぐため、変更のないタスクは丸ごとスキップされる。
 
 ## リリース
 
@@ -410,8 +434,8 @@ Dev Container には `act` が入っている。ワークフローがルート�
 リポジトリのルートで実行する。
 
 ```bash
-act push -W .github/workflows/ci-backend.yml
-act pull_request -W .github/workflows/ci-node.yml
+act push -W .github/workflows/backend-ci.yml
+act pull_request -W .github/workflows/frontend-ci.yml / extension-ci.yml
 ```
 
 ## 動作確認 URL（ローカル backend 起動時）

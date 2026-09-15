@@ -1,4 +1,4 @@
-name: nginx
+name: Nginx/CI
 
 # nginx 設定は envsubst テンプレート（dev: templates/, prod: templates-prod/）で、
 # 変数を展開してからでないと nginx -t にかけられない。dev はそのまま、prod は
@@ -9,12 +9,12 @@ on:
   pull_request:
     paths:
       - "nginx/**"
-      - ".github/workflows/nginx.yml"
+      - ".github/workflows/nginx-ci.yml"
   push:
     branches: [main]
     paths:
       - "nginx/**"
-      - ".github/workflows/nginx.yml"
+      - ".github/workflows/nginx-ci.yml"
 
 # envsubst で展開する変数は明示する（無指定だと $host 等の nginx 変数まで潰れる）。
 env:

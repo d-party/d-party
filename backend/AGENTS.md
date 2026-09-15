@@ -161,7 +161,7 @@ CI は **1 ファイルに集約** されている。ジョブ: `ruff` / `pytest
   バッジを `python-coverage-comment-action-data` ブランチへ保存する（Codecov は廃止）。
 - コンテナイメージの CVE スキャン（trivy）は廃止した。イメージの静的チェックは
   `hadolint` / `dockle` / `dockerlint` が担当する。
-- `code-quality-review.yml`（reviewdog の PR インラインコメント）と `release.yml` は
+- `repo-review.yml`（reviewdog の PR インラインコメント）と `release.yml` は
   別ファイルのまま。
 
 ### ghost セッションの回収
@@ -218,7 +218,7 @@ docker compose exec django python manage.py close_active_sessions
 統合済みです。変更はリポジトリのルートでブランチを切り、`d-party/d-party` へ PR を
 出してください。frontend や拡張機能にまたがる変更も 1 本の PR で構いません。
 
-- CI は `../.github/workflows/ci-backend.yml`（このディレクトリを
+- CI は `../.github/workflows/backend-ci.yml`（このディレクトリを
   `working-directory` にして走る）。
 - pre-commit の設定はルートの `../.pre-commit-config.yaml`（`files: ^backend/`）。
   `pre-commit install` はリポジトリのルートで実行します。

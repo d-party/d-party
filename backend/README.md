@@ -1,6 +1,6 @@
 # d-party Backend
 
-[![CI](https://github.com/d-party/d-party/actions/workflows/ci-backend.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/ci-backend.yml)
+[![CI](https://github.com/d-party/d-party/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/backend-ci.yml)
 [![Code Quality Review](https://github.com/d-party/d-party/actions/workflows/code-quality-review.yml/badge.svg)](https://github.com/d-party/d-party/actions/workflows/code-quality-review.yml)
 
 [![Coverage badge](https://raw.githubusercontent.com/d-party/d-party/python-coverage-comment-action-data/badge.svg)](https://htmlpreview.github.io/?https://github.com/d-party/d-party/blob/python-coverage-comment-action-data/htmlcov/index.html)
