@@ -149,9 +149,9 @@ uv run mypy .                 # 型検査（ダミー env が必要。下記参�
 
 ### CI（`.github/workflows/ci.yml`）
 
-CI は **1 ファイルに集約** されている。ジョブ: `ruff` / `pytest` / `mypy` /
-`license-check` / `bandit` / `pyt` / `codeql` / `lizard` / `dockerlint` / `hadolint` /
-`dockle` / `actionlint` / `shellcheck` / `yamllint`。
+ジョブ: `ruff` / `pytest` / `mypy` / `license-check` / `dockerlint` / `hadolint` /
+`dockle`。リポジトリ横断の lint（actionlint / shellcheck / yamllint）は `repo-ci.yml`、
+CodeQL は `repo-codeql.yml` が担当する。
 
 - **フォーマットは検証のみ**。違反は CI 失敗として扱い、自動コミットや force-push はしない
   （旧 `autoblack.yml` は廃止）。
@@ -161,6 +161,10 @@ CI は **1 ファイルに集約** されている。ジョブ: `ruff` / `pytest
   バッジを `python-coverage-comment-action-data` ブランチへ保存する（Codecov は廃止）。
 - コンテナイメージの CVE スキャン（trivy）は廃止した。イメージの静的チェックは
   `hadolint` / `dockle` / `dockerlint` が担当する。
+- **単体の linter を別プロセスで回さず ruff へ集約している**（<https://docs.astral.sh/ruff/rules/>）。
+  SAST は flake8-bandit 相当の `S`、複雑度は mccabe 相当の `C90`（`max-complexity = 10`）と
+  Pylint の `PLR09xx` が見る。そのため bandit / lizard の専用ジョブは持たない。
+  taint 解析は ruff の守備範囲外なので `repo-codeql.yml`（python）が担当する。
 - `repo-review.yml`（reviewdog の PR インラインコメント）と `release.yml` は
   別ファイルのまま。
 

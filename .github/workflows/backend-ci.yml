@@ -15,16 +15,11 @@ on:
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
-      - ".github/bandit.yml"
   pull_request:
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
-      - ".github/bandit.yml"
   workflow_dispatch:
-  schedule:
-    # セキュリティ系ジョブの定期スキャン（毎週金曜 21:25 UTC）。
-    - cron: "25 21 * * 5"
 
 # 同一ブランチの古い実行は打ち切る。
 concurrency:
@@ -239,82 +234,6 @@ jobs:
           --with-system
           --partial-match
           --allow-only="$(grep -v '^[[:space:]]*#' license-whitelist-python.txt | grep -v '^[[:space:]]*$' | paste -sd ';')"
-
-  bandit:
-    name: Bandit (SAST)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.9"
-      - name: install bandit
-        run: pip install bandit
-      # 設定はリポジトリのルート（.github/bandit.yml）にあるので相対で遡る。
-      - name: run bandit
-        run: |
-          bandit . -r -o ./bandit.txt -f txt -c ../.github/bandit.yml
-      - name: Archive bandit log
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: bandit-report
-          path: backend/bandit.txt
-
-  pyt:
-    name: python-taint (taint analysis)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      # checkout を先頭に置くこと。defaults.run.working-directory が backend なので、
-      # checkout 前に run ステップを置くと「そのディレクトリが無い」で落ちる。
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - name: install utils
-        run: |
-          sudo apt-get update
-          sudo apt-get install moreutils -y
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.9"
-      - name: install python-taint
-        run: pip install python-taint
-      - name: run pyt
-        run: |
-          pyt -a D -o pyt.txt .
-      - name: Archive pyt log
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: pyt-report
-          path: backend/pyt.txt
-
-  lizard:
-    name: Lizard (complexity)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - name: Lizard Runner
-        uses: Uno-Takashi/Lizard-Runner@v3
-        with:
-          path: "backend"
-          language: "python"
-          exclude: "tests.py"
 
   dockerlint:
     name: dockerlint
