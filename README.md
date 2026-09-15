@@ -257,7 +257,7 @@ monorepo になったので、backend と frontend にまたがる変更も **1 
 
 | ワークフロー             | name              | 対象                                                          |
 | ------------------------ | ----------------- | ------------------------------------------------------------- |
-| `backend-ci.yml`         | `Backend/CI`      | ruff · pytest · mypy · license · bandit · hadolint · dockle   |
+| `backend-ci.yml`         | `Backend/CI`      | ruff · pytest · mypy · license · dockerlint · hadolint · dockle |
 | `frontend-ci.yml`        | `Frontend/CI`     | turbo lint/typecheck/build/storybook · license · イメージ疎通 |
 | `extension-ci.yml`       | `Extension/CI`    | turbo lint/typecheck/build/storybook · license                |
 | `infra-ci.yml`           | `Infra/CI`        | helm lint · helm template                                     |

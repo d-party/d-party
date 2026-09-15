@@ -7,6 +7,7 @@ from collections import defaultdict
 from django.core.cache import cache
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -56,8 +57,13 @@ def _bad_days() -> Response:
 
 
 def _since(days: int) -> datetime.date:
-    """Inclusive start date of a ``days``-long window ending today."""
-    return datetime.date.today() - datetime.timedelta(days=days - 1)
+    """Inclusive start date of a ``days``-long window ending today.
+
+    ``timezone.localdate()`` を使い、集計側の ``TruncDate``（settings の TIME_ZONE で
+    日付を切る）と同じ基準に揃える。``date.today()`` はプロセスのローカル時刻を見るため、
+    TZ 環境変数が設定されていない実行環境では 1 日ずれる。
+    """
+    return timezone.localdate() - datetime.timedelta(days=days - 1)
 
 
 def _cached(key: str, producer):
@@ -133,7 +139,8 @@ def _resample_per_day(
     A plain loop replaces the former ``pandas.DataFrame.asfreq`` round-trip,
     which pulled in the heavy pandas dependency only to forward-fill zero days.
     """
-    today = datetime.date.today()
+    # 集計側の TruncDate と同じく settings の TIME_ZONE で「今日」を決める。
+    today = timezone.localdate()
     counts = {row["day"]: int(row["count"]) for row in rows}
     if since is not None:
         start = since

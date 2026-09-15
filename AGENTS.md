@@ -316,7 +316,7 @@ monorepo になったので、**backend と frontend と拡張機能にまたが
 
 | ワークフロー           | name               | 対象                                                          | paths |
 | ---------------------- | ------------------ | ------------------------------------------------------------- | ----- |
-| `backend-ci.yml`       | `Backend/CI`       | ruff · pytest · mypy · license · bandit · pyt · lizard · hadolint · dockle | `backend/**` |
+| `backend-ci.yml`       | `Backend/CI`       | ruff · pytest · mypy · license · dockerlint · hadolint · dockle | `backend/**` |
 | `frontend-ci.yml`      | `Frontend/CI`      | turbo lint/typecheck/build/storybook · license · イメージ疎通 | `frontend/**` + workspace 設定 |
 | `extension-ci.yml`     | `Extension/CI`     | turbo lint/typecheck/build/storybook · license                | `extension/**` + workspace 設定 |
 | `infra-ci.yml`         | `Infra/CI`         | helm lint · helm template                                     | `infra/**` |
