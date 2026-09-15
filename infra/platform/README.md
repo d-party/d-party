@@ -1,4 +1,4 @@
-# deploy/platform/ — クラスタ共有基盤（d-party 専用ではない）
+# infra/platform/ — クラスタ共有基盤（d-party 専用ではない）
 
 ここにあるのは **クラスタに 1 回だけ用意する共有シングルトン**です。d-party 固有では
 なく、**同じ k3s クラスタに同居する他サービスからも共用**されます。
@@ -33,10 +33,10 @@ d-party の chart（`../helm/d-party`）に同梱すると「d-party を入れ�
 
 ```bash
 # 1) 共有レジストリ
-kubectl apply -f deploy/platform/registry.yaml
+kubectl apply -f infra/platform/registry.yaml
 
 # 2) 全ノードに registries.yaml を配置して k3s 再起動
-sudo cp deploy/platform/k3s-registries.yaml /etc/rancher/k3s/registries.yaml
+sudo cp infra/platform/k3s-registries.yaml /etc/rancher/k3s/registries.yaml
 sudo systemctl restart k3s          # server ノード
 sudo systemctl restart k3s-agent    # agent(worker) ノード
 ```

@@ -6,12 +6,12 @@
 # - push 先は in-cluster の registry（HTTP / insecure）。
 #
 # 実行（再ビルドのたびに新しい Job を作る）:
-#   kubectl create -f deploy/build/buildkit-backend-job.yaml
+#   kubectl create -f infra/build/buildkit-backend-job.yaml
 #   kubectl -n registry logs -f job/<生成された名前>
 #
 # 注意: ノードで user namespace が有効である必要がある（Ubuntu 24.04 等では
 #   kernel.apparmor_restrict_unprivileged_userns=0 / user.max_user_namespaces>0）。
-#   詳細は deploy/README.md「クラスタ内ビルド」を参照。
+#   詳細は infra/README.md「クラスタ内ビルド」を参照。
 # ─────────────────────────────────────────────────────────────────────────────
 apiVersion: batch/v1
 kind: Job

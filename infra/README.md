@@ -1,4 +1,4 @@
-# deploy/ — k3s (Raspberry Pi 4B) 向けデプロイ
+# infra/ — k3s (Raspberry Pi 4B) 向けデプロイ
 
 このディレクトリは、d-party の **サーバ実行部分（nginx 以降）** を Raspberry Pi 4B で
 組んだ **k3s クラスタ**へデプロイするための設定です。
@@ -21,7 +21,7 @@
 - **CD は Argo CD（GitOps）**。運用リポジトリの `Application` がこの chart を参照します。
 
 ```
-deploy/
+infra/
   helm/d-party/              ← d-party 単体の Helm chart（このリポジトリの本体）
     Chart.yaml values.yaml
     templates/               nginx · django · frontend · postgres · redis · migrate(hook)
@@ -203,22 +203,22 @@ flowchart LR
 #### 手順
 
 ```bash
-# 1) 共有レジストリを 1 回だけ用意（クラスタ共有基盤。詳細は deploy/platform/README.md）
-kubectl apply -f deploy/platform/registry.yaml
+# 1) 共有レジストリを 1 回だけ用意（クラスタ共有基盤。詳細は infra/platform/README.md）
+kubectl apply -f infra/platform/registry.yaml
 
 # 2) 全ノードに registries.yaml を配置して k3s を再起動（1 回だけ）
-sudo cp deploy/platform/k3s-registries.yaml /etc/rancher/k3s/registries.yaml
+sudo cp infra/platform/k3s-registries.yaml /etc/rancher/k3s/registries.yaml
 sudo systemctl restart k3s          # server ノード
 sudo systemctl restart k3s-agent    # agent(worker) ノード
 
 # 3) イメージをビルド＆push（リリースのたびに実行。新しい Job が毎回作られる）
-kubectl create -f deploy/build/buildkit-backend-job.yaml
-kubectl create -f deploy/build/buildkit-frontend-job.yaml
+kubectl create -f infra/build/buildkit-backend-job.yaml
+kubectl create -f infra/build/buildkit-frontend-job.yaml
 kubectl -n registry get jobs -w
 ```
 
 > **frontend の build-arg**: `NEXT_PUBLIC_*` はビルド時に焼き込まれます。
-> `deploy/build/buildkit-frontend-job.yaml` の `build-arg:NEXT_PUBLIC_BACKEND_HOST` 等を
+> `infra/build/buildkit-frontend-job.yaml` の `build-arg:NEXT_PUBLIC_BACKEND_HOST` 等を
 > 公開ドメイン（`docker-compose.prod.yml` と同じ値）に合わせて編集してください。
 
 > **ノード前提（rootless ビルド）**: rootless BuildKit は user namespace を使います。
@@ -235,13 +235,13 @@ chart の既定 image 参照（`values.django.image` / `values.frontend.image`�
 
 ### 3.3 CD（Argo CD / GitOps）
 
-`deploy/argocd/application.example.yaml` を雛形に、運用リポジトリへ `Application` を置きます。
+`infra/argocd/application.example.yaml` を雛形に、運用リポジトリへ `Application` を置きます。
 
 ```bash
-kubectl apply -n argocd -f deploy/argocd/application.example.yaml
+kubectl apply -n argocd -f infra/argocd/application.example.yaml
 ```
 
-- `source.path = deploy/helm/d-party` を指し、`config.MY_DOMAIN` と
+- `source.path = infra/helm/d-party` を指し、`config.MY_DOMAIN` と
   `secret.existingSecret` を values 上書きで注入。
 - `syncPolicy.automated`（prune + selfHeal）で Git を真実として自動同期。
 - イメージ tag の自動追従が必要なら **argocd-image-updater**（active maintained,
@@ -251,11 +251,11 @@ kubectl apply -n argocd -f deploy/argocd/application.example.yaml
 
 ```bash
 # 構文・テンプレート検証（クラスタ不要）
-helm lint   deploy/helm/d-party
-helm template d-party deploy/helm/d-party | less
+helm lint   infra/helm/d-party
+helm template d-party infra/helm/d-party | less
 
 # クラスタへ直接入れる場合（GitOps を使わない暫定確認）
-helm upgrade --install d-party deploy/helm/d-party \
+helm upgrade --install d-party infra/helm/d-party \
   -n d-party --create-namespace \
   --set config.MY_DOMAIN=d-party.example \
   --set secret.existingSecret=d-party-secret
@@ -332,7 +332,7 @@ kubectl -n d-party create secret generic d-party-secret \
   --from-literal=POSTGRES_PASSWORD=dev-only-change-me
 
 # chart を入れる（Quick Tunnel で外から触るので MY_DOMAIN は仮で OK）
-helm upgrade --install d-party deploy/helm/d-party \
+helm upgrade --install d-party infra/helm/d-party \
   -n d-party --create-namespace \
   --set config.MY_DOMAIN=quicktunnel.local \
   --set secret.existingSecret=d-party-secret
@@ -531,7 +531,7 @@ kubectl -n argocd port-forward svc/argocd-server 8081:443
 
 ### 6.3 Application 作成
 
-`deploy/argocd/application.example.yaml` を雛形に、ローカル検証用へ調整した
+`infra/argocd/application.example.yaml` を雛形に、ローカル検証用へ調整した
 Application を apply します。`feature/...` ブランチを参照、images をローカル
 import 済みのタグへ、Ingress は disable（k3d で `--disable=servicelb` 起動の
 ため LoadBalancer が割当たらず Argo CD が Unhealthy 扱いになる）に変更します。
@@ -548,7 +548,7 @@ spec:
   source:
     repoURL: https://github.com/d-party/d-party
     targetRevision: feature/deploy-helm-gitops    # 任意の作業ブランチ
-    path: deploy/helm/d-party
+    path: infra/helm/d-party
     helm:
       releaseName: d-party
       valuesObject:
@@ -590,7 +590,7 @@ values を 1 行変えて push し、Argo CD が自動でローリング更新�
 
 ```bash
 # 1) values 変更 → commit → push
-sed -i 's/gunicornWorkers: 2/gunicornWorkers: 3/' deploy/helm/d-party/values.yaml
+sed -i 's/gunicornWorkers: 2/gunicornWorkers: 3/' infra/helm/d-party/values.yaml
 git commit -am "deploy: bump gunicornWorkers 2->3"
 git push
 

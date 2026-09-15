@@ -1,4 +1,4 @@
-# deploy/platform/CLUSTER-BOOTSTRAP.md — k3s クラスタ立ち上げ手順書
+# infra/platform/CLUSTER-BOOTSTRAP.md — k3s クラスタ立ち上げ手順書
 
 Raspberry Pi（arm64）で **k3s クラスタをゼロから立ち上げ**、d-party を含む複数サービスが
 同居できる状態にするまでの手順書です。**ノード OS の準備 → k3s 導入 → 操作ツール →
@@ -122,7 +122,7 @@ sudo timedatectl set-timezone Asia/Tokyo
 
 ### 1.3 リポジトリの取得（kubectl apply の元ファイル）
 
-§5 以降で `kubectl apply -f deploy/platform/...` を使うため、**そのコマンドを打つマシン**
+§5 以降で `kubectl apply -f infra/platform/...` を使うため、**そのコマンドを打つマシン**
 （rpi-1 か、手元の開発機）にこのリポジトリを clone しておきます。
 
 ```bash
@@ -308,7 +308,7 @@ helm version
 
 ```bash
 # registry:2 + Namespace(registry) + ClusterIP + NodePort(30500) を作成
-kubectl apply -f deploy/platform/registry.yaml
+kubectl apply -f infra/platform/registry.yaml
 kubectl -n registry rollout status deploy/registry
 ```
 
@@ -319,7 +319,7 @@ pull できるようにします。**全ノードに配置 → k3s 再起動**�
 
 ```bash
 # 全ノード（server / agent とも）で実施
-sudo cp deploy/platform/k3s-registries.yaml /etc/rancher/k3s/registries.yaml
+sudo cp infra/platform/k3s-registries.yaml /etc/rancher/k3s/registries.yaml
 
 # server ノード
 sudo systemctl restart k3s
@@ -455,10 +455,10 @@ curl -sfL https://get.k3s.io | sh -s - agent
 kubectl get nodes -o wide        # rpi-1 / rpi-2 が Ready
 
 # ── 共有基盤（クラスタに 1 回） ────────────────────────────────
-kubectl apply -f deploy/platform/registry.yaml
+kubectl apply -f infra/platform/registry.yaml
 kubectl -n registry rollout status deploy/registry
 #  全ノードで registries.yaml を配置 → k3s 再起動
-sudo cp deploy/platform/k3s-registries.yaml /etc/rancher/k3s/registries.yaml
+sudo cp infra/platform/k3s-registries.yaml /etc/rancher/k3s/registries.yaml
 sudo systemctl restart k3s          # rpi-1
 sudo systemctl restart k3s-agent    # rpi-2
 

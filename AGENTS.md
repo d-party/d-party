@@ -55,11 +55,11 @@ d-party/                  ← このリポジトリ（ルート）
 ## デプロイ（k3s / Helm / GitOps）
 
 本番想定は **Raspberry Pi (arm64) で組んだ k3s クラスタ**への Helm デプロイ。CD は
-**Argo CD（GitOps）**。設定一式は `deploy/` にある。詳細手順は
-[`deploy/README.md`](deploy/README.md)（および [`deploy/platform/README.md`](deploy/platform/README.md)）を参照。
+**Argo CD（GitOps）**。設定一式は `infra/` にある。詳細手順は
+[`infra/README.md`](infra/README.md)（および [`infra/platform/README.md`](infra/platform/README.md)）を参照。
 
 ```
-deploy/
+infra/
   helm/d-party/        d-party 単体の Helm chart（このリポジトリの本体）
     templates/         nginx · django · frontend · postgres · redis · migrate(hook)
                        · networkpolicy · priorityclass · ingress(任意)
@@ -80,7 +80,7 @@ deploy/
   release 名で prefix され namespace 非固定。RPi 想定で `replicaCount` は既定 1。
 - **d-party は自前の postgres / redis を chart に同梱し、他サービスとは共有しない**。
   別サービスが DB/Redis を要るなら、そのサービス側で別途立てる。
-- **共有クラスタ基盤（`deploy/platform/`）は d-party の所有物ではない**。chart はそこを
+- **共有クラスタ基盤（`infra/platform/`）は d-party の所有物ではない**。chart はそこを
   「既にある共有レジストリ」として参照するだけ。理想は別 platform リポジトリへ切り出し。
 - **隔離・優先度**: postgres/redis は `NetworkPolicy` で同 release 内からのみ到達可能にし、
   `PriorityClass`（stateful > app）でメモリ逼迫時にも DB を優先保護する。
@@ -91,12 +91,12 @@ deploy/
 
 ```bash
 # chart の静的検証（クラスタ不要）
-helm lint deploy/helm/d-party
-helm template d-party deploy/helm/d-party | less
+helm lint infra/helm/d-party
+helm template d-party infra/helm/d-party | less
 
-# 手元で実クラスタ検証（k3d）。詳細は deploy/README.md
+# 手元で実クラスタ検証（k3d）。詳細は infra/README.md
 k3d cluster create d-party --agents 2
-helm upgrade --install d-party deploy/helm/d-party -n d-party --create-namespace \
+helm upgrade --install d-party infra/helm/d-party -n d-party --create-namespace \
   --set config.MY_DOMAIN=d-party.example --set secret.existingSecret=d-party-secret
 k3d cluster delete d-party        # 後始末
 ```
@@ -121,7 +121,7 @@ docker-compose.loadtest.yml   k6 サービス（compose の loadtest profile。�
 配置方針（**サブモジュール規約との関係**）:
 
 - 負荷試験は**オーケストレーション層の関心事**（docker-compose / nginx / env を持つルートが対象）
-  なので、`backend/` ではなく**ルートリポジトリ**に置く。`deploy/` と同じカテゴリ。
+  なので、`backend/` ではなく**ルートリポジトリ**に置く。`infra/` と同じカテゴリ。
 - backend のコードではなく「走っているスタックへの外形テスト」なので、サブモジュール規約には反しない。
 - 負荷の本質は **ブロードキャスト増幅**: 1 ルーム N 人で 1 人の操作が `group_send` で N-1 接続へ
   配信される（O(N) ファンアウト）。単発 RPS ではなく多接続常時接続下の捌きを測る。

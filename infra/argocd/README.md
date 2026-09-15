@@ -12,18 +12,18 @@ backend / frontend を release
    （django.image.tag / frontend.image.tag）を書き換え（write-back: argocd 方式）
         │
         ▼  Argo CD の automated(selfHeal) が desired 変更を検知
-   deploy/helm/d-party を render → ローリング更新で自動デプロイ
+   infra/helm/d-party を render → ローリング更新で自動デプロイ
 「release のタイミング」= GHCR に新しい semver イメージが出た時。image-updater が ポーリングで検出するため、git への追加コミットは不要。
 chart 既定の image.tag: v0.0.0 はプレースホルダ。Application 側の valuesObject （初期 = 現行版）と image-updater が書き込む helm パラメータが常に上書きするため、 v0.0.0 が実体に出ることはない。
 構成（クラスタに導入済み・in-cluster）
 コンポーネント	内容
 Argo CD	argocd namespace に標準インストール（server-side apply）。CD 本体。
 argocd-image-updater	**v0.18.0（注釈方式）**を kubernetes モードで導入。GHCR を監視し Application を更新。
-Application d-party	deploy/argocd/application.yaml。deploy/helm/d-party を main から render。
+Application d-party	infra/argocd/application.yaml。infra/helm/d-party を main から render。
 公開は Cloudflare Named Tunnel（cloudflared namespace）→ stg.d-party.net。 TLS はエッジ（Universal SSL）で終端。chart はクラスタ内 HTTP のみ扱う。
 
 Application のポイント（application.yaml）
-source: https://github.com/d-party/d-party の deploy/helm/d-party（main 追従）。
+source: https://github.com/d-party/d-party の infra/helm/d-party（main 追従）。
 helm.valuesObject: config.MY_DOMAIN: stg.d-party.net / secret.existingSecret: d-party-secret / 初期 django.image.tag frontend.image.tag（= 現行版。以後 image-updater が上書き）。
 syncPolicy.automated: prune: true / selfHeal: true。ServerSideApply=true。
 ignoreDifferences: StatefulSet の volumeClaimTemplates 補完フィールドを無視（下記参照）。

@@ -73,7 +73,7 @@ grep -rn "from \"<package>\"" src/
 ```
 
 DB / ランタイムの下限も見る（Django 6.1 は PostgreSQL 15+、Next 16 は Node 20.9+）。
-`docker-compose.yml` と `deploy/helm/d-party/values.yaml` の実際のバージョンと突き合わせる。
+`docker-compose.yml` と `infra/helm/d-party/values.yaml` の実際のバージョンと突き合わせる。
 
 ## 4. ローカル検証
 

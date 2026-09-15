@@ -5,7 +5,7 @@
 # 公開ドメイン（cloudflared が終端する MY_DOMAIN）に合わせて build-arg を渡すこと。
 #
 # 実行:
-#   kubectl create -f deploy/build/buildkit-frontend-job.yaml
+#   kubectl create -f infra/build/buildkit-frontend-job.yaml
 #   kubectl -n registry logs -f job/<生成された名前>
 # ─────────────────────────────────────────────────────────────────────────────
 apiVersion: batch/v1
