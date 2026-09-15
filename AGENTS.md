@@ -421,6 +421,16 @@ PR のときしか動かさない。
 `.dockleignore` · `.pre-commit-config.yaml`）。これらは元々 backend リポジトリの直下に
 あり、そのリポジトリのルート = カレントディレクトリだったので効いていた。
 
+### リポジトリ側で 1 度だけ必要な設定
+
+ワークフローを置くだけでは動かないものが 2 つある。どちらもリポジトリの設定なので、
+fork や新しいリポジトリでは改めて必要になる。
+
+| 何 | どこ | 未設定だと |
+| --- | --- | --- |
+| **GitHub Pages を有効化し、ソースを「GitHub Actions」にする** | Settings → Pages → Source: GitHub Actions<br>（`gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`） | `Storybook/Deploy` の build は通るのに deploy だけが `Failed to create deployment (status: 404)` で落ちる |
+| **GHCR パッケージへの write を許可する** | `ghcr.io/d-party/backend` と `ghcr.io/d-party/frontend` の Package settings → Manage Actions access → このリポジトリに Write | `Release` の images ジョブが denied で落ちる |
+
 ### キャッシュ
 
 依存のキャッシュはすべて**ロックファイルのハッシュ**をキーにしている。
