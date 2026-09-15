@@ -1,9 +1,5 @@
 x-env_file: &env_file ./.env.global
 
-volumes:
-  prometheus_data: {}
-  grafana_data: {}
-
 services:
   nginx:
     container_name: nginx
@@ -93,84 +89,3 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
-  prometheus:
-    container_name: prometheus
-    image: prom/prometheus:v2.55.1
-    profiles: ["metrics"]
-    volumes:
-      - ./prometheus/:/etc/prometheus/
-    #      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-    ports:
-      - 9090:9090
-    depends_on:
-      django:
-        condition: service_healthy
-      cadvisor:
-        condition: service_started
-      node-exporter:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:9090/-/healthy"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-
-  node-exporter:
-    container_name: node-exporter
-    image: prom/node-exporter:v1.8.2
-    profiles: ["metrics"]
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - --collector.filesystem.ignored-mount-points
-      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
-    ports:
-      - 9100:9100
-    deploy:
-      mode: global
-
-  cadvisor:
-    container_name: cadvisor
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
-    profiles: ["metrics"]
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:rw
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-    ports:
-      - 5050:8080
-    deploy:
-      mode: global
-
-  grafana:
-    container_name: grafana
-    image: grafana/grafana:11.2.3
-    profiles: ["metrics"]
-    user: "472"
-    depends_on:
-      prometheus:
-        condition: service_healthy
-    ports:
-      - 3000:3000
-    volumes:
-      - ./grafana/data:/var/lib/grafana
-      - ./grafana/provisioning/:/etc/grafana/provisioning/
-    env_file:
-      - ./grafana/.env.grafana
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 20s

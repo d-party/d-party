@@ -105,7 +105,7 @@ jobs:
       D_ANIME_STORE_DOMAIN: animestore.docomo.ne.jp
       TIME_ZONE: Asia/Tokyo
       LANGUAGE_CODE: ja
-      DATABASE_ENGINE: django_prometheus.db.backends.postgresql
+      DATABASE_ENGINE: django.db.backends.postgresql
       DATABASE_USER: d_party
       DATABASE_HOST: localhost
       DATABASE_PORT: "5432"
@@ -178,7 +178,7 @@ jobs:
       D_ANIME_STORE_DOMAIN: animestore.docomo.ne.jp
       TIME_ZONE: Asia/Tokyo
       LANGUAGE_CODE: ja
-      DATABASE_ENGINE: django_prometheus.db.backends.postgresql
+      DATABASE_ENGINE: django.db.backends.postgresql
       DATABASE_USER: d_party
       DATABASE_HOST: localhost
       DATABASE_PORT: "5432"

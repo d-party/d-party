@@ -61,7 +61,6 @@ INSTALLED_APPS = [
     "channels",
     "rest_framework",
     "axes",
-    "django_prometheus",
     "streamer",
     "api",
 ]
@@ -72,7 +71,6 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 MIDDLEWARE = [
-    "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -81,7 +79,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "axes.middleware.AxesMiddleware",
-    "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
 ROOT_URLCONF = "d_party.urls"
@@ -276,11 +273,6 @@ UNFOLD = {
                         "title": _("統計チャート"),
                         "icon": "bar_chart",
                         "link": "/stats",
-                    },
-                    {
-                        "title": _("Grafana"),
-                        "icon": "monitoring",
-                        "link": "/grafana/",
                     },
                 ],
             },
