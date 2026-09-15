@@ -1,0 +1,147 @@
+# extension/ の成果物が実際に組み上がるかを見る。
+#
+# Extension/CI は lint と型検査だけを見るので、バンドラや Dockerfile が壊れていても
+# 気づけない。ここでは**出荷するもの**を作って中身を確認する。
+name: Extension/Build
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "extension/**"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".github/workflows/extension-build.yml"
+  pull_request:
+    paths:
+      - "extension/**"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".github/workflows/extension-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bundle:
+    name: Build the production bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Restore the Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter d-party-chrome-extension...
+
+      # Chrome Web Store へ上げるのと同じ本番ビルド（D_PARTY_ENV=production）。
+      # リリースまで通らないと気づけない壊れ方を、ここで拾う。
+      - name: Build the production bundle
+        run: pnpm --filter d-party-chrome-extension run build:prod
+
+      # rspack が黙って空の出力を吐く事故があるので、manifest が参照する
+      # エントリが実在することまで確認する。
+      - name: Verify the bundle contents
+        run: |
+          set -euo pipefail
+          cd extension/dist
+          test -f manifest.json || { echo "manifest.json がない"; exit 1; }
+          # shellcheck disable=SC2016
+          # ここはシェルではなく node に渡す JS。${...} は JS の
+          # テンプレートリテラルなので、シェルで展開してはいけない。
+          node -e '
+            const fs = require("fs");
+            const m = JSON.parse(fs.readFileSync("manifest.json", "utf8"));
+            const files = new Set();
+            files.add(m.background.service_worker);
+            for (const cs of m.content_scripts ?? []) {
+              for (const f of [...(cs.js ?? []), ...(cs.css ?? [])]) files.add(f);
+            }
+            if (m.action?.default_popup) files.add(m.action.default_popup);
+            let bad = 0;
+            for (const f of files) {
+              const ok = fs.existsSync(f) && fs.statSync(f).size > 0;
+              console.log(`  ${ok ? "ok  " : "MISS"} ${f}`);
+              if (!ok) bad++;
+            }
+            if (bad) { console.error(`${bad} 個の参照先が空か存在しない`); process.exit(1); }
+            console.log(`manifest version: ${m.version}`);
+          '
+
+      # Chrome Web Store へ上げる zip と同じ形にして、サイズも見ておく
+      # （CWS の上限は 2GB だが、肥大化に気づけるよう数値をログへ残す）。
+      - name: Package as the store would
+        run: |
+          set -euo pipefail
+          (cd extension/dist && zip -qr "${GITHUB_WORKSPACE}/extension.zip" .)
+          ls -l extension.zip
+
+  storybook:
+    name: Build Storybook
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Restore the Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter d-party-chrome-extension...
+
+      # storybook-deploy.yml は main でしかビルドしない（Pages へ公開するため）。
+      # ここでも建てて、壊れた story が main に入って公開を落とすのを防ぐ。
+      - name: Build Storybook
+        run: pnpm exec turbo run build-storybook --filter=d-party-chrome-extension

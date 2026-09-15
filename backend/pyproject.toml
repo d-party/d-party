@@ -1,0 +1,164 @@
+[project]
+name = "d-party-backend"
+version = "2.11.7"
+description = "d-party backend — Django Channels powered watch-together service for dアニメストア"
+authors = [{ name = "U-Not", email = "euno.eng@gmail.com" }]
+requires-python = ">=3.13"
+dependencies = [
+    "django>=5.2,<7.0",
+    "channels>=4.2",
+    "channels-redis>=4.2,<4.4",
+    "redis>=5,<9",
+    "daphne>=4.1",
+    "djangorestframework>=3.15",
+    "django-filter>=24.3",
+    "djangochannelsrestframework>=1.2",
+    "django-unfold>=0.100",
+    "django-axes>=7.0",
+    "django-extensions>=3.2.3",
+    "pydantic>=2.9",
+    "psycopg[binary]>=3.2",
+    "gunicorn>=23.0",
+    "uvicorn[standard]>=0.34",
+    "uvicorn-worker>=0.3",
+    "python-dotenv>=1.0",
+    "cryptography>=44.0",
+    "packaging>=24.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-django>=4.9",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "factory-boy>=3.3",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "django-stubs[compatible-mypy]>=5.1",
+    "djangorestframework-stubs>=3.15",
+    "werkzeug>=3.1",
+    "pip-licenses>=5.0",
+    "pipdeptree>=2.23",
+]
+
+[tool.uv]
+# This project is a deployable application, not a distributable package.
+package = false
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+extend-exclude = ["**/migrations/*"]
+
+[tool.ruff.lint]
+# ruff は多くの単体 linter を再実装しているので、別プロセスで回すのではなく
+# ここへ集約する（https://docs.astral.sh/ruff/rules/）。
+#
+#   E,W,F  pycodestyle + pyflakes      I      isort
+#   S      flake8-bandit               N      pep8-naming
+#   C90    mccabe（循環的複雑度）       PL     Pylint
+#   DJ     flake8-django               UP     pyupgrade
+#   B      flake8-bugbear              C4     flake8-comprehensions
+#   SIM    flake8-simplify             RET    flake8-return
+#   PT     flake8-pytest-style         ASYNC  flake8-async
+#   DTZ    flake8-datetimez            LOG    flake8-logging
+#   T20    flake8-print                TRY    tryceratops
+#   PERF   Perflint                    FURB   refurb
+#   PGH    pygrep-hooks                ISC    flake8-implicit-str-concat
+#   TC     flake8-type-checking        EXE    flake8-executable
+select = [
+    "E", "W", "F", "I", "UP", "B", "DJ", "C4", "S",
+    "C90", "PL", "N", "SIM", "RET", "PT", "ASYNC", "DTZ",
+    "LOG", "T20", "TRY", "PERF", "FURB", "PGH", "ISC", "TC", "EXE",
+]
+ignore = [
+    "E501",   # line length is handled by the formatter
+    "B008",   # function calls in argument defaults are idiomatic in Django/DRF
+    "DJ008",  # __str__ on every model is optional here
+    "TRY003", # long messages at the raise site are fine (and Django's own idiom)
+]
+
+# 循環的複雑度のしきい値。関数単位でここを超えると C901 で落ちる。
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+# The Channels ASGI entrypoint must initialise Django before importing routing.
+"d_party/asgi.py" = ["E402"]
+# Tests use bare asserts (flake8-bandit S101) plus pre-existing test-only smells.
+# PLR2004: comparing against literals is the point of a test.
+# PLC0415: models/settings have to be imported after django.setup().
+"**/tests.py" = [
+    "S101", "E711", "E721", "E722", "F811", "F841", "PLR2004", "PLC0415",
+]
+"**/test_*.py" = ["S101", "PLR2004", "PLC0415"]
+"conftest.py" = ["S101", "PLC0415"]
+# django-admin のひな型どおり、django のインポートは実行時まで遅延させる。
+"manage.py" = ["PLC0415"]
+
+[tool.coverage.run]
+# python-coverage-comment-action は .coverage（binary）を読み、パスを
+# リポジトリ相対で解決する。CI とローカルで絶対パスが異なるため
+# relative_files を有効にしておく（action の必須要件）。
+relative_files = true
+omit = [
+    "*/migrations/*",
+    "manage.py",
+    "*/tests.py",
+    "*/test_*.py",
+    "conftest.py",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "d_party.settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.13"
+# django-stubs / drf-stubs でモデル・QuerySet・DRF の型を解決する。
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+# 既存コードへの初回導入のため、まずは実害のある型不整合を拾う現実的な強度にする。
+# 未注釈関数の中身も検査するが、全関数への型注釈強制（disallow_untyped_defs）は
+# 段階導入するまで課さない。
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+# 型スタブの無い外部ライブラリ（channels / djangochannelsrestframework 等）の import は
+# ノイズになるため無視し、プロジェクト自身のコードの検査に集中する。
+ignore_missing_imports = true
+# 検査対象外:
+# - migrations: 生成物。
+# - manage.py: エントリスクリプト。
+# - tests / test_* / conftest: テストは factory-boy の動的属性（Factory.<field> /
+#   SubFactory）を多用し、メタクラス生成のため mypy/django-stubs では解決できず
+#   attr-defined の誤検出になる。テスト本体の型検査は費用対効果が低いため除外する。
+exclude = [
+    'migrations/',
+    'manage\.py$',
+    'tests\.py$',
+    'test_.*\.py$',
+    'conftest\.py$',
+]
+
+[[tool.mypy.overrides]]
+module = ["*.migrations.*"]
+ignore_errors = true
+
+# streamer.consumers（WebSocket コア）は既存実装の型負債を段階導入する。
+# - union-attr: self.anime_room / self.anime_user は None 初期化で、メソッド冒頭の
+#   None ガード後でも await（DB アクセス）を挟むと mypy が narrowing を解除するため
+#   多発する（ガードがあり実行時は None にならない）。
+# - arg-type: 公開プロトコル(format.py)のモデルへ意図的に dict（model_dump 結果や
+#   ワイヤ受信値）を渡し pydantic に coerce させている。プロトコル互換のため runtime は
+#   変えない。
+# - assignment: response_data を型の異なる Send ラッパーで使い回している。
+# これらは実行時バグではないため、当該コードのみ緩和し、段階的に解消する。
+[[tool.mypy.overrides]]
+module = ["streamer.consumers"]
+disable_error_code = ["union-attr", "arg-type", "assignment"]
+
+[tool.django-stubs]
+django_settings_module = "d_party.settings"

@@ -1,0 +1,47 @@
+# syntax=docker/dockerfile:1
+
+# Bring in the uv binary from the official image as a named stage so the COPY
+# below references a previously defined FROM alias (hadolint DL3022).
+FROM ghcr.io/astral-sh/uv:0.12 AS uv
+
+FROM python:3.14-slim-bookworm
+
+COPY --from=uv /uv /uvx /bin/
+
+# Keep UV_PROJECT_ENVIRONMENT (the virtualenv) outside the app dir so a
+# bind-mount over the source (docker-compose) does not shadow the installed
+# dependencies.
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEBCONF_NOWARNINGS=yes \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /usr/src/app
+
+# No system packages are needed: psycopg[binary] bundles libpq, and the former
+# system-cron retention job has been removed (reactions are folded into
+# ReactionStat on room end; see streamer/cron.py).
+
+# Install dependencies first for better layer caching.
+COPY pyproject.toml uv.lock ./
+# autobahn (daphne 経由) は NVX CFFI 拡張のコンパイルに失敗すると pure-Python
+# wheel へのフォールバックを拒否する。arm64 ネイティブビルドでこれに当たるため、
+# pure-Python ビルドを明示する（NVX は UTF-8 検証の最適化にすぎず挙動は同じ）。
+RUN --mount=type=cache,target=/root/.cache/uv \
+    AUTOBAHN_USE_NVX=0 uv sync --frozen --no-install-project
+
+# The app runs from UV_PROJECT_ENVIRONMENT (/opt/venv) and never uses the base
+# image's pip/setuptools — uv is the only installer. Drop them so their CVEs do
+# not ride along in the published image (setuptools ships an old version, and
+# pip vendors its own copy of msgpack). Note PATH puts /opt/venv/bin first, so
+# the interpreter that owns them must be addressed by absolute path.
+RUN /usr/local/bin/python -m pip uninstall --yes setuptools pip
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["sh", "entrypoint.sh"]

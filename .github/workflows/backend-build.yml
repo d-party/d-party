@@ -1,0 +1,162 @@
+# backend の成果物（コンテナイメージ）が実際に作れて、実際に起動するかを見る。
+#
+# Backend/CI は lint とテストだけを見るので、Dockerfile が壊れていても気づけない。
+# ここではイメージを組み、静的チェック（hadolint / dockerlint / dockle）にかけ、
+# **本物の PostgreSQL / Redis につないで起動させ、API が応答するところまで**確認する。
+name: Backend/Build
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-build.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-build.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  dockerfile:
+    name: Lint the Dockerfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: hadolint/hadolint-action@v3.5.0
+        with:
+          dockerfile: backend/Dockerfile
+          ignore: "DL3008,SC2174,DL3009,DL3059,SC3009"
+      - name: Setup node/npm
+        uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+      - name: install dockerlint
+        run: npm install -g dockerlint
+      - run: dockerlint backend/Dockerfile
+
+  image:
+    name: Build & smoke-test the runtime image
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+
+    # イメージを「起動する」ところまで見たいので、compose と同じ依存を用意する。
+    # ポートはホストへ公開されるため、コンテナは --network host で 127.0.0.1 を見る。
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: d_party
+          POSTGRES_USER: d_party
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U d_party -d d_party"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.4
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # 実行時 env はすべてイメージの外から渡す（Dockerfile は設定を焼き込まない）。
+      # --env-file にすることで、シェル上で展開せずに済ませる。
+      - name: Write the runtime env
+        run: |
+          cat > ci.env <<'EOF'
+          SECRET_KEY=django-insecure-ci
+          DEBUG=1
+          MY_DOMAIN=localhost
+          D_ANIME_STORE_DOMAIN=animestore.docomo.ne.jp
+          TIME_ZONE=Asia/Tokyo
+          LANGUAGE_CODE=ja
+          DATABASE_ENGINE=django.db.backends.postgresql
+          DATABASE_USER=d_party
+          DATABASE_HOST=127.0.0.1
+          DATABASE_PORT=5432
+          POSTGRES_DB=d_party
+          POSTGRES_PASSWORD=password
+          REDIS_HOST=127.0.0.1
+          REDIS_PORT=6379
+          CHROME_EXTENSION_REQUIRED_VERSION=1.0.0
+          EOF
+
+      # イメージ名は dockle とローカルの compose に合わせて固定する。
+      - name: Build the runtime image
+        run: docker build -t backend-django backend
+
+      - name: Run Dockle
+        uses: erzz/dockle-action@v1
+        with:
+          image: backend-django
+          exit-code: 1
+          failure-threshold: fatal
+
+      # migration はイメージに含まれるものをそのまま当てる。ここが通らないと
+      # 本番のリリース時に migrate ジョブが落ちる。
+      - name: Migrate with the image
+        run: |
+          docker run --rm --network host --env-file ci.env backend-django \
+            python manage.py migrate --noinput
+
+      - name: Start the container
+        run: |
+          docker run -d --name backend-ci --network host --env-file ci.env backend-django
+
+      - name: Wait for the server
+        run: |
+          for _ in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://127.0.0.1:8000/api/v1/health 2>/dev/null; then
+              echo "server is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "server did not become ready in time"
+          exit 1
+
+      # ビルドが通り起動もしたのに、settings の読み込みや URL 解決で 500 になる
+      # 壊れ方があるので、実際に引いて確認する。
+      - name: Check the API responds
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/v1/health)
+          echo "/api/v1/health -> $code"
+          [ "$code" = "200" ] || exit 1
+          # 存在しない API が 404 を返すこと（500 との取り違えを拾う）。
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/v1/__does_not_exist__)
+          echo "/api/v1/__does_not_exist__ -> $code"
+          [ "$code" = "404" ] || exit 1
+
+      - name: Container logs
+        if: always()
+        run: docker logs backend-ci
+
+      - name: Stop the container
+        if: always()
+        run: docker rm -f backend-ci

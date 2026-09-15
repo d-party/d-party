@@ -1,0 +1,12 @@
+# CodeQL（javascript-typescript）の解析範囲。
+#
+# backend/web/static/ には配信用のベンダー製 minified ライブラリ（jQuery 等）が
+# あり、絞らないとそれが解析対象に入って大量の誤検知になる。自前の TypeScript を
+# 持つ 2 パッケージだけに限定する。
+name: "CodeQL config (javascript-typescript)"
+paths:
+  - extension/src
+  - frontend/src
+  - packages/ui/src
+paths-ignore:
+  - "**/src/infrastructure/api/generated"

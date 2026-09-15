@@ -1,0 +1,237 @@
+# backend（Django）の静的検査とテスト。イメージが組み上がって起動するかは
+# Backend/Build が見る。
+#
+# uv / pytest / ruff / mypy の設定はすべて backend/ にあるので、
+# `defaults.run.working-directory: backend` でシェルを回すステップはその中で実行する。
+# `paths` により backend/ に触れた変更のときだけ起動する。
+#
+# リポジトリ横断の lint（actionlint / shellcheck / yamllint）と CodeQL は
+# repo-ci.yml が担当する。
+name: Backend/CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  workflow_dispatch:
+
+# 同一ブランチの古い実行は打ち切る。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# 既定は権限なし。各ジョブで必要最小限だけ与える。
+permissions: {}
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  ruff:
+    name: Ruff (format & lint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          working-directory: backend
+          # 依存キャッシュのキーはロックファイルのハッシュ。uv.lock が変わった
+          # ときだけ解決し直し、それ以外は復元して使う。
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+      - name: install dependencies
+        run: uv sync --frozen
+      # CI が履歴を書き換えるのは事故のもとなので、整形は検証のみ行い違反なら落とす
+      # （修正の適用は pre-commit とローカルの `uv run ruff format .` に任せる）。
+      - name: ruff format --check
+        run: uv run ruff format --check .
+      # import 順序（isort 相当）は pyproject.toml の select に "I" があるため
+      # このコマンドで一緒に検査される。
+      - name: ruff check
+        run: uv run ruff check .
+
+  pytest:
+    name: Pytest (PostgreSQL + Redis)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # python-coverage-comment-action が
+      # `python-coverage-comment-action-data` ブランチへバッジとカバレッジ履歴を
+      # 書き、PR へコメントするために必要。
+      contents: write
+      pull-requests: write
+    # postgres と redis はサービスコンテナで与える（ルートの compose は CI では使わない）。
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: d_party
+          POSTGRES_USER: d_party
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U d_party -d d_party"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.4
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      SECRET_KEY: django-insecure-ci
+      DEBUG: "1"
+      MY_DOMAIN: localhost
+      D_ANIME_STORE_DOMAIN: animestore.docomo.ne.jp
+      TIME_ZONE: Asia/Tokyo
+      LANGUAGE_CODE: ja
+      DATABASE_ENGINE: django.db.backends.postgresql
+      DATABASE_USER: d_party
+      DATABASE_HOST: localhost
+      DATABASE_PORT: "5432"
+      POSTGRES_DB: d_party
+      POSTGRES_PASSWORD: password
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
+      CHROME_EXTENSION_REQUIRED_VERSION: 1.0.0
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          working-directory: backend
+          # 依存キャッシュのキーはロックファイルのハッシュ。uv.lock が変わった
+          # ときだけ解決し直し、それ以外は復元して使う。
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+      - name: install dependencies
+        run: uv sync --frozen
+      # Migration files are committed to the repo, so CI must not generate
+      # them. Instead, fail if a model change is missing its migration, then
+      # apply the committed migrations.
+      - name: check for missing migrations
+        run: uv run python manage.py makemigrations --check --dry-run
+      - name: migrate
+        run: uv run python manage.py migrate
+      # `.coverage`（binary）が coverage コメント action の入力。coverage.xml は
+      # ローカル/他ツール向けに従来どおり残す。相対パス化は pyproject.toml の
+      # [tool.coverage.run] relative_files = true で担保している。
+      - name: run pytest
+        run: uv run pytest --cov --cov-report=xml
+      # PR にカバレッジのサマリコメントを出し、main ではバッジ用データを
+      # `python-coverage-comment-action-data` ブランチへ保存する。
+      # fork からの PR では GITHUB_TOKEN が read-only になり投稿できないため、
+      # テスト結果を巻き添えにしないよう continue-on-error にしている
+      # （その場合はコメント本文が下の artifact に残る）。
+      - name: Coverage comment
+        id: coverage_comment
+        continue-on-error: true
+        uses: py-cov-action/python-coverage-comment-action@v4.3
+        with:
+          GITHUB_TOKEN: ${{ github.token }}
+          # .coverage はリポジトリのルートではなく backend/ に出る。
+          COVERAGE_PATH: backend
+          MINIMUM_GREEN: "85"
+          MINIMUM_ORANGE: "70"
+      - name: Store coverage comment body
+        if: steps.coverage_comment.outputs.COMMENT_FILE_WRITTEN == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-coverage-comment-action
+          path: backend/python-coverage-comment-action.txt
+
+  mypy:
+    name: mypy (type check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    # mypy（django-stubs プラグイン）は DJANGO_SETTINGS_MODULE を import して
+    # モデル型を解決する。settings.py は import 時に env を要求するが、DB/Redis へ
+    # 実接続はしないためサービスコンテナは不要で、値はダミーでよい。
+    env:
+      SECRET_KEY: django-insecure-ci
+      DEBUG: "1"
+      MY_DOMAIN: localhost
+      D_ANIME_STORE_DOMAIN: animestore.docomo.ne.jp
+      TIME_ZONE: Asia/Tokyo
+      LANGUAGE_CODE: ja
+      DATABASE_ENGINE: django.db.backends.postgresql
+      DATABASE_USER: d_party
+      DATABASE_HOST: localhost
+      DATABASE_PORT: "5432"
+      POSTGRES_DB: d_party
+      POSTGRES_PASSWORD: password
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
+      CHROME_EXTENSION_REQUIRED_VERSION: 1.0.0
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          working-directory: backend
+          # 依存キャッシュのキーはロックファイルのハッシュ。uv.lock が変わった
+          # ときだけ解決し直し、それ以外は復元して使う。
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+      - name: install dependencies
+        run: uv sync --frozen
+      - name: run mypy
+        run: uv run mypy .
+
+  license-check:
+    name: License check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          working-directory: backend
+          # 依存キャッシュのキーはロックファイルのハッシュ。uv.lock が変わった
+          # ときだけ解決し直し、それ以外は復元して使う。
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+      - name: install dependencies
+        run: uv sync --frozen
+      - name: check licenses
+        # Allow-list lives in license-whitelist-python.txt (one license per line,
+        # # comments / blank lines ignored). --partial-match: many modern packages
+        # report SPDX expressions such as "Apache-2.0 OR BSD-3-Clause" or
+        # "BSD-3-Clause AND 0BSD AND MIT ...". Exact matching rejects those even when
+        # every component is permissive, so match an allowed license as a substring.
+        run: >
+          uv run pip-licenses
+          --with-system
+          --partial-match
+          --allow-only="$(grep -v '^[[:space:]]*#' license-whitelist-python.txt | grep -v '^[[:space:]]*$' | paste -sd ';')"

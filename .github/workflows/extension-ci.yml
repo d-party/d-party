@@ -1,0 +1,118 @@
+# extension/ の静的検査。成果物が組み上がるかは Extension/Build が見る。
+#
+# 依存は pnpm workspace なのでインストールはルートで 1 回、タスクは turbo に
+# --filter を渡して extension のぶんだけ回す。
+name: Extension/CI
+
+on:
+  push:
+    branches:
+      - main
+    # GitHub Actions は YAML のアンカー/エイリアスを解釈しないので、
+    # push と pull_request で同じリストを書き下している。
+    # 共有パッケージと workspace の設定が動くと解決結果が変わりうるので含める。
+    paths:
+      - "extension/**"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".github/workflows/extension-ci.yml"
+  pull_request:
+    paths:
+      - "extension/**"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".github/workflows/extension-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint & typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      # setup-node の `cache: pnpm` は pnpm ストアを
+      # **pnpm-lock.yaml のハッシュ**をキーにキャッシュする。
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+
+      # Turborepo のローカルキャッシュ（.turbo/cache）を実行間で持ち越す。
+      # キーの主軸は pnpm-lock.yaml のハッシュ: ロックファイルが変われば依存が
+      # 変わりタスクのハッシュも総入れ替えになるので、キャッシュもそこで切る。
+      - name: Restore the Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter d-party-chrome-extension...
+
+      - name: Generate the API client
+        run: pnpm exec turbo run api:generate --filter=d-party-chrome-extension
+
+      # 生成物はコミットしているので、古い checkout では openapi/openapi.json と
+      # 静かにずれる。上で再生成し、作業ツリーが変わったら落とす。
+      - name: Verify the generated API client is up to date
+        run: git diff --exit-code -- extension/src/infrastructure/api/generated
+
+      - name: Type check
+        run: pnpm exec turbo run typecheck --filter=d-party-chrome-extension
+
+      - name: Lint
+        run: pnpm exec turbo run lint --filter=d-party-chrome-extension
+
+  license-check:
+    name: Check dependency licenses
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter d-party-chrome-extension...
+
+      # 許可リストは extension/license-whitelist-node.txt（SPDX を 1 行 1 個）。
+      # production 依存に載っていないライセンスがあれば落とし、GPL/AGPL/SSPL の
+      # 混入を防ぐ。拡張の仕方はそのファイルを参照。
+      - name: Check licenses
+        run: pnpm --filter d-party-chrome-extension run license:check

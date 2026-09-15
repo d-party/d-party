@@ -19,13 +19,6 @@ server {
             alias /static/;
     }
 
-    # grafana is optional (compose profile 'metrics'); resolve at request time so
-    # nginx can start even when the grafana container is absent.
-    location /grafana/ {
-        set $monitor_upstream "${GRAFANA_UPSTREAM}";
-        proxy_set_header Host $host;
-        proxy_pass http://$monitor_upstream;
-    }
 
     location /.well-known/ {
         alias /.well-known/;

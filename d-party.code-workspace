@@ -1,15 +1,23 @@
 {
+  // 単一ルートでも開けるが、パッケージごとにフォルダを切っておくと、言語サーバ
+  // （ESLint / TypeScript / Python）がパッケージ単位で設定を拾いやすく、
+  // 検索スコープも絞りやすい。
   "folders": [
     { "path": ".", "name": "d-party (root)" },
     { "path": "backend", "name": "backend" },
-    { "path": "chrome-extension", "name": "chrome-extension" },
-    { "path": "frontend", "name": "frontend" }
+    { "path": "extension", "name": "extension" },
+    { "path": "frontend", "name": "frontend" },
+    { "path": "infra", "name": "infra" }
   ],
   "settings": {
     "files.eol": "\n",
     "search.exclude": {
       "**/node_modules": true,
       "**/.venv": true,
+      "**/.next": true,
+      "**/.turbo": true,
+      "**/dist": true,
+      "**/storybook-static": true,
       "postgres/data": true,
       "backend/static": true
     }
@@ -18,7 +26,9 @@
     "recommendations": [
       "ms-python.python",
       "ms-python.vscode-pylance",
-      "ms-python.black-formatter",
+      "charliermarsh.ruff",
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
       "ms-azuretools.vscode-docker",
       "redhat.vscode-yaml",
       "ms-kubernetes-tools.vscode-kubernetes-tools",

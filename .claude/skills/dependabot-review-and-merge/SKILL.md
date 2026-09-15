@@ -1,6 +1,6 @@
 ---
 name: dependabot-review-and-merge
-description: Review, verify and merge the open Dependabot PRs across the d-party submodules (backend / chrome-extension / frontend). Reads every intermediate release note for breaking changes, greps the codebase for the affected imports and APIs, runs the real test/build gates locally, and only then merges. Use when asked to handle, review, triage or merge dependency update PRs.
+description: Review, verify and merge the open Dependabot PRs on the d-party monorepo (backend / extension / frontend). Reads every intermediate release note for breaking changes, greps the codebase for the affected imports and APIs, runs the real test/build gates locally, and only then merges. Use when asked to handle, review, triage or merge dependency update PRs.
 ---
 
 # Dependabot review & merge (d-party)
@@ -8,36 +8,38 @@ description: Review, verify and merge the open Dependabot PRs across the d-party
 依存更新 PR を「CI が緑だから」でマージしない。**中間バージョンを含む全リリースノートを読み、
 実際に使っている import / API を照合し、ローカルで動かして**から初めてマージする。
 
-このリポジトリは疑似 monorepo。Dependabot PR は**各サブモジュールの上流リポジトリ**に立つ:
+このリポジトリは monorepo。Dependabot PR は**すべて `d-party/d-party` に立つ**
+（`.github/dependabot.yml` に 4 つの ecosystem が定義されている）:
 
-| submodule | upstream | 主なゲート |
+| ecosystem | 対象 | 主なゲート |
 | --- | --- | --- |
-| `backend/` | `d-party/backend` | pytest · mypy · ruff · makemigrations --check |
-| `chrome-extension/` | `d-party/chrome-extension` | typecheck · lint · rspack build · build-storybook |
-| `frontend/` | `d-party/frontend` | typecheck · lint · next build · build-storybook · Docker smoke |
+| `uv` (`/backend`) | backend の Python 依存 | pytest · mypy · ruff · makemigrations --check |
+| `npm` (`/`) | extension + frontend（**ロックファイルは 1 本**） | typecheck · lint · rspack build · next build · build-storybook · Docker smoke |
+| `docker` (`/backend`, `/frontend`) | ベースイメージ | hadolint · dockle · Docker smoke |
+| `github-actions` (`/`) | ワークフロー | actionlint |
 
-> サブモジュール内のコード変更は必ずそのサブモジュール内で行う。ルートリポジトリでは
-> サブモジュール参照 (SHA) と開発設定しかコミットしない（AGENTS.md「サブモジュール運用ルール」）。
+> **npm の PR は 1 本で両パッケージを動かしうる。** ロックファイルがルートに 1 本
+> しかないため、`extension/package.json` だけを触る PR でも `pnpm-lock.yaml` の
+> 解決結果が frontend に波及することがある。**必ず両方のゲートを回す。**
 
 ## 1. 棚卸し
 
 ```bash
-for r in backend chrome-extension frontend; do
-  echo "=== $r ==="
-  gh pr list -R d-party/$r --author "app/dependabot" --state open \
-    --json number,title,headRefName,mergeable,mergeStateStatus
-done
+gh pr list -R d-party/d-party --author "app/dependabot" --state open \
+  --json number,title,headRefName,mergeable,mergeStateStatus
 ```
 
 各 PR の本文・変更ファイル・チェック結果を取得して保存する（本文に Dependabot が
 release notes / commits を埋め込んでいる）:
 
 ```bash
-gh pr view <N> -R d-party/<repo> --json number,title,body,files,statusCheckRollup,headRefOid
+gh pr view <N> -R d-party/d-party --json number,title,body,files,statusCheckRollup,headRefOid
 ```
 
+`files` を見れば、その PR が backend / extension / frontend のどれに効くかが分かる。
+
 **最初に赤い PR を特定する。** 赤い PR は本物の破壊的変更を示していることが多く、
-そこが一番読む価値のある情報源になる。`gh run view <id> -R <repo> --log-failed` で
+そこが一番読む価値のある情報源になる。`gh run view <id> -R d-party/d-party --log-failed` で
 実際のエラー行まで降りる。
 
 ## 2. 破壊的変更の調査（ここを省略しない）
@@ -66,14 +68,15 @@ grep -rnE "EMAIL_BACKEND|send_mail|RemoteUserMiddleware|select_related\(\)|value
   --include=*.py . | grep -v "/.venv/\|/migrations/"
 
 # 例: framer-motion v13 は @emotion/is-prop-valid の暗黙依存を削除しただけ
-grep -rn "isValidProp\|is-prop-valid\|MotionConfig\|motion(" src/
+#     monorepo なので両パッケージを見る
+grep -rn "isValidProp\|is-prop-valid\|MotionConfig\|motion(" extension/src frontend/src
 
 # 例: import 形態が変わるもの（default export 廃止など）
-grep -rn "from \"<package>\"" src/
+grep -rn "from \"<package>\"" extension/src frontend/src
 ```
 
 DB / ランタイムの下限も見る（Django 6.1 は PostgreSQL 15+、Next 16 は Node 20.9+）。
-`docker-compose.yml` と `deploy/helm/d-party/values.yaml` の実際のバージョンと突き合わせる。
+`docker-compose.yml` と `infra/helm/d-party/values.yaml` の実際のバージョンと突き合わせる。
 
 ## 4. ローカル検証
 
@@ -90,11 +93,11 @@ docker compose up -d postgres redis     # リポジトリルートで
 cd backend
 export SECRET_KEY=django-insecure-local-test DEBUG=1 MY_DOMAIN=localhost \
   D_ANIME_STORE_DOMAIN=animestore.docomo.ne.jp TIME_ZONE=Asia/Tokyo LANGUAGE_CODE=ja \
-  DATABASE_ENGINE=django_prometheus.db.backends.postgresql DATABASE_USER=d_party \
+  DATABASE_ENGINE=django.db.backends.postgresql DATABASE_USER=d_party \
   DATABASE_HOST=localhost DATABASE_PORT=5432 POSTGRES_DB=d_party POSTGRES_PASSWORD=password \
   REDIS_HOST=localhost REDIS_PORT=6379 CHROME_EXTENSION_REQUIRED_VERSION=1.0.0
 
-uv sync --frozen --python 3.13
+uv sync --frozen
 uv run pytest -q --create-db      # --create-db necessary: 古い test DB が残ると偽の失敗が出る
 uv run python manage.py makemigrations --check --dry-run
 uv run ruff check . && uv run ruff format --check . && uv run mypy .
@@ -104,28 +107,37 @@ uv run ruff check . && uv run ruff format --check . && uv run mypy .
 「その失敗が bump 由来か、元から落ちているか」を切り分ける。切り分けずに
 「依存が壊した」と報告しない。
 
-### chrome-extension / frontend
+### extension / frontend
 
 全 PR を束ねた最終状態を作って検証する。lockfile は必ず衝突するので、
-`package.json` を最終形にしてから再生成する:
+`package.json` を最終形にしてから再生成する。**ルートで**作業すること:
 
 ```bash
-cd frontend
 git checkout -B verify-combined origin/main
 git merge --no-edit origin/dependabot/npm_and_yarn/main/<group-branch>   # group はだいたい綺麗に入る
 # 単体 PR は package.json の 1 行だけなので、その差分を確認して直接当てる
-git diff origin/main...origin/dependabot/npm_and_yarn/main/<branch> -- package.json
-# → 目標バージョンへ書き換えてから
+git diff origin/main...origin/dependabot/npm_and_yarn/main/<branch> -- '*/package.json'
+# → 目標バージョンへ書き換えてから（ロックファイルはルートの 1 本だけ）
 pnpm install --no-frozen-lockfile
 
-pnpm api:generate && git diff --exit-code -- src/infrastructure/api/generated
-pnpm typecheck && pnpm lint && pnpm build && pnpm build-storybook
+# turbo が両パッケージぶんを回す
+pnpm run api:generate
+git diff --exit-code -- extension/src/infrastructure/api/generated \
+                        frontend/src/infrastructure/api/generated
+pnpm run typecheck && pnpm run lint && pnpm run build && pnpm run build-storybook
+```
+
+turbo のキャッシュに騙されないよう、判定に使う実行は `--force` を付けるか
+`.turbo/` を消してから回す:
+
+```bash
+turbo run typecheck lint build --force
 ```
 
 **ビルドが通っただけで終わらせない。** frontend は実際に起動して叩く:
 
 ```bash
-PORT=3111 pnpm start &
+cd frontend && PORT=3111 pnpm start &
 for p in / /usage /qa /privacy /stats /anime-store/lobby/test-room-123 /nope; do
   curl -s -o /dev/null -w "$p %{http_code}\n" "http://127.0.0.1:3111$p"
 done
@@ -138,13 +150,14 @@ curl -s -o /dev/null -w "%{http_code} %{content_type}\n" \
 
 ## 5. 判定とマージ
 
-`gh pr merge <N> -R d-party/<repo> --squash --delete-branch`（3 リポジトリとも squash 運用）。
+`gh pr merge <N> -R d-party/d-party --squash --delete-branch`（squash 運用）。
 
-**lockfile 衝突の連鎖に注意。** `package.json` / `pnpm-lock.yaml` を触る PR は互いに
-衝突するので、1 つマージするたびに残りが DIRTY になる。手順:
+**lockfile 衝突の連鎖に注意。** ロックファイルがルートに 1 本しかないため、
+npm の PR は**どのパッケージ向けでも互いに衝突する**。1 つマージするたびに
+残りが DIRTY になる。手順:
 
 1. 1 つマージする
-2. 残りに `gh pr comment <N> -R <repo> --body "@dependabot rebase"`
+2. 残りに `gh pr comment <N> -R d-party/d-party --body "@dependabot rebase"`
 3. `mergeable`/`mergeStateStatus` が `MERGEABLE`/`CLEAN` に戻るまでポーリング
 4. rebase 後の **新しい commit で CI が緑になったことを確認**してから次をマージ
 
@@ -158,7 +171,6 @@ curl -s -o /dev/null -w "%{http_code} %{content_type}\n" \
 commit を push してよい（以後 Dependabot はその PR を更新しなくなるが、直後にマージするなら問題ない）。
 
 ```bash
-cd <submodule>
 git checkout -B fix-<pkg> origin/dependabot/npm_and_yarn/main/<branch>
 git rebase origin/main            # 衝突は package.json を最終形にして pnpm install で lock 再生成
 # 移行コードを当てる

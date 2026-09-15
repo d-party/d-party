@@ -12,26 +12,48 @@
   //  - `helm` 言語は ms-kubernetes-tools.vscode-kubernetes-tools が提供する。
   //    未インストールだと関連付けは無効（YAML のまま誤検知が出る）。
   //  - files.associations のパターンは `/` を含むと「絶対パス」にマッチするため、
-  //    先頭は `**/` で始める（`deploy/...` 直書きだと絶対パスに一致しない）。
+  //    先頭は `**/` で始める（`infra/...` 直書きだと絶対パスに一致しない）。
   "files.associations": {
-    "**/deploy/helm/**/templates/*.yaml": "helm",
-    "**/deploy/helm/**/templates/*.tpl": "helm"
+    "**/infra/helm/**/templates/*.yaml": "helm",
+    "**/infra/helm/**/templates/*.tpl": "helm"
   },
 
-  // ── Python (backend submodule) ────────────────────────────────────────────
+  // ── Python (backend/) ─────────────────────────────────────────────────────
+  // backend は black から ruff へ移行済み（backend/pyproject.toml の [tool.ruff]）。
+  // インタプリタは uv sync が backend/.venv に作るものを使う。
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
   "[python]": {
-    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.formatOnSave": true
   },
 
-  // ── Search ────────────────────────────────────────────────────────────────
+  // ── TypeScript (extension/ · frontend/) ───────────────────────────────────
+  // pnpm workspace なので typescript はルートの仮想ストアから解決される。
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[typescriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[javascript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+
+  // ── Search / watch ────────────────────────────────────────────────────────
+  // ビルド生成物とベンダーディレクトリを検索とファイル監視から外す。
   "search.exclude": {
     "**/node_modules": true,
     "**/.venv": true,
-    "backend/MySQL/data": true,
-    "backend/Django/static": true
+    "**/.next": true,
+    "**/.turbo": true,
+    "**/dist": true,
+    "**/storybook-static": true,
+    "backend/static": true,
+    "postgres/data": true,
+    "pnpm-lock.yaml": true,
+    "backend/uv.lock": true
   },
   "files.watcherExclude": {
-    "backend/MySQL/data/**": true
+    "**/node_modules/**": true,
+    "**/.venv/**": true,
+    "**/.next/**": true,
+    "**/.turbo/**": true,
+    "postgres/data/**": true
   }
 }

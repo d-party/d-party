@@ -3,7 +3,7 @@
 dアニメストア同時視聴サービスの **WebSocket（Channels）同期** を主対象とした負荷試験。
 スタック全体（nginx → django(daphne) → Redis channel layer / PostgreSQL）を、本番に近い経路で叩く。
 
-> サブモジュール規約により、この負荷試験は `backend/` ではなく**ルートリポジトリ**に置く
+> この負荷試験は `backend/` ではなく**ルート直下**に置く
 > （オーケストレーション層の関心事のため）。詳細は [`../AGENTS.md`](../AGENTS.md)。
 
 ## 何を測るか
@@ -78,17 +78,6 @@ LOADTEST_SCENARIO=ws_timer.js LOADTEST_ROOM_SIZE=4 \
 | `LOADTEST_PING_INTERVAL_MS` | `1000` | 各参加者の video_operation 間隔 |
 | `LOADTEST_REACTION_INTERVAL_MS` | `1500` | reaction 間隔 |
 | `LOADTEST_ROOM_LOAD_MS` | `8000` | 1 ルームの負荷フェーズ長 |
-
-## Grafana / Prometheus 連携（任意）
-
-既存の `metrics` profile（prometheus + grafana）に流して、負荷側メトリクスと
-django-prometheus / cadvisor / node-exporter のサーバ側メトリクスを同一時間軸で突き合わせられる。
-
-1. prometheus の起動コマンドに `--web.enable-remote-write-receiver` を追加（remote-write 受信を有効化）。
-2. k6 サービスの environment に以下を設定（[`../docker-compose.loadtest.yml`](../docker-compose.loadtest.yml) のコメント参照）:
-   - `K6_OUT=experimental-prometheus-rw`
-   - `K6_PROMETHEUS_RW_SERVER_URL=http://prometheus:9090/api/v1/write`
-3. Grafana に k6 公式ダッシュボード（Prometheus データソース）を追加。
 
 ## 既知の注意点（コードベース由来）
 

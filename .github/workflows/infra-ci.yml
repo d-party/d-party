@@ -1,0 +1,48 @@
+# infra/（k3s / Helm）の CI。
+#
+# chart が壊れると Raspberry Pi へのリリースがそのまま止まるため、クラスタ無しで
+# できる静的検証（helm lint / helm template）をここで回す。
+name: Infra/CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra-ci.yml"
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  helm:
+    name: Helm chart (lint & template)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: azure/setup-helm@v4
+      - name: helm lint
+        run: helm lint infra/helm/d-party
+      # values の既定だけでなく、実運用に近い上書き（外部 Secret + 独自ドメイン）でも
+      # マニフェストが組み上がることを確認する。
+      - name: helm template (defaults)
+        run: helm template d-party infra/helm/d-party > /dev/null
+      - name: helm template (existingSecret + domain)
+        run: |
+          helm template d-party infra/helm/d-party \
+            --set config.MY_DOMAIN=d-party.example \
+            --set secret.existingSecret=d-party-secret > /dev/null

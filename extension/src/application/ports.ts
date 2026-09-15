@@ -1,0 +1,77 @@
+/**
+ * Ports: the boundary between the application's sync logic and the outside
+ * world (the dアニメストア DOM, notifications, settings). The presentation
+ * layer provides concrete implementations.
+ */
+
+import type { PlayerOption, SyncOption, User } from "@/domain/protocol";
+import type { ConnectionStatus } from "@/domain/connectionStatus";
+import type { HistoryEntryInput } from "@/domain/history";
+import type { ReactionType } from "@/domain/reactions";
+import type { RoomSettings } from "@/domain/roomSettings";
+import type { ReactionDisplayMode, Settings } from "@/domain/settings";
+
+export interface Notifier {
+  success(messageHtml: string): void;
+  info(messageHtml: string): void;
+  alert(message: string): void;
+}
+
+/** Controls the dアニメストア HTML5 player and reads its state. */
+export interface PlayerController {
+  getOption(): PlayerOption;
+  getTitle(): string;
+  /** Apply a remote video operation (play/pause/seek/next/...). */
+  onAction(operation: string, option: SyncOption): void;
+  /** Apply a full sync to the host's state. */
+  onSync(option: SyncOption): void;
+}
+
+/** Renders the sidebar (share/history/users/control panels). */
+export interface SidebarView {
+  setShareLink(roomUrl: string): void;
+  setJoined(joined: boolean): void;
+  /** Identify the local user so the user list can mark them as "you". */
+  setSelfUserId(userId: string): void;
+  showSharePanel(): void;
+  setConnectionStatus(status: ConnectionStatus): void;
+  /** Append a structured entry to the history log. */
+  addHistory(entry: HistoryEntryInput): void;
+  updateUserList(users: User[]): void;
+  /** サーバから通知されたルーム詳細設定を反映する（操作タブの表示に使う）。 */
+  setRoomSettings(settings: RoomSettings): void;
+  hideSidebar(): void;
+  /** Reset the sidebar back to the room-creation stage (e.g. after the room is deleted). */
+  resetToCreate(): void;
+}
+
+export interface ReactionPlayOptions {
+  /** 送信者の表示名（バッジ表示で使用）。 */
+  userName?: string;
+  /** 表示方法。未指定なら `normal`。 */
+  mode?: ReactionDisplayMode;
+}
+
+/** Plays the on-screen reaction animations. */
+export interface ReactionView {
+  /** `id` はデフォルト名（`fav` 等）または エクストラ id（Noto コードポイント）。 */
+  play(id: string, opts?: ReactionPlayOptions): void;
+}
+
+/** Read-only access to the current user settings (kept live). */
+export interface SettingsProvider {
+  current(): Settings;
+}
+
+/**
+ * Records personal usage statistics. Calls are fire-and-forget from the
+ * session's perspective; the implementation persists them asynchronously and
+ * independently of the backend.
+ */
+export interface StatsRecorder {
+  roomCreated(): void;
+  roomJoined(): void;
+  reactionSent(type: ReactionType): void;
+  /** Report a finished connection so its duration can be accumulated. */
+  connectionEnded(durationMs: number): void;
+}

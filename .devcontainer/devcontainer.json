@@ -2,7 +2,7 @@
   "name": "d-party Dev Container",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config graphviz && sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*",
-  "postCreateCommand": "git submodule update --init --recursive && (cd backend && uv sync && pre-commit install --install-hooks)",
+  "postCreateCommand": "(cd backend && uv sync) && pre-commit install --install-hooks && corepack enable && pnpm install --frozen-lockfile",
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.14"
@@ -15,6 +15,9 @@
     "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
     "ghcr.io/devcontainers-extra/features/act:1": {},
     "ghcr.io/devcontainers-extra/features/pre-commit:2": {},
+    "ghcr.io/devcontainers-extra/features/actionlint:1": {},
+    "ghcr.io/devcontainers-extra/features/shellcheck:1": {},
+    "ghcr.io/devcontainers-extra/features/yamllint:2": {},
     "ghcr.io/devcontainers/features/github-cli:1.1.0": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
       "installDockerBuildx": true,
@@ -41,7 +44,7 @@
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "ms-python.black-formatter",
+        "charliermarsh.ruff",
         "ms-python.mypy-type-checker",
         "ms-azuretools.vscode-docker",
         "redhat.vscode-yaml",
@@ -54,10 +57,10 @@
         "lottiefiles.vscode-lottie"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
         "editor.formatOnSave": true,
         "[python]": {
-          "editor.defaultFormatter": "ms-python.black-formatter"
+          "editor.defaultFormatter": "charliermarsh.ruff"
         },
         "sqltools.connections": [
           {
@@ -79,7 +82,13 @@
           "python3": true,
           "pip": true,
           "pytest": true,
-          "black": true,
+          "ruff": true,
+          "pnpm": true,
+          "turbo": true,
+          "pre-commit": true,
+          "actionlint": true,
+          "shellcheck": true,
+          "yamllint": true,
           "act": true,
           "k6": true,
           "helm": true,
@@ -97,7 +106,7 @@
           "find": true,
           "grep": true,
           "rg": true,
-          "/^git (status|log|diff|branch|show|fetch|remote|submodule|rev-parse)\\b/": true,
+          "/^git (status|log|diff|branch|show|fetch|remote|rev-parse)\\b/": true,
           "/^docker(\\s+compose)?\\s+(ps|logs|images|version|config)\\b/": true,
           "rm": false,
           "rmdir": false,
@@ -122,11 +131,9 @@
     80,
     443,
     3000,
-    5050,
     5432,
     6379,
     8000,
-    9090,
     9100
   ],
   "portsAttributes": {
@@ -139,11 +146,7 @@
       "onAutoForward": "silent"
     },
     "3000": {
-      "label": "Grafana (metrics profile)",
-      "onAutoForward": "silent"
-    },
-    "5050": {
-      "label": "cAdvisor (metrics profile)",
+      "label": "Frontend (dev server)",
       "onAutoForward": "silent"
     },
     "5432": {
@@ -158,14 +161,6 @@
       "label": "Django",
       "onAutoForward": "silent"
     },
-    "9090": {
-      "label": "Prometheus",
-      "onAutoForward": "silent"
-    },
-    "9100": {
-      "label": "node-exporter",
-      "onAutoForward": "silent"
-    }
   },
   "otherPortsAttributes": {
     "onAutoForward": "silent"

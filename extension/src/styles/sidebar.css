@@ -1,0 +1,143 @@
+/*
+ * Stylesheet for the in-page party sidebar. Built as its own entry and injected
+ * into the sidebar's Shadow DOM at runtime (see mountSidebar.tsx), so Tailwind's
+ * preflight is scoped to the sidebar and never touches the dアニメストア page.
+ */
+@import "tailwindcss";
+
+/*
+ * Tailwind v4 は CSS のある位置を起点にソースを自動検出するため、リポジトリの
+ * 別パッケージにあるクラスは見つけられない。共有 UI（@d-party/ui）のクラスが
+ * purge されないよう、明示的にスキャン対象へ加える。
+ */
+@source "../../../packages/ui/src";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Variables target `:host` (not `:root`) because this stylesheet is injected
+ * into a Shadow DOM (see mountSidebar.tsx). Inside a shadow tree `:root`
+ * matches the outer document's <html>, so custom properties defined there
+ * never reach the sidebar elements and utilities like `bg-card` resolve to
+ * an empty value — making the panel look transparent on the player page.
+ */
+:host {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.637 0.237 25.331);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.637 0.237 25.331);
+
+  /*
+   * Tailwind v4 の transform ユーティリティ（translate/scale/skew/3D rotate）は
+   * `translate: var(--tw-translate-x) var(--tw-translate-y)` のように合成変数へ依存し、
+   * 未指定分は `@property` の `initial-value: 0` で埋める設計になっている。ところが
+   * この CSS は Shadow DOM に注入されるため、その中の `@property` 登録は Chromium に
+   * 無視される。すると例えば `--tw-translate-y` が「無効値」になり、`translate` 宣言
+   * 全体が computed 時に破棄されて Switch のつまみが動かない（`rotate-45` は直値なので
+   * 影響を受けない）。@property の初期値に相当する既定値をここで明示して補う。
+   */
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-translate-z: 0;
+  --tw-rotate-x: 0;
+  --tw-rotate-y: 0;
+  --tw-rotate-z: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :host {
+    --background: oklch(0.165 0.01 270);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.215 0.01 270);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.215 0.01 270);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.637 0.237 25.331);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.27 0.01 270);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.27 0.01 270);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.27 0.01 270);
+    --accent-foreground: oklch(0.985 0 0);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.637 0.237 25.331);
+  }
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /*
+   * アコーディオン開閉アニメーション。Radix が content 要素に付与する
+   * `--radix-accordion-content-height`（インライン custom property なので Shadow DOM でも有効）
+   * を高さに使う。これらを定義しないと `animate-accordion-*` ユーティリティ自体が
+   * 生成されず、アコーディオンが瞬間表示になる。
+   */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+}

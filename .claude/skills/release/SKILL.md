@@ -1,22 +1,29 @@
 ---
 name: release
-description: Cut a unified d-party release by dispatching the root release.yml workflow with a patch / minor / major version bump. Always confirms the bump type with the user through explicit options before dispatching, then watches the run through submodule releases and the submodule-reference bump. Use when asked to release, cut a version, publish, or tag d-party.
+description: Cut a unified d-party release by dispatching the root release.yml workflow with a patch / minor / major version bump. Always confirms the bump type with the user through explicit options before dispatching, then watches the run through the version bump, the arm64 GHCR image builds and the Chrome Web Store upload. Use when asked to release, cut a version, publish, or tag d-party.
 ---
 
 # Release (d-party)
 
-d-party のリリースは **ルートリポジトリの `release` ワークフロー 1 本**で完結する
-（方式A: 各サブモジュールの release を同じバージョンで起動して待つ）。
-サブモジュール側の release を個別に叩かない。ローカルで tag を打たない。
+d-party はモノレポで、リリースは **`release` ワークフロー 1 本**で完結する。
+ローカルで tag を打たない。version を手で書き換えない。
 
 ワークフローがやること:
 
-1. root と各サブモジュールのタグの**最大値**から次バージョンを算出する
-2. `backend` / `frontend` / `chrome-extension` の release を同一バージョンで
-   `workflow_dispatch` 起動し、完了まで待つ（各サブモジュールが自分の main に
-   version commit + タグを打つ。chrome-extension は Chrome Web Store 向けビルドまで）
-3. サブモジュール参照を進めて root の main へコミットし、root にも統一タグを打つ
-4. root に GitHub Release を作る
+1. ルートの最新タグ `vX.Y.Z` と `bump_type` から次のバージョンを算出する
+2. 5 ファイルの version を書き換えて `main` へ 1 コミット、タグを打ち、GitHub Release を作る
+   - `backend/pyproject.toml`（+ `backend/uv.lock`）
+   - `extension/package.json` · `extension/public/manifest.json`
+   - `frontend/package.json`
+   - ルートの `package.json`
+3. `backend` / `frontend` を **arm64 ネイティブ**でビルドし、
+   `ghcr.io/d-party/backend:vX.Y.Z` / `ghcr.io/d-party/frontend:vX.Y.Z` へ push する
+   （Raspberry Pi の k3s で argocd-image-updater がこの semver タグを拾う）
+4. 拡張機能をビルドして zip を Release に添付し、Chrome Web Store へ upload する
+
+> モノレポ化前は「各サブモジュールの release を workflow_dispatch で起動して待つ」
+> 方式だった。もう他リポジトリは起動しないし、GitHub App トークン
+> （`APP_ID` / `APP_PRIVATE_KEY`）も使わない。
 
 ## 1. バンプ種別を必ずユーザーに確認する
 
@@ -28,39 +35,40 @@ d-party のリリースは **ルートリポジトリの `release` ワークフ�
 
 同時に以下も確認する:
 
-- **`publish`**（chrome-extension を Chrome Web Store に公開するか。`false` なら
+- **`publish`**（拡張機能を Chrome Web Store に公開するか。`false` なら
   アップロードのみ）。既定は `false`
 - **`release_note`**（任意。空なら GitHub が自動生成する）
 
-判断材料として、前回タグからの差分を見せてから聞くとよい:
+判断材料として、前回タグからの差分を見せてから聞くとよい。モノレポなので
+1 回の `git log` で全体が見える。ディレクトリ別に見たいときは pathspec で絞る:
 
 ```bash
 git fetch --tags origin
 LATEST=$(git tag --list 'v*.*.*' | sort -V | tail -n1)
-echo "latest root tag: ${LATEST}"
+echo "latest tag: ${LATEST}"
 git log --oneline "${LATEST}..origin/main"
-for s in backend frontend chrome-extension; do
-  echo "--- $s ---"
-  git -C "$s" fetch --tags --quiet origin
-  git -C "$s" log --oneline "$(git -C "$s" tag --list 'v*.*.*' | sort -V | tail -n1)..origin/main"
+
+# 何が変わったかをパッケージ別に
+for d in backend extension frontend infra nginx; do
+  echo "--- $d ---"
+  git log --oneline "${LATEST}..origin/main" -- "$d"
 done
 ```
 
 ## 2. 事前チェック
 
 - `main` が緑であること、未マージの release blocker が無いこと
-- 各サブモジュールの `main` に、リリースしたい変更が**すでにマージ済み**であること
-  （ワークフローはサブモジュールの `main` 最新をタグ付けする）
-- root の作業ブランチではなく `main` を対象にする
+- リリースしたい変更が `main` に**すでにマージ済み**であること
+  （ワークフローは `main` の最新をタグ付けする）
 
 ```bash
 gh pr list -R d-party/d-party --state open
-for r in backend chrome-extension frontend; do gh pr list -R d-party/$r --state open; done
+gh run list -R d-party/d-party --branch main --limit 10
 ```
 
 ## 3. 起動
 
-ユーザーが選んだ値でルートの `release.yml` を dispatch する:
+ユーザーが選んだ値で `release.yml` を dispatch する:
 
 ```bash
 gh workflow run release.yml -R d-party/d-party --ref main \
@@ -77,35 +85,44 @@ RUN=$(gh run list -R d-party/d-party --workflow release.yml --limit 1 --json dat
 gh run watch "$RUN" -R d-party/d-party --exit-status
 ```
 
-`release` ジョブは 3 サブモジュールの release 完了を待つので**数分以上かかる**。
-途中経過は各サブモジュール側でも見える:
-
-```bash
-for r in backend frontend chrome-extension; do
-  echo "=== $r ==="; gh run list -R d-party/$r --workflow release.yml --limit 1
-done
-```
+`images` ジョブは arm64 ランナーで 2 イメージを焼くので**数分以上かかる**。
 
 ## 4. 完了確認
 
 ```bash
 git fetch --tags origin && git log --oneline origin/main -3
-gh release view -R d-party/d-party --json tagName,name,createdAt
-for r in backend frontend chrome-extension; do gh release view -R d-party/$r --json tagName -q .tagName; done
+gh release view -R d-party/d-party --json tagName,name,assets
+
+# 5 ファイルの version がタグと揃っていること
+TAG=$(git tag --list 'v*.*.*' | sort -V | tail -n1)
+git show "${TAG}:backend/pyproject.toml" | grep -m1 '^version'
+for f in extension/package.json extension/public/manifest.json frontend/package.json package.json; do
+  echo -n "$f: "; git show "${TAG}:$f" | grep -m1 '"version"'
+done
 ```
 
-root と 3 サブモジュールのタグが**同じバージョンで揃っている**ことを確認する。
+GHCR にイメージが上がったことも確認する（Raspberry Pi の配信元）:
+
+```bash
+gh api "orgs/d-party/packages/container/backend/versions" -q '.[0].metadata.container.tags'
+gh api "orgs/d-party/packages/container/frontend/versions" -q '.[0].metadata.container.tags'
+```
 
 ## 5. 失敗したとき
 
-- **サブモジュールの release は成功したが root の bump が失敗した**
-  → タグが不揃いのまま残る。ワークフローは次回 root/サブモジュール双方のタグの
-    最大値から採番するのでバージョンの巻き戻りは起きないが、root の submodule 参照と
-    タグは手当てが要る。`git submodule update --remote` → commit → push → tag。
-- **`Triggered run for <repo> did not appear`**
-  → GitHub App トークンの Actions:write 権限か、対象リポジトリへの App インストールを疑う。
-- **chrome-extension が Chrome Web Store で 400**
+- **`images` ジョブが `denied: permission_denied` で落ちる**
+  → GHCR パッケージの書き込み許可が足りない。`ghcr.io/d-party/backend` と
+    `ghcr.io/d-party/frontend` はもともと旧リポジトリから push されていたため、
+    このリポジトリには write が紐づいていない。各パッケージの
+    **Package settings → Manage Actions access → Add repository** で
+    `d-party/d-party` に **Write** を付ける（1 回だけの手作業）。
+- **version ジョブは成功したが images / extension が落ちた**
+  → タグと Release はすでに存在する。修正後に同じバージョンで再実行すれば、
+    version ジョブは「already at vX.Y.Z」でコミットを飛ばし、タグを force-update
+    するだけで済む。バージョンを進め直す必要はない。
+- **Chrome Web Store で 400**
   → 同じバージョンを二重に上げている可能性。タグの最大値を確認する。
-
-認証は `APP_ID` / `APP_PRIVATE_KEY` シークレットから発行する GitHub App トークン。
-PAT は使わない。
+    レスポンスボディはログに出しているので `itemError[].error_code` を読む。
+- **argocd-image-updater が新しいタグを拾わない**
+  → GHCR のパッケージが public になっているか、`update-strategy: semver` の
+    許容レンジを確認する。詳細は `infra/argocd/README.md`。

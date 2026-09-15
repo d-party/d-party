@@ -17,9 +17,17 @@ venv/
 coverage.xml
 htmlcov/
 
-# ── Node ─────────────────────────────────────────────────────────────────
+# ── Node / pnpm workspace ────────────────────────────────────────────────
 node_modules/
 .pnpm-store/
+# ビルド生成物（extension は dist/、frontend は .next/、storybook は共通）
+dist/
+.next/
+storybook-static/
+*.tsbuildinfo
+
+# ── Turborepo ────────────────────────────────────────────────────────────
+.turbo/
 
 # ── Secrets / local env ──────────────────────────────────────────────────
 .env

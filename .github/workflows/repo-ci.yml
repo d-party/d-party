@@ -1,0 +1,207 @@
+# リポジトリ横断の検査をまとめたワークフロー。
+#
+#   1. lint      … ワークフロー・シェルスクリプト・YAML はパッケージを問わず
+#                   散らばるので、パッケージ個別の CI ではなくここで見る。
+#   2. CodeQL    … python（backend）と javascript-typescript（extension /
+#                   frontend / packages）を matrix でまとめて解析する。
+#   3. reviewdog … PR の差分へインラインコメントを付ける。検査そのものは
+#                   1. と Backend/CI が回しており、ここは「コメントを載せる」
+#                   ことだけが目的なので PR のときしか動かさない。
+name: Repo/CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # CodeQL の定期スキャン（毎週金曜 21:25 UTC）。
+    - cron: "25 21 * * 5"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: reviewdog/action-actionlint@v1
+
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+
+  yamllint:
+    name: yamllint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: yaml-lint
+        uses: ibiqlik/action-yamllint@v3
+
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: python
+            config-file: .github/codeql/python.yml
+          - language: javascript-typescript
+            config-file: .github/codeql/javascript.yml
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          # 解析範囲は言語ごとの設定ファイルで絞る（.github/codeql/）。
+          # 絞らないと javascript の解析が backend/web/static/ のベンダー製
+          # minified ライブラリまで舐めに行く。
+          config-file: ${{ matrix.config-file }}
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+
+      # category を明示する。指定しないと codeql-action は SARIF の
+      # runAutomationDetails.id をワークフロー名から組み立てるため、名前に "/" が
+      # 入っていると id が壊れて結果のアップロードに失敗する。
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  mypy-review:
+    # reviewdog は PR の差分へコメントするので、push では意味がない。
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    # 型検査そのものは ci-backend.yml が回している。django-stubs プラグインが
+    # DJANGO_SETTINGS_MODULE を import するため、同じダミー env が要る
+    # （DB/Redis へ実接続はしないのでサービスコンテナは不要）。
+    env:
+      SECRET_KEY: django-insecure-ci
+      DEBUG: "1"
+      MY_DOMAIN: localhost
+      D_ANIME_STORE_DOMAIN: animestore.docomo.ne.jp
+      TIME_ZONE: Asia/Tokyo
+      LANGUAGE_CODE: ja
+      DATABASE_ENGINE: django.db.backends.postgresql
+      DATABASE_USER: d_party
+      DATABASE_HOST: localhost
+      DATABASE_PORT: "5432"
+      POSTGRES_DB: d_party
+      POSTGRES_PASSWORD: password
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
+      CHROME_EXTENSION_REQUIRED_VERSION: 1.0.0
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          working-directory: backend
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+      # action-mypy は v4 以降 setup_method の既定が "nothing" になり、自前では
+      # mypy を入れなくなった（v3 は入れていた）。requirements.txt を吐くだけでは
+      # mypy が PATH に無く exit 127 になるため、プロジェクトの venv を作って
+      # そこへ通す。pip install mypy ではなく uv sync にすることで、django-stubs /
+      # drf-stubs プラグインが解決できる ci-backend.yml と同じ環境になる。
+      - name: install dependencies
+        run: uv sync --frozen
+      - name: put the project venv on PATH
+        run: echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - uses: tsuyoshicho/action-mypy@v5
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: "github-pr-review"
+          # python のコードは backend/ にしかない。
+          workdir: "backend"
+          target: "."
+
+  actionlint-review:
+    # reviewdog は PR の差分へコメントするので、push では意味がない。
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: reviewdog/action-actionlint@v1
+        with:
+          reporter: "github-pr-review"
+
+  textlint-review:
+    # reviewdog は PR の差分へコメントするので、push では意味がない。
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup node/npm
+        uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+      # --no-save: ルートには workspace の package.json があるので、ここで
+      # --save-dev すると依存が書き込まれ、reviewdog がその差分まで指摘してしまう。
+      # ルールは .textlintrc.json（ルート）から読む。
+      - run: |
+          npm install --no-save textlint textlint-rule-write-good
+      - name: textlint-github-pr-review
+        uses: tsuyoshicho/action-textlint@v3
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-pr-review
+          textlint_flags: "README.md"

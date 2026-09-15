@@ -1,0 +1,20 @@
+# yamllint の設定。Repo/CI がリポジトリ全体を対象に実行する。
+# 素の YAML として検証できないものと、自分たちが書いていないものは除外する。
+extends: default
+
+ignore: |
+  node_modules/
+  .venv/
+  .turbo/
+  dist/
+  .next/
+  storybook-static/
+  # Helm の templates は Go テンプレート（{{- ... }}）で、素の YAML としては
+  # インデントも括弧も規則どおりにならない。ここは helm lint / helm template
+  # （Infra/CI）が担当するので yamllint の対象から外す。
+  infra/helm/**/templates/
+
+rules:
+  line-length:
+    max: 120
+    level: warning
