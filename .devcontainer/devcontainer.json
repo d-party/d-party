@@ -2,7 +2,7 @@
   "name": "d-party Dev Container",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config graphviz && sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*",
-  "postCreateCommand": "(cd backend && uv sync) && pre-commit install --install-hooks && corepack enable && pnpm install --frozen-lockfile",
+  "postCreateCommand": "(cd backend && uv sync) && pre-commit install --install-hooks && pnpm install --frozen-lockfile",
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.14"
@@ -133,8 +133,7 @@
     3000,
     5432,
     6379,
-    8000,
-    9100
+    8000
   ],
   "portsAttributes": {
     "80": {
@@ -160,7 +159,7 @@
     "8000": {
       "label": "Django",
       "onAutoForward": "silent"
-    },
+    }
   },
   "otherPortsAttributes": {
     "onAutoForward": "silent"
