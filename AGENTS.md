@@ -128,6 +128,12 @@ turbo run lint --filter=d-party-chrome-extension
 turbo run lint typecheck build --filter='...[origin/main]'
 ```
 
+> **corepack は使わない。** Node 25 で本体同梱が廃止され、Dev Container の node
+> feature（v26）にも入っていない。feature が pnpm の実体（`packageManager` と同じ
+> 10.28.1）を直接入れるので、`corepack enable` は不要どころか失敗する。
+> frontend の Dockerfile だけは `node:26-alpine` に pnpm が無いため、そこでは
+> `npm install --global corepack@latest && corepack enable` している。
+
 パッケージ名は `d-party-chrome-extension`（`extension/`）と `d-party-frontend`（`frontend/`）。
 ディレクトリ名と一致しないので `--filter` で指すときは注意する。
 
