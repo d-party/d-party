@@ -1,4 +1,4 @@
-# モノレポのルートをビルドコンテキストにする frontend/Dockerfile 用。
+# リポジトリのルートをビルドコンテキストにする frontend/Dockerfile 用。
 # backend/ は自前の .dockerignore を持ち context: ./backend でビルドするため、
 # ここの指定は影響しない。
 **/node_modules

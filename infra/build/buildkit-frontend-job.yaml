@@ -40,10 +40,14 @@ spec:
             - build
             - --frontend
             - dockerfile.v0
+            # Git context はリポジトリのルート。frontend/Dockerfile は pnpm
+            # workspace のロックファイルを必要とし、それはルートにあるため、
+            # backend のようにサブディレクトリへ絞れない。
+            # #main は固定タグ/SHA（例 #v2.11.7）に差し替え可。
             - --opt
-            - context=https://github.com/d-party/frontend.git#main
+            - context=https://github.com/d-party/d-party.git#main
             - --opt
-            - filename=Dockerfile
+            - filename=frontend/Dockerfile
             - --opt
             - platform=linux/arm64
             # ↓ 公開ドメインに合わせて編集する（docker-compose.prod.yml と同じ値）。

@@ -25,7 +25,7 @@ services:
     # dev の node/pnpm dev を上書きし、本番は standalone ビルドを node で配信する。
     # NEXT_PUBLIC_* は next build 時に焼き込まれるため build.args で渡す
     # （build 引数は env_file を読めない。値は .env.prod と一致させること）。
-    # ビルドコンテキストはモノレポのルート。pnpm workspace のロックファイルが
+    # ビルドコンテキストはリポジトリのルート。pnpm workspace のロックファイルが
     # ルートにあるため、frontend/ 単体では --frozen-lockfile を満たせない。
     build:
       context: .

@@ -18,7 +18,7 @@ services:
 
   frontend:
     image: node:26-alpine
-    # pnpm workspace のロックファイル / workspace 定義はモノレポのルートにあるので、
+    # pnpm workspace のロックファイルと workspace 定義はリポジトリのルートにあるので、
     # コンテナにもリポジトリ全体をマウントし、frontend パッケージの中で作業する。
     working_dir: /app/frontend
     env_file:

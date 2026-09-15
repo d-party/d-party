@@ -1,7 +1,7 @@
 {
   "name": "d-party",
   "version": "2.11.7",
-  "description": "dアニメストアで『同時視聴』を実現する d-party のモノレポ",
+  "description": "dアニメストアで『同時視聴』を実現する d-party",
   "private": true,
   "type": "module",
   "scripts": {

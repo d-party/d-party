@@ -2,7 +2,7 @@
 
 # d-party frontend — Next.js (standalone output) served by a Node runtime.
 #
-# ビルドコンテキストは **モノレポのルート**（frontend/ ではない）。pnpm workspace の
+# ビルドコンテキストは **リポジトリのルート**（frontend/ ではない）。pnpm workspace の
 # ロックファイルがルートにあり、frontend 単体のコンテキストでは
 # --frozen-lockfile を満たせないため。
 #
@@ -52,10 +52,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
-# workspace 配下でビルドすると Next は「ロックファイルのある位置」を
-# outputFileTracingRoot とみなすため、standalone の中身は
+# Next は「ロックファイルのある位置」を outputFileTracingRoot とみなす。
+# ここでは workspace のルートなので、standalone の中身は
 #   standalone/node_modules/…  +  standalone/frontend/server.js
-# というモノレポの形になる。展開先もその形に合わせる。
+# という workspace の形になる。展開先もその形に合わせる。
 COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/static ./frontend/.next/static
 # public/ は standalone に丸ごとは入らない（参照されたファイルだけ traced される）。

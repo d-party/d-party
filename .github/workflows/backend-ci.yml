@@ -1,14 +1,11 @@
 # backend（Django）の CI。
 #
-# モノレポ化前は d-party/backend リポジトリの .github/workflows/ci.yml だった。
-# 中身はそのまま引き継ぎ、次の 2 点だけをモノレポ向けに調整している:
+# uv / pytest / ruff / mypy の設定はすべて backend/ にあるので、
+# `defaults.run.working-directory: backend` でシェルを回すステップはその中で実行する。
+# `paths` により backend/ に触れた変更のときだけ起動する。
 #
-#   1. `defaults.run.working-directory: backend` で、シェルを回すステップは
-#      すべて backend/ の中で実行する（uv / pytest / ruff の設定はそこにある）。
-#   2. `paths` で backend/ に触れた変更のときだけ回す。
-#
-# リポジトリ横断の lint（actionlint / shellcheck / yamllint）は ci-repo.yml へ、
-# CodeQL は言語横断の codeql.yml へ移した。
+# リポジトリ横断の lint（actionlint / shellcheck / yamllint）は repo-ci.yml、
+# CodeQL は言語横断の repo-codeql.yml が担当する。
 name: Backend/CI
 
 on:
@@ -26,7 +23,7 @@ on:
       - ".github/bandit.yml"
   workflow_dispatch:
   schedule:
-    # 旧 security.yml の定期スキャンを引き継ぐ（毎週金曜 21:25 UTC）。
+    # セキュリティ系ジョブの定期スキャン（毎週金曜 21:25 UTC）。
     - cron: "25 21 * * 5"
 
 # 同一ブランチの古い実行は打ち切る。
@@ -62,8 +59,8 @@ jobs:
           cache-dependency-glob: "backend/uv.lock"
       - name: install dependencies
         run: uv sync --frozen
-      # 旧 autoblack.yml は ruff の修正結果をブランチへ force-push していた。
-      # CI が履歴を書き換えるのは事故のもとなので、検証のみ行い違反なら落とす。
+      # CI が履歴を書き換えるのは事故のもとなので、整形は検証のみ行い違反なら落とす
+      # （修正の適用は pre-commit とローカルの `uv run ruff format .` に任せる）。
       - name: ruff format --check
         run: uv run ruff format --check .
       # import 順序（isort 相当）は pyproject.toml の select に "I" があるため
@@ -81,8 +78,7 @@ jobs:
       # 書き、PR へコメントするために必要。
       contents: write
       pull-requests: write
-    # postgres と redis はサービスコンテナで与える（オーケストレーションの
-    # compose はモノレポのルートにあるが、CI では使わない）。
+    # postgres と redis はサービスコンテナで与える（ルートの compose は CI では使わない）。
     services:
       postgres:
         image: postgres:16
@@ -159,7 +155,7 @@ jobs:
         uses: py-cov-action/python-coverage-comment-action@v4.3
         with:
           GITHUB_TOKEN: ${{ github.token }}
-          # .coverage はモノレポのルートではなく backend/ に出る。
+          # .coverage はリポジトリのルートではなく backend/ に出る。
           COVERAGE_PATH: backend
           MINIMUM_GREEN: "85"
           MINIMUM_ORANGE: "70"
@@ -260,7 +256,7 @@ jobs:
           python-version: "3.9"
       - name: install bandit
         run: pip install bandit
-      # 設定はモノレポのルート（.github/bandit.yml）にあるので相対で遡る。
+      # 設定はリポジトリのルート（.github/bandit.yml）にあるので相対で遡る。
       - name: run bandit
         run: |
           bandit . -r -o ./bandit.txt -f txt -c ../.github/bandit.yml

@@ -1,10 +1,6 @@
-# d-party 統一リリース（モノレポ版）。
+# d-party 統一リリース。
 #
-# モノレポ化前は、この root リポジトリが backend / frontend / chrome-extension の
-# release ワークフローを workflow_dispatch で起動して完了を待ち、最後に
-# サブモジュール参照を bump する「方式A」だった。そのためだけに GitHub App
-# （APP_ID / APP_PRIVATE_KEY）で他リポジトリへ Actions:write を持たせていたが、
-# 1 リポジトリになったので **cross-repo のトークンは不要**になった。
+# 全パッケージのバージョンを 1 つに揃え、タグと成果物をこのワークフローだけで作る。
 #
 # 流れ:
 #   1. bump_type と最新タグ (vX.Y.Z) から次のバージョンを算出する。
@@ -16,19 +12,16 @@
 #          （Raspberry Pi の k3s へ argocd-image-updater が拾いに来る配信元）
 #        - extension: build して zip を Release に添付し、Chrome Web Store へ upload
 #
-# 必要な設定（GitHub App は不要になったが、これは要る）:
+# 必要な設定:
 #
 #   ★ GHCR パッケージへの書き込み許可
-#     ghcr.io/d-party/backend と ghcr.io/d-party/frontend は、もともと
-#     d-party/backend · d-party/frontend リポジトリから push されたため、
-#     それらのリポジトリにだけ write が紐づいている。このリポジトリから
-#     push できるようにするには、各パッケージの
+#     ghcr.io/d-party/backend と ghcr.io/d-party/frontend には、このリポジトリの
+#     Actions からの write が紐づいている必要がある。各パッケージの
 #       Package settings → Manage Actions access → Add repository
 #     で `d-party/d-party` に **Write** を付ける（1 回だけの手作業）。
-#     これをやらないと images ジョブが denied で落ちる。イメージ名を変えずに
-#     済ませることで、infra/helm の values と Argo CD 側の設定は無改修で動く。
+#     これが無いと images ジョブが denied で落ちる。
 #
-#   ★ Chrome Web Store 用の secrets（従来どおり）
+#   ★ Chrome Web Store 用の secrets
 #     EXTENSION_ID / CLIENT_ID / CLIENT_SECRET / REFRESH_TOKEN
 name: Release
 
@@ -95,8 +88,7 @@ jobs:
           BUMP_TYPE: ${{ inputs.bump_type }}
         run: |
           set -euo pipefail
-          # モノレポ化でバージョンの真実はこのリポジトリのタグ 1 本になった
-          # （旧方式はサブモジュール側のタグとの max を取っていた）。
+          # バージョンの真実はこのリポジトリのタグ 1 本。
           LATEST=$(git tag --list 'v*.*.*' | sort -V | tail -n1)
           if [ -z "${LATEST}" ]; then
             VER="2.3.0"
@@ -203,7 +195,7 @@ jobs:
             dockerfile: backend/Dockerfile
             image_var: BACKEND_IMAGE
           - name: frontend
-            # frontend のビルドコンテキストはモノレポのルート。pnpm workspace の
+            # frontend のビルドコンテキストはリポジトリのルート。pnpm workspace の
             # ロックファイルがルートにあるため（frontend/Dockerfile 参照）。
             # NEXT_PUBLIC_* は渡さない — prod-kube はブラウザの origin から
             # 接続先を導出する。compose-prod は引き続き build.args で焼くので
