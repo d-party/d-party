@@ -4,7 +4,7 @@
 
 ## What this is
 
-`d-party` は **dアニメストア** および **DMM TV** での「同時視聴」を提供するサービスです。
+`d-party` は **dアニメストアでの「同時視聴」** を提供するサービスです。
 このリポジトリは **monorepo** で、サーバ・拡張機能・フロントエンド・インフラ設定が
 すべてここに入っています。
 
@@ -12,13 +12,6 @@
 して束ねた「疑似 monorepo」でした。各リポジトリの履歴を `git filter-repo` で
 サブディレクトリへ書き換えてから統合したため、**`git log` / `git blame` / `git bisect` は
 移行前まで辿れます**。旧 `chrome-extension/` は `extension/`、旧 `deploy/` は `infra/` です。
-
-**マルチサービス設計:** 同時視聴の同期コア（WebSocket プロトコル・consumer の同期処理・
-stats・grace 削除、拡張側の `RoomSession` / `PartyWebSocketClient` / `protocol`）はサービス
-非依存で共通化する。サービス固有なのは「プレイヤー駆動 DOM（`PlayerController`）」「一覧/
-詳細ページへのアイコン注入」「lobby URL 解決」のみ。バックエンドは dアニメ（`anime_*`
-テーブル・`anime-store/party/`）と DMM（`dmm_*` テーブル・`dmm-tv/party/`）で**データを
-分離**しつつ、抽象基底モデル + パラメータ化 consumer でロジックを共有する。
 
 ## Architecture
 
@@ -38,12 +31,12 @@ stats・grace 削除、拡張側の `RoomSession` / `PartyWebSocketClient` / `pr
 ### Request / data flow
 
 ```
-Chrome 拡張機能 (dアニメストア / DMM TV のページに content script を注入)
+Chrome 拡張機能 (dアニメストアのページに content script を注入)
         │  WebSocket (wss://d-party.net, 既定)
         ▼
 Nginx :80/443 ──▶ Django (daphne/uvicorn, Channels)
         ├─ REST API (DRF)            : /api/*
-        ├─ WebSocket (Channels)      : 同時視聴の同期 (anime-store/party/ · dmm-tv/party/)
+        ├─ WebSocket (Channels)      : 同時視聴の同期
         └─ 管理画面 (Unfold)         : /admin/*
 Django ──▶ PostgreSQL 16（永続化） / Redis 7（Channels レイヤ・キャッシュ）
 ```
@@ -288,13 +281,9 @@ extension/
   `rspack.DefinePlugin` がビルド時にリテラルへ置換するため、実行時の設定変更はできない。
 - REST クライアントは **orval** で生成（`openapi/openapi.json` → `src/infrastructure/api/generated/`）。
   生成物はコミットされ、CI が差分ゼロを検証する。
-- 対象サイト（`public/manifest.json`）:
-  - dアニメストア: `https://animestore.docomo.ne.jp/animestore/*` および
-    `https://anime.dmkt-sp.jp/animestore/*`
-  - DMM TV: `https://tv.dmm.com/*`（作品詳細のアイコン注入）と
-    `https://tv.dmm.com/vod/playback/on-demand/*`（再生ページのプレイヤー同期）
-  - ロビー（バージョン確認）: `https://d-party.net/{anime-store,dmm-tv}/lobby/*`
-    （dev は `http://localhost/...`）
+- 対象サイト: `https://animestore.docomo.ne.jp/animestore/*` および
+  `https://anime.dmkt-sp.jp/animestore/*`、ロビーは `https://d-party.net/anime-store/lobby/*`
+  （dev は `http://localhost/anime-store/lobby/*`）。
 - CI は **`extension-ci.yml`**（`Extension/CI`: 生成物の drift · typecheck · lint ·
   license-check）と **`extension-build.yml`**（`Extension/Build`: `build:prod` と
   manifest の参照先の実在確認 · zip · storybook）。Storybook の Pages 公開は
@@ -340,8 +329,7 @@ packages/ui/
 ```
 frontend/
   src/
-    app/                 App Router（layout / page / usage / qa / privacy / stats /
-                         anime-store/lobby/[roomId] / dmm-tv/lobby/[roomId] / not-found）
+    app/                 App Router（layout / page / usage / anime-store/lobby/[roomId] / not-found）
     components/ui/button.tsx  Button のみ自前（他の primitive は @d-party/ui）
     infrastructure/       env.ts（接続先）・api/（orval 生成 REST クライアント）
     lib/utils.ts          cn()
@@ -355,12 +343,6 @@ frontend/
 - ルーム遷移 `/anime-store/lobby/[roomId]` は拡張機能の `.chrome_extension_field` DOM 契約を維持しつつ、
   `room_id → リダイレクト URL` を backend の `GET /api/v1/anime-store/lobby/{room_id}` で解決する
   （`frontend/docs/backend-lobby-endpoint.md` 参照）。
-- DMM TV も同じ DOM 契約で `/dmm-tv/lobby/[roomId]` を提供し、`GET /api/v1/dmm-tv/lobby/{room_id}` で
-  再生ページ（`/vod/playback/on-demand/?season=..&content=..&party=join`）へ解決する。DMM のタイマー
-  画面は後続対応。
-- 統計ダッシュボード（`/stats`）はバックエンドが全サービス合算（dアニメ + DMM）で集計するため、
-  フロント側は無改修で両サービスの合計を表示する。
-- 表記はランディング等で「dアニメストア・DMM TV」を併記。
 - 接続先は `src/infrastructure/env.ts`（`NEXT_PUBLIC_*` で上書き、既定 `localhost`）。
 - **Dockerfile のビルドコンテキストはルート**。workspace 配下でビルドすると Next の
   `outputFileTracingRoot` がワークスペースのルートになり、standalone の中身が

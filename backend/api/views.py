@@ -17,20 +17,9 @@ from streamer.models import (
     AnimeReaction,
     AnimeRoom,
     AnimeUser,
-    DmmReaction,
-    DmmReactionStat,
-    DmmRoom,
-    DmmUser,
     ReactionStat,
     ReactionType,
 )
-
-# 統計はサービス（dアニメ / DMM）を横断した d-party 全体の利用状況を表す。各集計は
-# 下のモデル群すべてを合算する（サービスを増やしてもここに追加すれば統計へ反映される）。
-ROOM_MODELS = (AnimeRoom, DmmRoom)
-USER_MODELS = (AnimeUser, DmmUser)
-# (生リアクション, 畳み込み集計) のペア。生は稼働中ルーム分、集計は終了ルーム分。
-REACTION_SOURCES = ((AnimeReaction, ReactionStat), (DmmReaction, DmmReactionStat))
 
 # Matches the previous ``distutils.version.StrictVersion`` accepted form: a
 # strict ``major.minor.patch`` triple. ``distutils`` was removed in Python 3.12.
@@ -83,32 +72,30 @@ def _cached(key: str, producer):
 
 
 def _reaction_counts_by_type(since: datetime.date) -> dict[str, int]:
-    """Per-type reaction counts in ``[since, today]`` across all services.
+    """Per-type reaction counts in ``[since, today]`` (folded + live rooms).
 
-    Historical reactions live in the folded stat tables (``ReactionStat`` /
-    ``DmmReactionStat``, folded on room end); reactions of still-alive rooms
-    remain in the raw tables (``AnimeReaction`` / ``DmmReaction``) and are added
-    on top so the total reflects in-progress rooms too. Keyed by the stored
-    ``reaction_type`` value (e.g. ``"S"``).
+    Historical reactions live in ``ReactionStat`` (folded on room end); reactions
+    of still-alive rooms remain in ``AnimeReaction`` and are added on top so the
+    total reflects in-progress rooms too. Keyed by the stored ``reaction_type``
+    value (e.g. ``"S"``).
     """
     merged: dict[str, int] = defaultdict(int)
-    for reaction_model, stat_model in REACTION_SOURCES:
-        folded = (
-            stat_model.objects.filter(date__gte=since)
-            .values("reaction_type")
-            .annotate(total=Sum("count"))
+    folded = (
+        ReactionStat.objects.filter(date__gte=since)
+        .values("reaction_type")
+        .annotate(total=Sum("count"))
+    )
+    for row in folded:
+        merged[row["reaction_type"]] += row["total"]
+    live = (
+        AnimeReaction.objects.filter(
+            room_id__deleted_at__isnull=True, created_at__date__gte=since
         )
-        for row in folded:
-            merged[row["reaction_type"]] += row["total"]
-        live = (
-            reaction_model.objects.filter(
-                room_id__deleted_at__isnull=True, created_at__date__gte=since
-            )
-            .values("reaction_type")
-            .annotate(total=Count("reaction_id"))
-        )
-        for row in live:
-            merged[row["reaction_type"]] += row["total"]
+        .values("reaction_type")
+        .annotate(total=Count("reaction_id"))
+    )
+    for row in live:
+        merged[row["reaction_type"]] += row["total"]
     return merged
 
 
@@ -176,34 +163,6 @@ def _mean_per_day(rows: list[dict]) -> float:
     return sum(row["count"] for row in rows) / len(rows) if rows else 0.0
 
 
-def _combined_per_day(models, since: datetime.date | None = None) -> list[dict]:
-    """Merge per-day creation counts across several models (all services).
-
-    Returns ``[{"day": date, "count": n}, ...]`` sorted by day, summing each
-    day's count over every model. Feed into ``_resample_per_day`` to 0-fill.
-    """
-    merged: dict[datetime.date, int] = defaultdict(int)
-    for model in models:
-        for row in _per_day_counts(model, since):
-            merged[row["day"]] += row["count"]
-    return [{"day": day, "count": merged[day]} for day in sorted(merged)]
-
-
-def _sum_created(models, since: datetime.date) -> int:
-    """Total rows created on/after ``since`` across models (all services)."""
-    return sum(m.objects.filter(created_at__date__gte=since).count() for m in models)
-
-
-def _sum_all(models) -> int:
-    """Total rows (incl. logically deleted) across models (all services)."""
-    return sum(m.objects.all().count() for m in models)
-
-
-def _sum_alive(models) -> int:
-    """Total currently-alive rows across models (all services)."""
-    return sum(m.objects.alive().count() for m in models)
-
-
 class HealthCheckAPI(APIView):
     """Lightweight liveness probe. Returns 200 when the application is running."""
 
@@ -256,7 +215,7 @@ class AnimeActiveUserPerDayAPI(APIView):
         since = _since(days)
 
         def produce():
-            return _resample_per_day(_combined_per_day(USER_MODELS, since), since)
+            return _resample_per_day(_per_day_counts(AnimeUser, since), since)
 
         return Response({"data": _cached(f"stats:active-user-per-day:{days}", produce)})
 
@@ -274,7 +233,7 @@ class AnimeActiveRoomPerDayAPI(APIView):
         since = _since(days)
 
         def produce():
-            return _resample_per_day(_combined_per_day(ROOM_MODELS, since), since)
+            return _resample_per_day(_per_day_counts(AnimeRoom, since), since)
 
         return Response({"data": _cached(f"stats:active-room-per-day:{days}", produce)})
 
@@ -333,7 +292,7 @@ class AnimeUserAllCountAPI(APIView):
         since = _since(days)
 
         def produce():
-            return _sum_created(USER_MODELS, since)
+            return AnimeUser.objects.filter(created_at__date__gte=since).count()
 
         count = _cached(f"stats:user-all-count:{days}", produce)
         return Response({"data": {"count": count}})
@@ -352,7 +311,7 @@ class AnimeRoomAllCountAPI(APIView):
         since = _since(days)
 
         def produce():
-            return _sum_created(ROOM_MODELS, since)
+            return AnimeRoom.objects.filter(created_at__date__gte=since).count()
 
         count = _cached(f"stats:room-all-count:{days}", produce)
         return Response({"data": {"count": count}})
@@ -365,7 +324,7 @@ class AnimeUserAliveCountAPI(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
-        return Response({"data": {"count": _sum_alive(USER_MODELS)}})
+        return Response({"data": {"count": AnimeUser.objects.alive().count()}})
 
 
 class AnimeRoomAliveCountAPI(APIView):
@@ -375,7 +334,7 @@ class AnimeRoomAliveCountAPI(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
-        return Response({"data": {"count": _sum_alive(ROOM_MODELS)}})
+        return Response({"data": {"count": AnimeRoom.objects.alive().count()}})
 
 
 class _ShieldsView(APIView):
@@ -396,12 +355,12 @@ class _ShieldsView(APIView):
 
 class RoomCountShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
-        return {"label": "TotalRoom", "message": str(_sum_all(ROOM_MODELS))}
+        return {"label": "TotalRoom", "message": str(AnimeRoom.objects.all().count())}
 
 
 class RoomCountParDayShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
-        rows = _resample_per_day(_combined_per_day(ROOM_MODELS))
+        rows = _resample_per_day(_per_day_counts(AnimeRoom))
         mean = f"{_mean_per_day(rows):.2f}/day"
         return {
             "label": "Room",
@@ -413,12 +372,12 @@ class RoomCountParDayShieldsAPI(_ShieldsView):
 
 class UserCountShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
-        return {"label": "TotalUser", "message": str(_sum_all(USER_MODELS))}
+        return {"label": "TotalUser", "message": str(AnimeUser.objects.all().count())}
 
 
 class UserCountParDayShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
-        rows = _resample_per_day(_combined_per_day(USER_MODELS))
+        rows = _resample_per_day(_per_day_counts(AnimeUser))
         mean = f"{_mean_per_day(rows):.2f}/day"
         return {
             "label": "User",
@@ -432,7 +391,7 @@ class ReactionCountShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
         return {
             "label": "TotalReaction",
-            "message": str(sum(m.objects.all().count() for m, _ in REACTION_SOURCES)),
+            "message": str(AnimeReaction.objects.all().count()),
         }
 
 
@@ -479,59 +438,6 @@ class AnimeStoreLobbyResolveAPI(APIView):
                 "part_id": anime_room.part_id,
                 "room_id": str(room_id),
                 "title": anime_room.title,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
-class DmmTvLobbyResolveAPI(APIView):
-    """Resolve a room id to the DMM TV redirect URL.
-
-    ``AnimeStoreLobbyResolveAPI`` の DMM TV 版。フロントのルーム遷移ページ
-    （``/dmm-tv/lobby/<room_id>``）が、拡張機能のインストール確認後にユーザーを
-    どこへリダイレクトするか（＝再生ページ + party=join マーカー）を得るために呼ぶ。
-
-    DMM の再生ページ URL は ``?season=..&content=..`` の両方で再生対象が決まるため、
-    拡張機能は create 時に ``part_id`` へ ``season/content`` をまとめて格納する。ここでは
-    それを分解して再生ページ（``/vod/playback/on-demand/``）の URL を復元する。スラッシュを
-    含まない古い/最小データは content のみとして扱う。レスポンス契約（redirect_url /
-    part_id / room_id / title）は anime 版と共通。
-    """
-
-    permission_classes = [AllowAny]
-
-    def get(self, request, room_id, format=None) -> Response:
-        dmm_tv_domain = os.environ.get("DMM_TV_DOMAIN", "tv.dmm.com")
-        try:
-            dmm_room = DmmRoom.objects.get(room_id=room_id)
-        except DmmRoom.DoesNotExist:
-            return Response(
-                {"message": "ルームが見つかりません"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        if dmm_room.deleted_at is not None:
-            return Response(
-                {"message": "ルームは終了しています"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        # part_id は "season/content"。スラッシュが無ければ content のみとして扱う。
-        if "/" in dmm_room.part_id:
-            season, content = dmm_room.part_id.split("/", 1)
-        else:
-            season, content = "", dmm_room.part_id
-
-        base_url = f"https://{dmm_tv_domain}/vod/playback/on-demand/?"
-        params = {"content": content, "party": "join", "room_id": str(room_id)}
-        if season:
-            params["season"] = season
-        url_param = urllib.parse.urlencode(params)
-        return Response(
-            {
-                "redirect_url": base_url + url_param,
-                "part_id": dmm_room.part_id,
-                "room_id": str(room_id),
-                "title": dmm_room.title,
             },
             status=status.HTTP_200_OK,
         )

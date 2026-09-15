@@ -36,7 +36,7 @@ export function RoomOgImage({
 
   return (
     <OgCard
-      eyebrow={hasTitle ? "この作品を一緒に視聴中" : "dアニメストア・DMM TV で同時視聴"}
+      eyebrow={hasTitle ? "この作品を一緒に視聴中" : "dアニメストアで同時視聴"}
       headline={hasTitle ? work : "友だちと、同じ瞬間を。"}
       sub={hasTitle && sub.length > 0 ? sub : undefined}
       headlineSize={hasTitle ? 76 : 64}

@@ -13,13 +13,12 @@ export const metadata: Metadata = {
     template: "%s | d-party",
   },
   description:
-    "dアニメストア・DMM TV でウォッチパーティーができる、完全無料の Google Chrome 向け拡張機能 d-party。",
+    "dアニメストアでもウォッチパーティーができる、完全無料の Google Chrome 向け拡張機能 d-party。",
   keywords: [
     "d-party",
     "dパーティー",
     "ウォッチパーティー",
     "dアニメストア",
-    "DMM TV",
     "同時視聴",
   ],
   authors: [{ name: "U-Not" }],

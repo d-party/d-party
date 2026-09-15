@@ -161,9 +161,7 @@ export function OgCard({
           color: COLORS.muted,
         }}
       >
-        <div style={{ display: "flex" }}>
-          dアニメストア・DMM TV を友だちと同時視聴
-        </div>
+        <div style={{ display: "flex" }}>dアニメストアを友だちと同時視聴</div>
         <div style={{ display: "flex", fontWeight: 700, color: COLORS.text }}>
           d-party.net
         </div>
