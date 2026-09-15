@@ -7,6 +7,17 @@
 #   https://<org>.github.io/<repo>/extension/   ← 拡張機能の Storybook
 #   https://<org>.github.io/<repo>/frontend/    ← フロントエンドの Storybook
 #   https://<org>.github.io/<repo>/             ← 両者への索引
+#
+# 必要な設定:
+#
+#   ★ GitHub Pages を有効にし、ソースを「GitHub Actions」にする
+#     Settings → Pages → Build and deployment → Source: GitHub Actions
+#     （API なら `gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`）
+#     未設定だと build は成功するのに deploy だけが
+#       Error: Failed to create deployment (status: 404) ...
+#       Ensure GitHub Pages has been enabled
+#     で落ちる。リポジトリ単位の設定なので、fork や新しいリポジトリでは
+#     このワークフローを入れただけでは動かない。
 name: Storybook/Deploy
 
 on:
