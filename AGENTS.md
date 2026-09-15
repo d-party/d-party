@@ -480,6 +480,17 @@ Actions:write を持たせていた。**それは不要になった。**
 `d-party/backend` · `d-party/frontend` リポジトリからしか push できないため。
 イメージ名を変えないことで `infra/helm` の values と Argo CD 側は無改修で済む。
 
+> **パッケージのリンク先は旧リポジトリのまま。** `ghcr.io/d-party/{backend,frontend}`
+> は旧リポジトリから push されて作られたため、GHCR 上の「source repository」は
+> いまも archive 済みの `d-party/backend` · `d-party/frontend` を指す。push できて
+> いるのは上記の Write を明示的に付けているからで、継承ではない。
+> リリースでは OCI の `org.opencontainers.image.source` をイメージのラベルと
+> manifest list の annotation の両方へ付け、このリポジトリを指すようにしている。
+> ただし**既にあるパッケージのリンクが張り替わるかは公式ドキュメントに記載がない**。
+> 張り替わらない場合に確実に直すには、パッケージ名自体を変えるしかない
+> （その場合は `infra/helm` の values と、運用リポジトリの argocd-image-updater の
+> annotation も合わせて変える）。
+
 ## Common commands
 
 ### スタック全体（このルートで実行）
