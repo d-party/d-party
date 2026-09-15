@@ -53,7 +53,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>): React.JSX.Element {
   return (
-    <html lang="ja">
+    // Next.js 16 はナビゲーション時に scroll-behavior を上書きしなくなった。
+    // globals.css で html に scroll-behavior: smooth を当てているため、この属性が
+    // 無いとページ遷移のたびにトップへ滑らかスクロールしてしまう。属性を付けると
+    // 15 以前と同じ「遷移は即座、ページ内リンクは滑らか」に戻る。
+    <html lang="ja" data-scroll-behavior="smooth">
       <body className="flex min-h-dvh flex-col">
         <Header />
         <main className="flex-1">{children}</main>
