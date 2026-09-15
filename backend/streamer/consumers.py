@@ -1,6 +1,5 @@
 import asyncio
 import json
-from typing import ClassVar
 
 from channels.db import database_sync_to_async
 from django.db import transaction
@@ -29,24 +28,7 @@ from .format import (
     UserSend,
     VideoOperation,
 )
-from .models import (
-    AnimeReaction,
-    AnimeRoom,
-    AnimeUser,
-    BaseReaction,
-    BaseReactionStat,
-    BaseRoom,
-    BaseSetting,
-    BaseUser,
-    DmmReaction,
-    DmmReactionStat,
-    DmmRoom,
-    DmmSetting,
-    DmmUser,
-    ReactionStat,
-    ReactionType,
-    Setting,
-)
+from .models import AnimeReaction, AnimeRoom, AnimeUser, ReactionType, Setting
 from .util import is_valid_uuid
 
 # ホストの WS が一瞬落ちた / タブをリロードしただけでルームが即消え
@@ -54,29 +36,20 @@ from .util import is_valid_uuid
 # 最後のユーザが離脱しても N 秒はルームを生かしておき、その間に誰かが
 # 再参加したら削除をキャンセルして生かす。ディスクに状態を持たずプロセス
 # 内の dict + asyncio.Task で追跡（runserver / 単一 daphne ワーカー前提）。
-#
-# ``_pending_room_deletes`` は room_id(UUID) をキーにするためサービス
-# （dアニメ / DMM）を跨いでも衝突しない。全サービス共有で問題ない。
 ROOM_GRACE_SECONDS = 60.0
 _pending_room_deletes: dict[str, asyncio.Task] = {}
 
 
 @database_sync_to_async
-def _logical_delete_room_if_empty(
-    room_model, user_model, fold_fn, room_id_str: str
-) -> bool:
-    """Delete room only if it is still empty. Returns True if deleted.
-
-    ``room_model`` / ``user_model`` はサービス別の具象モデル、``fold_fn`` はそのサービスの
-    リアクションを集計テーブルへ畳み込む関数（consumer が渡す）。
-    """
-    qs = room_model.objects.alive().filter(room_id=room_id_str)
+def _logical_delete_room_if_empty(room_id_str: str) -> bool:
+    """Delete room only if it is still empty. Returns True if deleted."""
+    qs = AnimeRoom.objects.alive().filter(room_id=room_id_str)
     if not qs.exists():
         return False
-    if user_model.objects.alive().filter(room_id=room_id_str).exists():
+    if AnimeUser.objects.alive().filter(room_id=room_id_str).exists():
         return False
     # ルームが終了するので、リアクションを集計テーブルへ畳んで生データを削除する。
-    fold_fn(room_id_str)
+    fold_room_reactions(room_id_str)
     qs.delete()  # logical
     return True
 
@@ -88,18 +61,14 @@ def _cancel_pending_room_delete(room_id_str: str) -> None:
         task.cancel()
 
 
-def _schedule_room_delete(
-    room_model, user_model, fold_fn, room_id_str: str, delay: float = ROOM_GRACE_SECONDS
-) -> None:
+def _schedule_room_delete(room_id_str: str, delay: float = ROOM_GRACE_SECONDS) -> None:
     """Schedule a logical-delete after `delay` seconds, replacing any prior task."""
     _cancel_pending_room_delete(room_id_str)
 
     async def _delete_after() -> None:
         try:
             await asyncio.sleep(delay)
-            await _logical_delete_room_if_empty(
-                room_model, user_model, fold_fn, room_id_str
-            )
+            await _logical_delete_room_if_empty(room_id_str)
         except asyncio.CancelledError:
             pass
         finally:
@@ -108,50 +77,23 @@ def _schedule_room_delete(
     _pending_room_deletes[room_id_str] = asyncio.create_task(_delete_after())
 
 
-class BasePartyConsumer(GenericAsyncAPIConsumer):
-    """同時視聴の同期を担う WebSocket consumer の共通実装（サービス非依存）。
-
-    dアニメストア（``AnimePartyConsumer``）と DMM TV（``DmmPartyConsumer``）はこの基底を
-    継承し、扱うモデル一式（``Room`` / ``UserModel`` / ``Reaction`` / ``SettingModel`` /
-    ``ReactionStatModel``）だけをクラス属性で差し替える。create/join/leave/video_operation/
-    sync/reaction/詳細設定などの同期ロジック本体はすべて共通。
-
-    ``part_id`` / ``title`` / 動画 ``option`` は不透明な文字列として扱うだけで、サービス
-    固有のプレイヤー知識は持たない（それはクライアント側の責務）。
-    """
-
+class AnimePartyConsumer(GenericAsyncAPIConsumer):
     permission_classes = ()
-
-    # ── サブクラスが差し込むサービス別モデル ─────────────────────────────
-    # 基底では値を持たず型注釈のみ（サブクラスが具象モデルを代入する）。
-    Room: ClassVar[type[BaseRoom]]
-    UserModel: ClassVar[type[BaseUser]]
-    Reaction: ClassVar[type[BaseReaction]]
-    SettingModel: ClassVar[type[BaseSetting]]
-    ReactionStatModel: ClassVar[type[BaseReactionStat]]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # 入室した Room のオブジェクト
-        self.room = None
+        # 入室したAnimeRoomのオブジェクト
+        self.anime_room = None
         # ユーザー情報
-        self.user = None
+        self.anime_user = None
         # 観覧専用（spectator）接続かどうか。タイマー画面が video_operation の
         # ブロードキャストを受信して再生位置を計算するための読み取り専用参加。
-        # User を作らず、人数/一覧/ホスト委譲/自動削除に一切影響しない。
+        # AnimeUser を作らず、人数/一覧/ホスト委譲/自動削除に一切影響しない。
         self.is_spectator = False
         # ルームの詳細設定のローカルキャッシュ（{one_way, owner_leave_delete,
         # disable_reaction}）。create/join で読み込み、setting_send で更新する。
         # 一方通行モードの動画操作ブロック等をこのキャッシュで判定し、都度 DB を引かない。
         self.room_setting = None
-
-    # ── リアクション畳み込み（サービス別モデルを束ねた fold）────────────────
-    def _fold(self, room_id) -> None:
-        fold_room_reactions(
-            room_id,
-            reaction_model=self.Reaction,
-            stat_model=self.ReactionStatModel,
-        )
 
     # ── 詳細設定のキャッシュ参照ヘルパ（純粋・同期）─────────────────────────────
     def _one_way(self) -> bool:
@@ -179,12 +121,12 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         Args:
             close_code (int): WebSocket のクローズコード
         """
-        # 観覧専用接続は User を持たないため leave_party の対象外。グループから
+        # 観覧専用接続は AnimeUser を持たないため leave_party の対象外。グループから
         # 抜けるだけで、人数の減算やルーム削除の判定は行わない。
         if self.is_spectator:
-            if self.room is not None:
+            if self.anime_room is not None:
                 await self.channel_layer.group_discard(
-                    str(self.room.room_id), self.channel_name
+                    str(self.anime_room.room_id), self.channel_name
                 )
             return
         await self.leave_party()
@@ -194,17 +136,19 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         self, part_id, user_name, title="", user_icon="FaRegUser", **kwargs
     ):
         # create room
-        self.room = await self.database_create_room(part_id=part_id, title=title)
+        self.anime_room = await self.database_create_room(part_id=part_id, title=title)
         # create user
-        self.user = await self.database_create_user(
+        self.anime_user = await self.database_create_user(
             user_name=user_name,
-            room_id=self.room,
+            room_id=self.anime_room,
             is_host=True,
             user_icon=user_icon,
         )
-        await self.channel_layer.group_add(str(self.room.room_id), self.channel_name)
-        user = User(**self.user.__dict__)
-        create = Create(room_id=self.room.room_id, user=user)
+        await self.channel_layer.group_add(
+            str(self.anime_room.room_id), self.channel_name
+        )
+        user = User(**self.anime_user.__dict__)
+        create = Create(room_id=self.anime_room.room_id, user=user)
         await self.send(text_data=json.dumps(create.model_dump(mode="json")))
         user_list = await self.database_user_list()
         user_list_data = UserList(user_list=user_list)
@@ -213,7 +157,7 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
             sender_channel_name=self.channel_name,
         )
         await self.channel_layer.group_send(
-            str(self.room.room_id),
+            str(self.anime_room.room_id),
             response_data.model_dump(mode="json"),
         )
         # ルームと 1:1 の詳細設定を既定値(すべて False)で自動生成し、作成者へ通知する。
@@ -232,30 +176,32 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         joinを受け取った場合、ルームが存在していればルームに参加する
 
         Args:
-            room_id (str): Roomオブジェクトに存在するroom_id（ワイヤ上は文字列）
+            room_id (str): AnimeRoomオブジェクトに存在するroom_id（ワイヤ上は文字列）
             user_name (str): ユーザーが指定する事ができるユーザー名
             user_icon (str): ユーザーが指定する react-icons (FA6) のキー。旧拡張は送らないため既定値あり。
         """
         # 接続要求されたルームのオブジェクトがあれば取得（deleted_at が入っているものは弾く）
-        self.room = await self.database_get_or_none_room(room_id=room_id)
-        if self.room is None:
+        self.anime_room = await self.database_get_or_none_room(room_id=room_id)
+        if self.anime_room is None:
             # ルームが存在しない/既に終了している場合は failed_join を通知してクローズ。
-            # 旧実装は send 後に leave_party() を呼んでいたが user 未生成のため
+            # 旧実装は send 後に leave_party() を呼んでいたが anime_user 未生成のため
             # 早期 return するだけで WS が開いたままになり、後続の sync_request 等が
-            # self.user.__dict__ で AttributeError を起こして 1011 close を招く。
+            # self.anime_user.__dict__ で AttributeError を起こして 1011 close を招く。
             failed = ServerMessage(message_type="failed_join")
             await self.send(text_data=json.dumps(failed.model_dump(mode="json")))
             await self.close()
             return
         # このルームに猶予期間の削除予約があれば取り消す
-        _cancel_pending_room_delete(str(self.room.room_id))
-        # ルームが存在しているのであればUserオブジェクトを作成
-        self.user = await self.database_create_user(
-            user_name=user_name, room_id=self.room, user_icon=user_icon
+        _cancel_pending_room_delete(str(self.anime_room.room_id))
+        # ルームが存在しているのであればAnimeUserオブジェクトを作成
+        self.anime_user = await self.database_create_user(
+            user_name=user_name, room_id=self.anime_room, user_icon=user_icon
         )
-        await self.channel_layer.group_add(str(self.room.room_id), self.channel_name)
-        user = User(**self.user.__dict__)
-        join = Join(room_id=self.room.room_id, user=user)
+        await self.channel_layer.group_add(
+            str(self.anime_room.room_id), self.channel_name
+        )
+        user = User(**self.anime_user.__dict__)
+        join = Join(room_id=self.anime_room.room_id, user=user)
         await self.send(text_data=json.dumps(join.model_dump(mode="json")))
         user_add = UserAdd(user=user)
         response_data = GroupSend(
@@ -263,7 +209,7 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
             sender_channel_name=self.channel_name,
         )
         await self.channel_layer.group_send(
-            str(self.room.room_id),
+            str(self.anime_room.room_id),
             response_data.model_dump(mode="json"),
         )
         user_list = await self.database_user_list()
@@ -273,7 +219,7 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
             sender_channel_name=self.channel_name,
         )
         await self.channel_layer.group_send(
-            str(self.room.room_id),
+            str(self.anime_room.room_id),
             response_data.model_dump(mode="json"),
         )
         # 参加者へ現在の詳細設定を通知する。非オーナーはこれを見て一方通行モード時の
@@ -298,12 +244,12 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         """観覧専用（spectator）でルームに参加するアクション。
 
         拡張機能なしのタイマー画面が、既存の ``video_operation`` ブロードキャストを受信して
-        再生位置を計算するために使う。``User`` を作らず、人数・参加者一覧・ホスト委譲・
+        再生位置を計算するために使う。``AnimeUser`` を作らず、人数・参加者一覧・ホスト委譲・
         自動削除の判定に一切影響しない読み取り専用参加。ルームが存在しなければ
         ``failed_spectate`` を通知してクローズする。
 
         Args:
-            room_id (str): 観覧するRoomのID（ワイヤ上は文字列）
+            room_id (str): 観覧するAnimeRoomのID（ワイヤ上は文字列）
         """
         room = await self.database_get_or_none_room(room_id=room_id)
         if room is None:
@@ -311,14 +257,16 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
             await self.send(text_data=json.dumps(failed.model_dump(mode="json")))
             await self.close()
             return
-        self.room = room
+        self.anime_room = room
         self.is_spectator = True
-        await self.channel_layer.group_add(str(self.room.room_id), self.channel_name)
+        await self.channel_layer.group_add(
+            str(self.anime_room.room_id), self.channel_name
+        )
         # 最初の video_operation を受け取る前でも現在の視聴対象を表示できるよう初期状態を返す。
         ack = SpectateAck(
-            room_id=self.room.room_id,
-            part_id=self.room.part_id,
-            title=self.room.title,
+            room_id=self.anime_room.room_id,
+            part_id=self.anime_room.part_id,
+            title=self.anime_room.title,
         )
         await self.send(text_data=json.dumps(ack.model_dump(mode="json")))
 
@@ -336,17 +284,17 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
             title (str | None): 現在視聴中のエピソードタイトル。タイマー画面が
                 エピソード切替に追従するために配信へ載せる。旧クライアントは送らないため任意。
         """
-        if self.room is None or self.user is None:
+        if self.anime_room is None or self.anime_user is None:
             return
         await self.database_renew_state()
         # 一方通行(アクセラレーター)モードでは、オーナー以外の動画操作をブロックする。
         # is_host を先に見て短絡するのでホスト操作にはオーバーヘッドが無い。
-        if not self.user.is_host and self._one_way():
+        if not self.anime_user.is_host and self._one_way():
             return
         video_operation = VideoOperation(
-            room_id=self.room.room_id,
+            room_id=self.anime_room.room_id,
             operation=operation,
-            user=User(**self.user.__dict__).model_dump(),
+            user=User(**self.anime_user.__dict__).model_dump(),
             option=option,
             title=title,
         )
@@ -354,10 +302,13 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
             response=video_operation,
             sender_channel_name=self.channel_name,
         )
-        if video_operation.option.part_id != self.room.part_id and self.user.is_host:
+        if (
+            video_operation.option.part_id != self.anime_room.part_id
+            and self.anime_user.is_host
+        ):
             await self.database_update_room_part_id(video_operation.option.part_id)
         await self.channel_layer.group_send(
-            str(self.room.room_id),
+            str(self.anime_room.room_id),
             response_data.model_dump(mode="json"),
         )
 
@@ -366,16 +317,16 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         """sync_requestを受け取った場合のアクション
         sync_requestはホストの状態に動画プレイヤーを同期を要求するアクション
         """
-        if self.room is None or self.user is None:
+        if self.anime_room is None or self.anime_user is None:
             return
         await self.database_renew_state()
-        sync_request = SyncRequest(user=User(**self.user.__dict__).model_dump())
+        sync_request = SyncRequest(user=User(**self.anime_user.__dict__).model_dump())
         response_data = HostSend(
             response=sync_request,
             sender_channel_name=self.channel_name,
         )
         await self.channel_layer.group_send(
-            str(self.room.room_id),
+            str(self.anime_room.room_id),
             response_data.model_dump(mode="json"),
         )
 
@@ -388,7 +339,7 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
             to_user (dict): 送信先の User ペイロード（user_id で宛先を判定する）
             option (dict): 動画プレイヤー情報
         """
-        if self.room is None or self.user is None:
+        if self.anime_room is None or self.anime_user is None:
             return
         await self.database_renew_state()
         sync_response = SyncResponse(option=option)
@@ -398,7 +349,7 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
             sender_channel_name=self.channel_name,
         )
         await self.channel_layer.group_send(
-            str(self.room.room_id),
+            str(self.anime_room.room_id),
             response_data.model_dump(mode="json"),
         )
 
@@ -409,19 +360,19 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         Args:
             operation (str): 操作の種類
         """
-        if self.room is None or self.user is None:
+        if self.anime_room is None or self.anime_user is None:
             return
         await self.database_renew_state()
         operation_notification = OperationNotification(
-            room_id=self.room.room_id,
+            room_id=self.anime_room.room_id,
             operation=operation,
-            user=User(**self.user.__dict__).model_dump(),
+            user=User(**self.anime_user.__dict__).model_dump(),
         )
         response_data = GroupSend(
             response=operation_notification, sender_channel_name=self.channel_name
         )
         await self.channel_layer.group_send(
-            str(self.room.room_id),
+            str(self.anime_room.room_id),
             response_data.model_dump(mode="json"),
         )
 
@@ -437,7 +388,7 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         id）はブロードキャストのみ行い、**永続化しない**（統計対象外）。これにより
         未知の id でも ``ReactionType[...]`` の ``KeyError`` を起こさず安全に配信する。
         """
-        if self.room is None or self.user is None:
+        if self.anime_room is None or self.anime_user is None:
             return
         # リアクション禁止設定では、ブロードキャストも永続化も行わない。送信者自身の画面
         # には拡張機能側がローカルに表示する（「自分にだけは表示される」）ため、サーバは
@@ -446,13 +397,13 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
             return
         reaction = Reaction(
             reaction_type=reaction_type,
-            user=User(**self.user.__dict__).model_dump(),
+            user=User(**self.anime_user.__dict__).model_dump(),
         )
         response_data = GroupSend(
             response=reaction, sender_channel_name=self.channel_name
         )
         await self.channel_layer.group_send(
-            str(self.room.room_id),
+            str(self.anime_room.room_id),
             response_data.model_dump(mode="json"),
         )
         if reaction_type in ReactionType.__members__:
@@ -461,7 +412,7 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
     @action()
     async def user_list(self, **kwargs):
         """user_listを受け取った場合のアクション"""
-        if self.room is None or self.user is None:
+        if self.anime_room is None or self.anime_user is None:
             return
         user_list = await self.database_user_list()
         response_data = UserList(user_list=user_list)
@@ -474,12 +425,12 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         ルーム内の全員（送信者を含む）へ ``room_deleted`` を通知してから、
         ルームと参加者をまとめて論理削除する。ホスト以外からの要求は無視する。
         """
-        if self.room is None or self.user is None:
+        if self.anime_room is None or self.anime_user is None:
             return
         await self.database_renew_state()
-        if not self.user.is_host:
+        if not self.anime_user.is_host:
             return
-        room_id_str = str(self.room.room_id)
+        room_id_str = str(self.anime_room.room_id)
         # 猶予期間の自動削除が予約されていれば取り消す（ここで明示的に削除するため）。
         _cancel_pending_room_delete(room_id_str)
         server_message = ServerMessage(message_type="room_deleted")
@@ -507,10 +458,10 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         以外からの要求は無視する。更新後はルーム全員へ ``room_setting`` を配信し、各接続の
         ローカルキャッシュ（一方通行判定等に使用）も同時に更新する。
         """
-        if self.room is None or self.user is None:
+        if self.anime_room is None or self.anime_user is None:
             return
         await self.database_renew_state()
-        if not self.user.is_host:
+        if not self.anime_user.is_host:
             return
         self.room_setting = await self.database_update_setting(
             one_way=bool(one_way),
@@ -523,7 +474,7 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
             sender_channel_name=self.channel_name,
         )
         await self.channel_layer.group_send(
-            str(self.room.room_id),
+            str(self.anime_room.room_id),
             response_data.model_dump(mode="json"),
         )
 
@@ -567,11 +518,11 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
             data (dict): group_send 経由で渡る dict。``response`` の本文と
                 ``sender_channel_name`` を持つ。
         """
-        # 観覧専用接続は User を持たないため対象外（renew_state で AttributeError を避ける）。
-        if self.user is None:
+        # 観覧専用接続は AnimeUser を持たないため対象外（renew_state で AttributeError を避ける）。
+        if self.anime_user is None:
             return
         await self.database_renew_state()
-        if self.channel_name != data["sender_channel_name"] and self.user.is_host:
+        if self.channel_name != data["sender_channel_name"] and self.anime_user.is_host:
             await self.send(text_data=json.dumps(data["response"]))
 
     async def user_send(self, data: dict):
@@ -580,11 +531,11 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         Args:
             data (dict): to_userというカラムが存在している必要がある
         """
-        # 観覧専用接続は特定ユーザー宛の対象にならない（User を持たない）。
-        if self.user is None:
+        # 観覧専用接続は特定ユーザー宛の対象にならない（AnimeUser を持たない）。
+        if self.anime_user is None:
             return
         if self.channel_name != data["sender_channel_name"] and str(
-            self.user.user_id
+            self.anime_user.user_id
         ) == str(data["to_user"]["user_id"]):
             await self.send(text_data=json.dumps(data["response"]))
 
@@ -592,9 +543,9 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         """サーバーから離脱する場合の共通処理
         データベースからの論理削除などを行い、ルーム内のユーザーに通知する
         """
-        if self.room is None or self.user is None:
+        if self.anime_room is None or self.anime_user is None:
             return
-        leave = Leave(user=User(**self.user.__dict__).model_dump())
+        leave = Leave(user=User(**self.anime_user.__dict__).model_dump())
         response_data = GroupSend(
             response=leave,
             sender_channel_name=self.channel_name,
@@ -606,8 +557,8 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         # オーナー退室時自動削除。オーナーが抜けたら残りの参加者ごとルームを即削除し、
         # 全員へ room_deleted を通知する。猶予削除やホスト委譲は行わない。
         # （一方通行モード単体では自動削除しない。owner_leave_delete が有効なときだけ。）
-        if self.user.is_host and self._effective_owner_leave_delete():
-            room_id_str = str(self.room.room_id)
+        if self.anime_user.is_host and self._effective_owner_leave_delete():
+            room_id_str = str(self.anime_room.room_id)
             _cancel_pending_room_delete(room_id_str)
             server_message = ServerMessage(message_type="room_deleted")
             send_data = RoomSend(
@@ -625,10 +576,8 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
             # 即消しだとホストの一瞬切断・タブリロードでルームが消え、
             # ゲストが全員 failed_join になる。猶予期間中に誰かが再参加したら join 側で
             # cancel される。
-            _schedule_room_delete(
-                self.Room, self.UserModel, self._fold, str(self.room.room_id)
-            )
-        if user_count >= 1 and self.user.is_host:
+            _schedule_room_delete(str(self.anime_room.room_id))
+        if user_count >= 1 and self.anime_user.is_host:
             next_host = await self.database_promote_next_host()
             if next_host is not None:
                 server_message = ServerMessage(message_type="host_change")
@@ -636,11 +585,11 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
                     response=server_message, sender_channel_name=self.channel_name
                 )
                 await self.channel_layer.group_send(
-                    str(self.room.room_id),
+                    str(self.anime_room.room_id),
                     send_data.model_dump(mode="json"),
                 )
         await self.channel_layer.group_send(
-            str(self.room.room_id),
+            str(self.anime_room.room_id),
             response_data.model_dump(mode="json"),
         )
         user_list = await self.database_user_list()
@@ -650,11 +599,11 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
             sender_channel_name=self.channel_name,
         )
         await self.channel_layer.group_send(
-            str(self.room.room_id),
+            str(self.anime_room.room_id),
             response_data.model_dump(mode="json"),
         )
         await self.channel_layer.group_discard(
-            str(self.room.room_id), self.channel_name
+            str(self.anime_room.room_id), self.channel_name
         )
 
     # control database
@@ -670,21 +619,21 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
 
         Args:
             user_name (str): ユーザーが任意に指定可能な名前
-            room_id (Room): 紐づく Room オブジェクト
+            room_id (AnimeRoom): 紐づく AnimeRoom オブジェクト
             is_host (bool, optional): ホストユーザーの場合はTrueにする
             user_icon (str, optional): react-icons (FA6) のキー。未指定なら既定アイコン。
 
         Returns:
-            User : 作成したユーザーのオブジェクト
+            AnimeUser : 作成したユーザーのオブジェクト
         """
-        return self.UserModel.objects.create(
+        return AnimeUser.objects.create(
             user_name=user_name, room_id=room_id, is_host=is_host, user_icon=user_icon
         )
 
     @database_sync_to_async
     def database_delete_user(self):
         """データベースからユーザーを削除する（論理削除）"""
-        self.user.delete()
+        self.anime_user.delete()
 
     @database_sync_to_async
     def database_create_room(self, part_id: str, title: str = ""):
@@ -692,13 +641,13 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         クライアント側でルーム作成が押された場合に呼び出される
 
         Args:
-            part_id (str): 現在視聴している動画のID(サービスが発行)
-            title (str): 視聴中コンテンツのタイトル(拡張機能がページ DOM から取得)
+            part_id (str): 現在視聴している動画のID(dアニメストアが発行)
+            title (str): 視聴中アニメのタイトル(拡張機能がページ DOM から取得)
 
         Returns:
-            Room: 作成したルームのオブジェクト
+            AnimeRoom: 作成したルームのオブジェクト
         """
-        return self.Room.objects.create(part_id=part_id, title=title)
+        return AnimeRoom.objects.create(part_id=part_id, title=title)
 
     @database_sync_to_async
     def database_update_room_part_id(self, part_id: str):
@@ -707,13 +656,13 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         新規に入ったユーザーはこの更新されたIDの動画にリダイレクトされる
 
         Args:
-            part_id (str): 現在視聴している動画のID(サービスが発行)
+            part_id (str): 現在視聴している動画のID(dアニメストアが発行)
         """
-        self.room.part_id = part_id
+        self.anime_room.part_id = part_id
         # 接続ごとにキャッシュした行の全カラムを書き戻さない。旧実装は素の save() で
         # 参加時点の古い値ごと上書きしており、廃止前の num_people / sum_people が
         # 巻き戻る原因になっていた。
-        self.room.save(update_fields=["part_id", "updated_at"])
+        self.anime_room.save(update_fields=["part_id", "updated_at"])
 
     @database_sync_to_async
     def database_delete_room_and_users(self):
@@ -722,11 +671,11 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         ホストがルームを削除したときに呼ぶ。QuerySet の ``delete()`` は
         ``LogicalDeletionMixin`` により論理削除（``deleted_at`` 付与）。
         """
-        room_id = self.room.room_id
+        room_id = self.anime_room.room_id
         # ルームが終了するので、リアクションを集計テーブルへ畳んで生データを削除する。
-        self._fold(room_id)
-        self.UserModel.objects.alive().filter(room_id=room_id).delete()
-        self.Room.objects.alive().filter(room_id=room_id).delete()
+        fold_room_reactions(room_id)
+        AnimeUser.objects.alive().filter(room_id=room_id).delete()
+        AnimeRoom.objects.alive().filter(room_id=room_id).delete()
 
     @database_sync_to_async
     def database_promote_next_host(self):
@@ -739,9 +688,9 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         """
         with transaction.atomic():
             next_user = (
-                self.UserModel.objects.select_for_update()
+                AnimeUser.objects.select_for_update()
                 .alive()
-                .filter(room_id=self.room.room_id)
+                .filter(room_id=self.anime_room.room_id)
                 .order_by("created_at")
                 .first()
             )
@@ -755,40 +704,41 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
     def database_get_user_count(self):
         """ルーム内の現在の人数を取得する。
 
-        人数はルームにキャッシュせず、常に参加ユーザー（論理削除されていない行）から
-        数える。観覧専用（spectator）接続は参加ユーザーを作らないため数に入らない。
+        人数は ``AnimeRoom`` にキャッシュせず、常に ``AnimeUser``（論理削除されて
+        いない行）から数える。観覧専用（spectator）接続は ``AnimeUser`` を持たない
+        ため数に入らない。
         """
-        room = self.Room.objects.get(room_id=self.room.room_id)
-        return room.alive_user_count
+        ar = AnimeRoom.objects.get(room_id=self.anime_room.room_id)
+        return ar.alive_user_count
 
     @database_sync_to_async
     def database_get_or_none_room(self, room_id):
         """ルームが存在していれば、ルームのオブジェクトを取得、そうでなければNoneを返す
 
         Args:
-            room_id (str): 検索するRoomのID
+            room_id (str): 検索するAnimeRoomのID
 
         Returns:
-            Room | None: ルームのオブジェクト。見つからない場合はNone
+            AnimeRoom | None: ルームのオブジェクト。見つからない場合はNone
         """
         if not is_valid_uuid(uuid_to_test=room_id):
             return None
         # 論理削除済みのルームには参加させない（旧実装は .filter() だけで deleted_at を
         # 無視していたため、削除直後のルームに join できてしまうバグがあった）。
-        return self.Room.objects.alive().filter(room_id=room_id).first()
+        return AnimeRoom.objects.alive().filter(room_id=room_id).first()
 
     @database_sync_to_async
     def database_renew_state(self):
         """インスタンス化しているユーザー情報とルーム情報をデータベースに合わせる"""
-        user_id = self.user.user_id
-        self.user = self.UserModel.objects.get(user_id=user_id)
-        room_id = self.room.room_id
-        self.room = self.Room.objects.get(room_id=room_id)
+        user_id = self.anime_user.user_id
+        self.anime_user = AnimeUser.objects.get(user_id=user_id)
+        room_id = self.anime_room.room_id
+        self.anime_room = AnimeRoom.objects.get(room_id=room_id)
 
     @database_sync_to_async
     def database_user_list(self):
         """ルーム内のユーザーを取得する"""
-        ar = self.Room.objects.get(room_id=self.room.room_id)
+        ar = AnimeRoom.objects.get(room_id=self.anime_room.room_id)
         user_list = ar.inroom.alive().values(
             "user_name", "user_id", "is_host", "user_icon"
         )
@@ -797,12 +747,12 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
     @database_sync_to_async
     def database_create_reaction(self, reaction_type):
         """リアクションを保存する"""
-        return self.Reaction.objects.create(
-            room_id=self.room, reaction_type=ReactionType[reaction_type].value
+        return AnimeReaction.objects.create(
+            room_id=self.anime_room, reaction_type=ReactionType[reaction_type].value
         )
 
     @staticmethod
-    def _setting_to_dict(setting) -> dict:
+    def _setting_to_dict(setting: Setting) -> dict:
         return {
             "one_way": setting.one_way,
             "owner_leave_delete": setting.owner_leave_delete,
@@ -812,9 +762,7 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
     @database_sync_to_async
     def database_get_or_create_setting(self):
         """ルームの詳細設定を既定値で取得/作成する（ルーム作成時に呼ぶ）。"""
-        # ``room`` は具象 Setting/DmmSetting 側で宣言する 1:1 PK。抽象 BaseSetting には
-        # 無いため django-stubs がキーワード解決できない（実行時は具象なので正しい）。
-        setting, _ = self.SettingModel.objects.get_or_create(room=self.room)  # type: ignore[misc]
+        setting, _ = Setting.objects.get_or_create(room=self.anime_room)
         return self._setting_to_dict(setting)
 
     @database_sync_to_async
@@ -824,7 +772,7 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         旧クライアントが作成した Setting 行の無いルームへ後方互換で参加する場合にも
         安全に既定値へフォールバックする。
         """
-        setting = self.SettingModel.objects.filter(room=self.room).first()  # type: ignore[misc]
+        setting = Setting.objects.filter(room=self.anime_room).first()
         if setting is None:
             return {
                 "one_way": False,
@@ -838,7 +786,7 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
         self, one_way: bool, owner_leave_delete: bool, disable_reaction: bool
     ):
         """ルームの詳細設定を更新する（オーナー限定の update_setting から呼ぶ）。"""
-        setting, _ = self.SettingModel.objects.get_or_create(room=self.room)  # type: ignore[misc]
+        setting, _ = Setting.objects.get_or_create(room=self.anime_room)
         setting.one_way = one_way
         setting.owner_leave_delete = owner_leave_delete
         setting.disable_reaction = disable_reaction
@@ -851,23 +799,3 @@ class BasePartyConsumer(GenericAsyncAPIConsumer):
             ]
         )
         return self._setting_to_dict(setting)
-
-
-class AnimePartyConsumer(BasePartyConsumer):
-    """dアニメストア用の同時視聴 consumer。WS: ``anime-store/party/``。"""
-
-    Room = AnimeRoom
-    UserModel = AnimeUser
-    Reaction = AnimeReaction
-    SettingModel = Setting
-    ReactionStatModel = ReactionStat
-
-
-class DmmPartyConsumer(BasePartyConsumer):
-    """DMM TV 用の同時視聴 consumer。WS: ``dmm-tv/party/``。"""
-
-    Room = DmmRoom
-    UserModel = DmmUser
-    Reaction = DmmReaction
-    SettingModel = DmmSetting
-    ReactionStatModel = DmmReactionStat

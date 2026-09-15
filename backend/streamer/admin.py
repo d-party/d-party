@@ -7,16 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
-from .models import (
-    AnimeReaction,
-    AnimeRoom,
-    AnimeUser,
-    DmmReaction,
-    DmmRoom,
-    DmmSetting,
-    DmmUser,
-    Setting,
-)
+from .models import AnimeReaction, AnimeRoom, AnimeUser, Setting
 
 
 @admin.action(description="Logically delete selected items")
@@ -42,12 +33,8 @@ class LogicalDeletionModelAdmin(ModelAdmin):
         return self.model.objects.get_queryset()
 
 
-class RoomModelAdmin(LogicalDeletionModelAdmin):
-    """ルーム一覧の共通 Admin。dアニメ（``AnimeRoom``）と DMM（``DmmRoom``）で共用する。
-
-    人数はルームのカラムではなく参加ユーザーから導出する（``BaseRoomQuerySet``）。
-    """
-
+@admin.register(AnimeRoom)
+class AnimeRoomAdmin(LogicalDeletionModelAdmin):
     list_display = (
         "room_id",
         "title",
@@ -59,7 +46,7 @@ class RoomModelAdmin(LogicalDeletionModelAdmin):
     )
 
     def get_queryset(self, request):
-        # 人数はルームのカラムではなく参加ユーザーから導出する。一覧の各行で
+        # 人数は AnimeRoom のカラムではなく AnimeUser から導出する。一覧の各行で
         # COUNT を撃たないよう、クエリセット側でまとめて注釈しておく（N+1 回避）。
         return super().get_queryset(request).with_people_counts()
 
@@ -72,11 +59,6 @@ class RoomModelAdmin(LogicalDeletionModelAdmin):
     def sum_people(self, obj):
         """累計参加人数（退室済みを含む。``with_people_counts()`` の注釈）。"""
         return obj.sum_people
-
-
-@admin.register(AnimeRoom)
-class AnimeRoomAdmin(RoomModelAdmin):
-    pass
 
 
 @admin.register(AnimeUser)
@@ -103,44 +85,6 @@ class SettingAdmin(ModelAdmin):
     )
     # 既定は作成日時の降順（新しいものが先頭）で並べる。
     ordering = ("-created_at",)
-
-
-# ---------------------------------------------------------------------------
-# DMM TV
-# ---------------------------------------------------------------------------
-
-
-@admin.register(DmmRoom)
-class DmmRoomAdmin(RoomModelAdmin):
-    pass
-
-
-@admin.register(DmmUser)
-class DmmUserAdmin(LogicalDeletionModelAdmin):
-    list_display = ("user_name", "user_id", "is_host", "created_at", "deleted_at")
-
-
-@admin.register(DmmReaction)
-class DmmReactionAdmin(LogicalDeletionModelAdmin):
-    list_display = ("reaction_id", "reaction_type", "created_at", "deleted_at")
-
-
-@admin.register(DmmSetting)
-class DmmSettingAdmin(ModelAdmin):
-    list_display = (
-        "room",
-        "one_way",
-        "owner_leave_delete",
-        "disable_reaction",
-        "updated_at",
-    )
-    # 既定は作成日時の降順（新しいものが先頭）で並べる。
-    ordering = ("-created_at",)
-
-
-# ---------------------------------------------------------------------------
-# 認証（django.contrib.auth）
-# ---------------------------------------------------------------------------
 
 
 # django.contrib.auth の User / Group を unfold 仕様で再登録し、フォーム・変更画面の

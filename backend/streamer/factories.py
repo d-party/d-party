@@ -1,6 +1,6 @@
 import factory
 
-from .models import AnimeRoom, AnimeUser, DmmRoom, DmmSetting, DmmUser, Setting
+from .models import AnimeRoom, AnimeUser, Setting
 
 
 class AnimeRoomFactory(factory.django.DjangoModelFactory):
@@ -30,40 +30,6 @@ class SettingFactory(factory.django.DjangoModelFactory):
         model = Setting
 
     room = factory.SubFactory(AnimeRoomFactory)
-    one_way = False
-    owner_leave_delete = False
-    disable_reaction = False
-
-
-class DmmRoomFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = DmmRoom
-
-    # num_people / sum_people は実カラムではなくなった（参加ユーザーから導出する）。
-    # AnimeRoomFactory と同じく、ここでは設定しない。
-    part_id = "c7tzzizzvhuj53zhmpf9aa2c0"
-    title = factory.Faker("sentence", nb_words=3)
-    updated_at = factory.Faker("date")
-    created_at = factory.Faker("date")
-
-
-class DmmUserFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = DmmUser
-
-    user_name = factory.Faker("name")
-    user_icon = "FaRegUser"
-    room_id = factory.SubFactory(DmmRoomFactory)
-    is_host = False
-    updated_at = factory.Faker("date")
-    created_at = factory.Faker("date")
-
-
-class DmmSettingFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = DmmSetting
-
-    room = factory.SubFactory(DmmRoomFactory)
     one_way = False
     owner_leave_delete = False
     disable_reaction = False
