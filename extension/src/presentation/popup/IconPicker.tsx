@@ -2,7 +2,7 @@ import { Check } from "lucide-react";
 
 import { UserAvatar } from "@/components/UserAvatar";
 import { USER_ICON_KEYS } from "@/components/userIcons";
-import { cn } from "@/lib/utils";
+import { cn } from "@d-party/ui";
 
 /**
  * Grid of selectable avatar icons (curated react-icons / FA6 set). The selected

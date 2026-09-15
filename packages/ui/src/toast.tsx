@@ -2,7 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
 import * as React from "react";
 
-import { cn } from "@/lib/utils";
+import { cn } from "./lib/utils";
 
 const toastVariants = cva(
   "pointer-events-auto flex w-80 items-start gap-2.5 rounded-lg border p-3 text-sm shadow-2xl ring-1 backdrop-blur transition-all duration-200",

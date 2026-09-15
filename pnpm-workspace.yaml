@@ -6,6 +6,7 @@
 packages:
   - "extension"
   - "frontend"
+  - "packages/*"
 
 # pnpm 10.28 以降、package.json の "pnpm" フィールドは読まれない。
 # 設定はこのファイルへ置く（https://pnpm.io/settings）。

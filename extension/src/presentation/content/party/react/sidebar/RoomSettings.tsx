@@ -1,7 +1,7 @@
 import { Ban, Gauge, LogOut } from "lucide-react";
 
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Label } from "@d-party/ui";
+import { Switch } from "@d-party/ui";
 import type { RoomSettings as RoomSettingsValue } from "@/domain/roomSettings";
 
 /**

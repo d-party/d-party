@@ -9,7 +9,7 @@ import {
   ToastIcon,
   ToastViewport,
   type ToastVariant,
-} from "@/components/ui/toast";
+} from "@d-party/ui";
 
 import {
   sidebarWidth,

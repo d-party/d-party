@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@d-party/ui";
 import {
   type RoomSettings as RoomSettingsValue,
   DEFAULT_ROOM_SETTINGS,

@@ -1,0 +1,159 @@
+# frontend/ の成果物が実際に組み上がるかを見る。
+#
+# Frontend/CI は lint と型検査だけを見るので、Next のビルドや Dockerfile が
+# 壊れていても気づけない。ここでは**配信するもの**を作って動かす。
+name: Frontend/Build
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "frontend/**"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".github/workflows/frontend-build.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".github/workflows/frontend-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bundle:
+    name: Build the Next bundle & Storybook
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Restore the Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            turbo-${{ runner.os }}-
+
+      # Next.js のビルドキャッシュ（.next/cache）は turbo の outputs から除いて
+      # あるので別枠で持ち越す。こちらも pnpm-lock.yaml のハッシュで区切る。
+      - name: Restore the Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter d-party-frontend...
+
+      - name: Build
+        run: pnpm exec turbo run build --filter=d-party-frontend
+
+      # standalone 出力は Dockerfile がそのまま配る成果物。サーバ本体が
+      # 出ていないと、イメージは組み上がるのに起動だけが落ちる。
+      - name: Verify the standalone output
+        run: |
+          set -euo pipefail
+          test -f frontend/.next/standalone/frontend/server.js \
+            || { echo "standalone の server.js がない"; exit 1; }
+          test -d frontend/.next/static \
+            || { echo ".next/static がない"; exit 1; }
+          echo "standalone ok"
+
+      # storybook-deploy.yml は main でしかビルドしない（Pages へ公開するため）。
+      # ここでも建てて、壊れた story が main に入って公開を落とすのを防ぐ。
+      - name: Build Storybook
+        run: pnpm exec turbo run build-storybook --filter=d-party-frontend
+
+  image:
+    name: Build & smoke-test the runtime image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # 本番配信は frontend/Dockerfile（Next standalone）だが、上の bundle ジョブは
+    # pnpm を直接叩くだけでイメージを作らない。dev の compose も Dockerfile を
+    # 使わない（node イメージで pnpm dev を回す）ため、Dockerfile 側だけが壊れても
+    # どこにも引っかからない。実際に corepack 同梱の廃止と
+    # pnpm-workspace.yaml のコピー漏れの 2 件がこのすき間を通り抜けた。
+    #
+    # ビルドコンテキストがリポジトリのルートで、standalone の中身も
+    # workspace の形（standalone/frontend/server.js）になるため、ここは特に
+    # 手元の `pnpm build` では検出できない壊れ方をしやすい。
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build the runtime image
+        run: docker build -f frontend/Dockerfile -t d-party-frontend:ci .
+
+      - name: Start the container
+        run: docker run -d --name frontend-ci -p 3000:3000 d-party-frontend:ci
+
+      # standalone サーバの起動を待つ。60 秒待っても応答しなければ失敗させる。
+      - name: Wait for the server
+        run: |
+          for _ in $(seq 1 30); do
+            # 起動待ちの間の接続エラーはノイズなので捨てる。上がらなかった
+            # ときの診断は下の Container logs ステップで足りる。
+            if curl -fsS -o /dev/null http://localhost:3000/ 2>/dev/null; then
+              echo "server is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "server did not become ready in time"
+          exit 1
+
+      # ビルドが通ってもページが 500 になる壊れ方があるので、実際に引いて確認する。
+      - name: Check the pages render
+        run: |
+          for path in / /usage /qa /privacy /stats; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:3000$path")
+            echo "$path -> $code"
+            [ "$code" = "200" ] || exit 1
+          done
+          # not-found ルートが 404 を返すこと（500 との取り違えを拾う）。
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/__does_not_exist__)
+          echo "/__does_not_exist__ -> $code"
+          [ "$code" = "404" ] || exit 1
+
+      - name: Container logs
+        if: always()
+        run: docker logs frontend-ci
+
+      - name: Stop the container
+        if: always()
+        run: docker rm -f frontend-ci

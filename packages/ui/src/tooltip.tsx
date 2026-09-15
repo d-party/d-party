@@ -1,8 +1,8 @@
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import * as React from "react";
 
-import { usePortalContainer } from "@/lib/portalContainer";
-import { cn } from "@/lib/utils";
+import { usePortalContainer } from "./lib/portalContainer";
+import { cn } from "./lib/utils";
 
 const TooltipProvider = TooltipPrimitive.Provider;
 const Tooltip = TooltipPrimitive.Root;

@@ -21,7 +21,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { UserAvatar } from "@/components/UserAvatar";
 import type { HistoryIcon } from "@/domain/history";
-import { cn } from "@/lib/utils";
+import { cn } from "@d-party/ui";
 
 import type { HistoryEntry, SidebarState } from "../sidebarStore";
 import { EmptyHint } from "./panels";

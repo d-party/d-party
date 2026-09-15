@@ -18,22 +18,16 @@
     "license:check": "pnpm dlx license-checker-rseidelsohn@5.0.1 --production --excludePrivatePackages --onlyAllow \"$(grep -v '^[[:space:]]*#' license-whitelist-node.txt | grep -v '^[[:space:]]*$' | paste -sd ';')\""
   },
   "dependencies": {
-    "@radix-ui/react-accordion": "^1.2.20",
-    "@radix-ui/react-label": "^2.1.15",
+    "@d-party/ui": "workspace:*",
     "@radix-ui/react-slot": "^1.3.3",
-    "@radix-ui/react-switch": "^1.3.7",
-    "@radix-ui/react-tabs": "^1.1.21",
-    "@radix-ui/react-tooltip": "^1.2.16",
     "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
     "framer-motion": "^13.2.0",
     "lottie-react": "^3.1.2",
     "lucide-react": "^1.41.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-icons": "^5.7.0",
-    "react-use": "^17.6.1",
-    "tailwind-merge": "^3.6.0"
+    "react-use": "^17.6.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

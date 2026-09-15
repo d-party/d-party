@@ -11,6 +11,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: true,
+  // 共有 UI は TypeScript のソースのまま公開しているので、Next 側でトランスパイルする。
+  transpilePackages: ["@d-party/ui"],
 };
 
 export default nextConfig;

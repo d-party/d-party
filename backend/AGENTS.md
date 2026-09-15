@@ -149,9 +149,15 @@ uv run mypy .                 # 型検査（ダミー env が必要。下記参�
 
 ### CI（`.github/workflows/ci.yml`）
 
-ジョブ: `ruff` / `pytest` / `mypy` / `license-check` / `dockerlint` / `hadolint` /
-`dockle`。リポジトリ横断の lint（actionlint / shellcheck / yamllint）は `repo-ci.yml`、
-CodeQL は `repo-codeql.yml` が担当する。
+`backend-ci.yml`（`Backend/CI`）のジョブ: `ruff` / `pytest` / `mypy` / `license-check`。
+
+イメージ側は `backend-build.yml`（`Backend/Build`）が見る。hadolint / dockerlint で
+Dockerfile を検査し、イメージを組み、dockle にかけ、**本物の PostgreSQL / Redis に
+つないで migrate し、起動して `/api/v1/health` が 200 を返すところまで**確認する。
+ビルドが通っても起動だけ落ちる壊れ方をここで拾う。
+
+リポジトリ横断の lint（actionlint / shellcheck / yamllint）と CodeQL、reviewdog は
+`repo-ci.yml`（`Repo/CI`）が担当する。
 
 - **フォーマットは検証のみ**。違反は CI 失敗として扱い、自動コミットや force-push はしない
   （旧 `autoblack.yml` は廃止）。
@@ -165,8 +171,6 @@ CodeQL は `repo-codeql.yml` が担当する。
   SAST は flake8-bandit 相当の `S`、複雑度は mccabe 相当の `C90`（`max-complexity = 10`）と
   Pylint の `PLR09xx` が見る。そのため bandit / lizard の専用ジョブは持たない。
   taint 解析は ruff の守備範囲外なので `repo-codeql.yml`（python）が担当する。
-- `repo-review.yml`（reviewdog の PR インラインコメント）と `release.yml` は
-  別ファイルのまま。
 
 ### ghost セッションの回収
 

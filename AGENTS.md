@@ -71,10 +71,33 @@ d-party/                  ← このリポジトリ（ルート）
 
 ## pnpm workspace と Turborepo
 
-`extension/` と `frontend/` は pnpm workspace の 2 パッケージ。
-**ロックファイルはルートの `pnpm-lock.yaml` 1 本**で、両者が同じ解決結果を共有する
-（`overrides` と `onlyBuiltDependencies` も `pnpm-workspace.yaml` に集約）。
-backend は Python なので workspace の外。
+pnpm workspace は 3 パッケージ。**ロックファイルはルートの `pnpm-lock.yaml` 1 本**で、
+全員が同じ解決結果を共有する（`overrides` と `onlyBuiltDependencies` も
+`pnpm-workspace.yaml` に集約）。backend は Python なので workspace の外。
+
+| パッケージ名 | パス | 役割 |
+| --- | --- | --- |
+| `d-party-chrome-extension` | `extension/` | 拡張機能 |
+| `d-party-frontend` | `frontend/` | 公開サイト |
+| `@d-party/ui` | `packages/ui/` | 両者が共有する shadcn/ui プリミティブ |
+
+`@d-party/ui` は **TypeScript のソースのまま**公開している（ビルド成果物を持たない）。
+消費側がそれぞれトランスパイルする:
+
+- extension … rspack。pnpm の symlink を解決した実パスが `node_modules` の外に
+  なるので、ローダの `exclude: /node_modules/` に引っかからない。
+- frontend … `next.config.ts` の `transpilePackages: ["@d-party/ui"]`。
+- Tailwind … v4 は CSS のある位置からソースを自動検出するので、別パッケージは
+  見つけられない。**3 つの CSS エントリすべてに `@source` を書く**
+  （`extension/src/presentation/popup/styles.css` · `extension/src/styles/sidebar.css` ·
+  `frontend/src/app/globals.css`）。外すと共有 UI のクラスが 6KB ほど purge される。
+- Storybook … 両アプリの `.storybook/main.ts` が `packages/ui` の story も拾う。
+  テーマトークンが異なるので、同じプリミティブを popup の明るい配色と
+  サイトの暗い配色の両方で確認できる。
+
+**`button` は共有していない。** 両アプリで意図的にスタイルが違う（拡張側は hover の
+浮き上がりと押し込みの演出を持つ）ため、それぞれが `src/components/ui/button.tsx` を
+自前で持つ。`cn` は `@d-party/ui` から import する。
 
 タスクのオーケストレーションは `turbo.json`。`api:generate` → `lint` / `typecheck` /
 `build` / `build-storybook` の依存と出力キャッシュを宣言してあるので、
@@ -334,16 +357,25 @@ monorepo になったので、**backend と frontend と拡張機能にまたが
 
 | ワークフロー           | name               | 対象                                                          | paths |
 | ---------------------- | ------------------ | ------------------------------------------------------------- | ----- |
-| `backend-ci.yml`       | `Backend/CI`       | ruff · pytest · mypy · license · dockerlint · hadolint · dockle | `backend/**` |
-| `frontend-ci.yml`      | `Frontend/CI`      | turbo lint/typecheck/build/storybook · license · イメージ疎通 | `frontend/**` + workspace 設定 |
-| `extension-ci.yml`     | `Extension/CI`     | turbo lint/typecheck/build/storybook · license                | `extension/**` + workspace 設定 |
+| `backend-ci.yml`       | `Backend/CI`       | ruff · pytest · mypy · license-check                          | `backend/**` |
+| `backend-build.yml`    | `Backend/Build`    | hadolint · dockerlint · イメージ build → dockle → migrate → 起動 → API 応答 | `backend/**` |
+| `frontend-ci.yml`      | `Frontend/CI`      | 生成物の drift · typecheck · lint · license-check              | `frontend/**` `packages/**` + workspace 設定 |
+| `frontend-build.yml`   | `Frontend/Build`   | next build（standalone 出力の確認）· storybook · イメージ build → 起動 → ページ疎通 | 同上 |
+| `extension-ci.yml`     | `Extension/CI`     | 生成物の drift · typecheck · lint · license-check              | `extension/**` `packages/**` + workspace 設定 |
+| `extension-build.yml`  | `Extension/Build`  | build:prod（manifest の参照先が実在するか）· zip · storybook   | 同上 |
 | `infra-ci.yml`         | `Infra/CI`         | helm lint · helm template                                     | `infra/**` |
 | `nginx-ci.yml`         | `Nginx/CI`         | nginx テンプレートの構文チェック                               | `nginx/**` |
-| `repo-ci.yml`          | `Repo/CI`          | actionlint · shellcheck · yamllint                            | 全体  |
-| `repo-codeql.yml`      | `Repo/CodeQL`      | CodeQL（python / javascript-typescript）                       | 全体  |
-| `repo-review.yml`      | `Repo/Review`      | reviewdog（mypy / actionlint / textlint）                      | PR のみ |
+| `repo-ci.yml`          | `Repo/CI`          | actionlint · shellcheck · yamllint · CodeQL · reviewdog       | 全体  |
 | `storybook-deploy.yml` | `Storybook/Deploy` | 両 Storybook を GitHub Pages のサブパスへ公開                  | main のみ |
 | `release.yml`          | `Release`          | 統一リリース                                                   | 手動  |
+
+**`<Scope>/CI` と `<Scope>/Build` を分ける。** CI は lint と型検査とテスト、Build は
+「出荷するものが実際に組み上がって動くか」。lint が通ってもイメージが起動しない、
+バンドルが空、という壊れ方は CI だけでは拾えない。
+
+`Repo/CI` は横断の lint に加えて CodeQL と reviewdog も持つ。reviewdog のジョブは
+PR の差分へコメントするのが目的なので `if: github.event_name == 'pull_request'` で
+PR のときしか動かさない。
 
 ワークフローの `name` は `<Scope>/<Kind>` で揃えている。PR のチェック一覧で
 どの領域のものか一目で分かるようにするため。
