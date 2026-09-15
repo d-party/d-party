@@ -128,9 +128,7 @@ sudo timedatectl set-timezone Asia/Tokyo
 ```bash
 git clone https://github.com/d-party/d-party.git
 cd d-party
-# 共有基盤の yaml はサブモジュール不要（registry.yaml 等はルート管理）。
-# d-party アプリのビルド（../README.md §3.2）まで進む場合のみ submodule を取得:
-#   git submodule update --init --recursive
+# monorepo なのでクローンすればすべて揃う（サブモジュールは無い）。
 ```
 
 > 外向きポート開放は不要です。公開は Cloudflare Tunnel（cloudflared）が *outbound* で

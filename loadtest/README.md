@@ -3,7 +3,7 @@
 dアニメストア同時視聴サービスの **WebSocket（Channels）同期** を主対象とした負荷試験。
 スタック全体（nginx → django(daphne) → Redis channel layer / PostgreSQL）を、本番に近い経路で叩く。
 
-> サブモジュール規約により、この負荷試験は `backend/` ではなく**ルートリポジトリ**に置く
+> この負荷試験は `backend/` ではなく**ルート直下**に置く
 > （オーケストレーション層の関心事のため）。詳細は [`../AGENTS.md`](../AGENTS.md)。
 
 ## 何を測るか

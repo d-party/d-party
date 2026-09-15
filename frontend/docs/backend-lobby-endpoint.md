@@ -7,8 +7,8 @@
 dアニメストアのリダイレクト URL を解決するためにこの REST エンドポイントを使用します。
 これは旧 Django テンプレートビュー `web/views.py:AnimeRoomLobby` がサーバ側で行っていた処理の置き換えです。
 
-> **サブモジュール運用ルール:** このエンドポイントは `backend`（[d-party-Backend](https://github.com/d-party/d-party-Backend)）
-> リポジトリ側で別ブランチ・別 PR として実装してください。ルートリポジトリでは backend の参照 SHA のみ更新します。
+> **実装場所:** このエンドポイントは同じ monorepo の `backend/` に実装します。
+> monorepo なのでフロントエンドの変更と同じ PR に含めて構いません。
 > フロントエンド側では `openapi/openapi.json` にスキーマを定義済みで、`pnpm api:generate` でクライアント生成も完了しています。
 
 ## 仕様

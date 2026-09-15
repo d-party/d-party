@@ -5,22 +5,27 @@
 ## What this is
 
 `d-party` は **dアニメストアでの「同時視聴」** を提供するサービスです。
-このリポジトリは複数の Git サブモジュールを束ねた **疑似 monorepo** であり、
-各サービスを 1 か所からクローン・開発できるようにまとめたものです。
+このリポジトリは **monorepo** で、サーバ・拡張機能・フロントエンド・インフラ設定が
+すべてここに入っています。
 
-**重要:** このリポジトリ自身が管理するのは「サブモジュールの参照（コミット SHA）」と
-「開発環境の設定ファイル」だけです。サービスの実装コードは各サブモジュール内にあり、
-それぞれが独立したリポジトリです。
+**移行の経緯（重要）:** 以前は backend / chrome-extension / frontend を Git サブモジュールと
+して束ねた「疑似 monorepo」でした。各リポジトリの履歴を `git filter-repo` で
+サブディレクトリへ書き換えてから統合したため、**`git log` / `git blame` / `git bisect` は
+移行前まで辿れます**。旧 `chrome-extension/` は `extension/`、旧 `deploy/` は `infra/` です。
 
-## Architecture（サブモジュール構成）
+## Architecture
 
-| パス                | サービス            | スタック                                                            | 上流リポジトリ                                                                    |
-| ------------------- | ------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `backend/`          | Django バックエンド | Python 3.13 · Django 6 · Channels · DRF · PostgreSQL 16 · Redis 7 · Nginx | [backend](https://github.com/d-party/backend)                     |
-| `chrome-extension/` | Chrome 拡張機能     | Manifest V3 · TypeScript · React 19 · rspack · Tailwind CSS v4 · shadcn/ui · pnpm | [chrome-extension](https://github.com/d-party/chrome-extension) |
-| `frontend/`         | ユーザー向けフロントエンド | Next.js 15 · React 19 · TypeScript · Tailwind CSS v4 · shadcn/ui · pnpm | [frontend](https://github.com/d-party/frontend)                   |
+| パス         | 中身                       | スタック                                                                     |
+| ------------ | -------------------------- | ---------------------------------------------------------------------------- |
+| `backend/`   | Django バックエンド        | Python 3.14 · Django 6 · Channels · DRF · PostgreSQL 16 · Redis 7 · Nginx    |
+| `extension/` | ブラウザ拡張機能           | Manifest V3 · TypeScript · React 19 · rspack · Tailwind CSS v4 · shadcn/ui   |
+| `frontend/`  | ユーザー向けフロントエンド | Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 · shadcn/ui             |
+| `infra/`     | k3s (Raspberry Pi) デプロイ | Helm chart · Argo CD · rootless BuildKit                                     |
+| `loadtest/`  | WebSocket 負荷試験         | k6                                                                           |
 
-各サブモジュールとも `main` ブランチを追跡（`.gitmodules`）。
+> `extension/` はブラウザ名を含まない名前にしてある。Manifest V3 は Edge など
+> Chromium 系ブラウザでもそのまま読み込めるため。パッケージ名（`package.json` の
+> `d-party-chrome-extension`）と Chrome Web Store 上の識別子は従来どおり。
 
 ### Request / data flow
 
@@ -45,12 +50,47 @@ d-party/                  ← このリポジトリ（ルート）
   docker-compose.yml      nginx · django · frontend · postgres · redis · prometheus · grafana · cadvisor · node-exporter
   .env.global             共有 env（ドメイン・Postgres 認証情報・DEBUG・各 upstream）
   nginx/ postgres/ redis/ prometheus/ grafana/   各サービス設定（runtime data は gitignore）
-  backend/  frontend/  chrome-extension/          サブモジュール
+  package.json  pnpm-workspace.yaml  pnpm-lock.yaml  turbo.json   pnpm workspace
+  backend/  extension/  frontend/  infra/  loadtest/
 ```
 
-- django は `build.context: ./backend`、frontend は `./frontend` をビルドコンテキストにする。
+- django は `build.context: ./backend`。
+- **frontend のビルドコンテキストは `frontend/` ではなくルート**（`dockerfile: frontend/Dockerfile`）。
+  pnpm workspace のロックファイルがルートにあり、`frontend/` 単体では
+  `--frozen-lockfile` を満たせないため。dev の frontend コンテナも同じ理由で
+  リポジトリ全体をマウントする。
 - 監視系（prometheus/grafana/cadvisor/node-exporter）は compose の `metrics` profile。
   起動は `docker compose --profile metrics up -d`。
+
+## pnpm workspace と Turborepo
+
+`extension/` と `frontend/` は pnpm workspace の 2 パッケージ。
+**ロックファイルはルートの `pnpm-lock.yaml` 1 本**で、両者が同じ解決結果を共有する
+（`overrides` と `onlyBuiltDependencies` も `pnpm-workspace.yaml` に集約）。
+backend は Python なので workspace の外。
+
+タスクのオーケストレーションは `turbo.json`。`api:generate` → `lint` / `typecheck` /
+`build` / `build-storybook` の依存と出力キャッシュを宣言してあるので、
+変わっていないタスクは再実行されない。
+
+```bash
+pnpm install                    # ルートで 1 回。両パッケージぶん入る
+pnpm run api:generate           # OpenAPI から REST クライアントを生成
+pnpm run typecheck              # 両パッケージの tsc --noEmit
+pnpm run lint
+pnpm run build
+pnpm run build-storybook
+pnpm run license:check
+
+# 片方だけ
+pnpm --filter d-party-frontend run build
+turbo run lint --filter=d-party-chrome-extension
+# 変更の影響範囲だけ（CI で使える）
+turbo run lint typecheck build --filter='...[origin/main]'
+```
+
+パッケージ名は `d-party-chrome-extension`（`extension/`）と `d-party-frontend`（`frontend/`）。
+ディレクトリ名と一致しないので `--filter` で指すときは注意する。
 
 ## デプロイ（k3s / Helm / GitOps）
 
@@ -118,11 +158,10 @@ loadtest/
 docker-compose.loadtest.yml   k6 サービス（compose の loadtest profile。通常起動に非干渉）
 ```
 
-配置方針（**サブモジュール規約との関係**）:
+配置方針:
 
-- 負荷試験は**オーケストレーション層の関心事**（docker-compose / nginx / env を持つルートが対象）
-  なので、`backend/` ではなく**ルートリポジトリ**に置く。`infra/` と同じカテゴリ。
-- backend のコードではなく「走っているスタックへの外形テスト」なので、サブモジュール規約には反しない。
+- 負荷試験は**オーケストレーション層の関心事**（docker-compose / nginx / env が対象）
+  なので、`backend/` ではなくルート直下に置く。`infra/` と同じカテゴリ。
 - 負荷の本質は **ブロードキャスト増幅**: 1 ルーム N 人で 1 人の操作が `group_send` で N-1 接続へ
   配信される（O(N) ファンアウト）。単発 RPS ではなく多接続常時接続下の捌きを測る。
 - `consumers.py` の `_pending_room_deletes` は **プロセス内 dict + asyncio.Task で「単一 daphne
@@ -147,14 +186,14 @@ docker run --rm -v "$PWD/loadtest:/loadtest" -w /loadtest \
 ## backend/（Django）
 
 ```
-backend/                  ← リポジトリ直下が django プロジェクト（サブモジュール = d-party Backend）
+backend/                  ← このディレクトリ直下が django プロジェクト
   d_party/                プロジェクト設定 (settings.py, asgi.py, urls.py)
   streamer/               同時視聴の WebSocket consumers / cron / models
   api/                    DRF REST API (views, urls)
   web/                    管理者向け統計チャートのテンプレート
   pyproject.toml          uv 依存定義
   uv.lock
-  Dockerfile              python:3.13-slim + uv
+  Dockerfile              python:3.14-slim + uv（build context は ./backend）
 ```
 
 - 依存管理は **uv**（`backend/pyproject.toml`）。インフラ設定は backend には無く、ルートが持つ。
@@ -163,17 +202,21 @@ backend/                  ← リポジトリ直下が django プロジェクト
 - Lint / フォーマッタ / import 順序はすべて **ruff**（`target-version = py313`）。
   `[tool.ruff.lint] select` に `I`（isort 相当）を含むため、`ruff check` で import 順序も検査される。
   型検査は **mypy**（django-stubs / drf-stubs プラグイン）。
-- CI（上流リポジトリ側）: **`ci.yml` に集約**（ruff · pytest · mypy · license-check ·
-  bandit · pyt · CodeQL · lizard · dockerlint · hadolint · dockle · actionlint ·
-  shellcheck · yamllint）。ほかに `code-quality-review`（reviewdog で PR へインラインコメント）
-  と `release`。
+- CI は **`.github/workflows/ci-backend.yml`**（ruff · pytest · mypy · license-check ·
+  bandit · pyt · lizard · dockerlint · hadolint · dockle）。`defaults.run.working-directory`
+  が `backend` なので、各ステップは `backend/` の中で走る。`paths` フィルタにより
+  backend/ に触れた変更のときだけ起動する。
+  リポジトリ横断の lint（actionlint / shellcheck / yamllint）は `ci-repo.yml`、
+  CodeQL は `codeql.yml` へ分離した。
   PR には pytest のカバレッジが自動コメントされ、バッジ用データは
   `python-coverage-comment-action-data` ブランチに保存される（外部 SaaS 非依存）。
+- pre-commit の設定は**ルートの `.pre-commit-config.yaml`**（`files: ^backend/` で
+  backend にだけ効く）。pre-commit はフックと設定をリポジトリのルートで解決するため。
 
-## chrome-extension/（Chrome 拡張機能）
+## extension/（ブラウザ拡張機能）
 
 ```
-chrome-extension/
+extension/
   public/
     manifest.json         Manifest V3（service_worker, content_scripts）
     css/ icon/ images/    content script 用 CSS はバンドラではなく manifest の css 配列で注入
@@ -184,7 +227,7 @@ chrome-extension/
     application/          ユースケース・ポート（RoomSession / ports / ActionGuard）
     infrastructure/       外部 I/O（ws/ · storage/ · notifier/ · api/ · env.ts）
     presentation/         注入対象ごとのエントリ（background / content / popup）
-    components/ui/        shadcn コンポーネント（frontend と共通）
+    components/ui/        shadcn コンポーネント（frontend と同じものを各自が持つ。共有化はしていない）
   rspack.config.ts        エントリ: background · content-store · content-party · content-version · popup
   orval.config.ts  openapi/  tsconfig.json  eslint.config.mjs
   dist/                   ビルド成果物（chrome://extensions で読み込む対象）
@@ -200,8 +243,11 @@ chrome-extension/
 - 対象サイト: `https://animestore.docomo.ne.jp/animestore/*` および
   `https://anime.dmkt-sp.jp/animestore/*`、ロビーは `https://d-party.net/anime-store/lobby/*`
   （dev は `http://localhost/anime-store/lobby/*`）。
-- CI（上流リポジトリ側）: ci（lint · typecheck · build · storybook）· codeql-analysis ·
-  license-check · storybook · release。
+- CI は frontend と共通の **`.github/workflows/ci-node.yml`**（turbo 経由で
+  lint · typecheck · build · storybook · license-check）。Storybook の Pages 公開は
+  `storybook.yml` が両パッケージぶんをまとめて 1 回でデプロイする
+  （GitHub Pages は 1 リポジトリ 1 サイトなので、`/extension/` と `/frontend/` の
+  サブパスに分けている）。
 
 ## frontend/（Next.js）
 
@@ -209,25 +255,28 @@ chrome-extension/
 frontend/
   src/
     app/                 App Router（layout / page / usage / anime-store/lobby/[roomId] / not-found）
-    components/ui/        shadcn コンポーネント（chrome-extension と共通）
+    components/ui/        shadcn コンポーネント（extension と同じものを各自が持つ）
     infrastructure/       env.ts（接続先）・api/（orval 生成 REST クライアント）
     lib/utils.ts          cn()
-  openapi/openapi.json    REST スキーマ（chrome-extension と同期 + lobby エンドポイント）
-  Dockerfile              Next standalone 配信
+  openapi/openapi.json    REST スキーマ（extension と同期 + lobby エンドポイント）
+  Dockerfile              Next standalone 配信（build context は**ルート**）
 ```
 
-- 旧 Django テンプレート（ランディング / 使い方 / ルーム遷移ロビー / 404）を **Next.js 15（App Router）+ Turbopack**
-  に移行したユーザー向け公開ページ。技術スタック・UIコンポーネントは chrome-extension と共通化。
-- 依存管理は **pnpm**、ビルドは Turbopack（`pnpm dev` / `pnpm build`）。
+- 旧 Django テンプレート（ランディング / 使い方 / ルーム遷移ロビー / 404）を **Next.js（App Router）+ Turbopack**
+  に移行したユーザー向け公開ページ。技術スタック・UI コンポーネントは extension と揃えてある。
+- ビルドは Turbopack（`pnpm dev` / `pnpm build`）。
 - ルーム遷移 `/anime-store/lobby/[roomId]` は拡張機能の `.chrome_extension_field` DOM 契約を維持しつつ、
-  `room_id → リダイレクト URL` を新バックエンド API `GET /api/v1/anime-store/lobby/{room_id}` で解決する
-  （backend サブモジュール側に別途実装が必要。`frontend/docs/backend-lobby-endpoint.md` 参照）。
+  `room_id → リダイレクト URL` を backend の `GET /api/v1/anime-store/lobby/{room_id}` で解決する
+  （`frontend/docs/backend-lobby-endpoint.md` 参照）。
 - 接続先は `src/infrastructure/env.ts`（`NEXT_PUBLIC_*` で上書き、既定 `localhost`）。
+- **Dockerfile のビルドコンテキストはルート**。workspace 配下でビルドすると Next の
+  `outputFileTracingRoot` がワークスペースのルートになり、standalone の中身が
+  `standalone/frontend/server.js` + `standalone/node_modules` という形になる。
+  runner のレイアウトと `CMD` もそれに合わせてある。
 
 ## 開発フロー（GitHub Flow）
 
 このプロジェクトは **GitHub Flow** を採用する（旧 Git Flow から移行済み。`develop` は廃止）。
-ルート・各サブモジュールとも同じ運用ルール:
 
 1. `main` は常にデプロイ可能な状態を保つ。
 2. すべての変更は `main` から短命なブランチを切る（命名は `feature/*` · `fix/*` ·
@@ -236,48 +285,77 @@ frontend/
    `main` へ直接コミットしない。
 4. マージ済みブランチは削除する。
 5. **リリースは `main` から tag を切って行う**（長命なリリースブランチは作らない）。
-   - backend / chrome-extension とも `release` ワークフロー（`workflow_dispatch`）で
-     バージョン tag と GitHub Release を発行する。
 6. CI のトリガ・Dependabot の `target-branch` はすべて `main`（`develop` は参照しない）。
+
+monorepo になったので、**backend と frontend と拡張機能にまたがる変更も 1 本の PR で出す**。
+以前のように「サブモジュールごとに PR を出し、マージ順を揃え、最後に参照を bump する」
+必要はない。
 
 詳細な貢献手順は [CONTRIBUTING.md](CONTRIBUTING.md) を参照。
 
-## サブモジュール運用ルール（最重要）
+## monorepo としての約束ごと
 
-1. **サービスのコード変更は必ず該当サブモジュール内で行う。**
-   `cd backend` または `cd chrome-extension` してからブランチを切り、各上流リポジトリへ PR を出す。
-2. このルートリポジトリでは **サブモジュールの参照（SHA）と開発設定のみ** をコミットする。
-3. **サブモジュール参照（SHA）のバンプは基本的にリリース作業の一環として実施する。**
-   日常の作業では都度バンプする必要はなく、気にしなくてよい。
-   参照を進める必要が生じたときは、ルート側で更新してコミットする:
+1. **どのディレクトリのコードも、このリポジトリで直接変更してコミットする。**
+   サブモジュールは無くなったので `git submodule` 系のコマンドは一切使わない。
+2. **JS の依存は必ずルートで入れる。** `cd frontend && pnpm install` のような
+   パッケージ内での install はしない（workspace 全体が再解決され、ロックファイルが
+   意図せず動く）。追加は `pnpm --filter <pkg> add <dep>`。
+3. **ロックファイルはルートの `pnpm-lock.yaml` 1 本だけ。** パッケージの下に
+   `pnpm-lock.yaml` や `pnpm-workspace.yaml` を作らない。
+4. **CI のワークフローはルートの `.github/workflows/` にしか置けない。**
+   GitHub は入れ子の `.github/workflows/` を読まない。
+5. バージョンは全パッケージで揃える。`release` ワークフローが
+   `backend/pyproject.toml` · `extension/package.json` ·
+   `extension/public/manifest.json` · `frontend/package.json` · ルートの
+   `package.json` を同じ値へ書き換え、タグを 1 本打つ。手で個別に上げない。
 
-   ```bash
-   git submodule update --remote --merge        # 追跡ブランチ(main)の最新へ
-   git add backend chrome-extension
-   git commit -m "chore: bump submodules"
-   ```
+## CI
 
-4. クローン直後にサブモジュールが空なら:
+ワークフローはルートの `.github/workflows/` に集約。`paths` フィルタで、触った
+ディレクトリに対応するものだけが回る。
 
-   ```bash
-   git submodule update --init --recursive
-   ```
+| ワークフロー              | 対象                                                          | paths          |
+| ------------------------- | ------------------------------------------------------------- | -------------- |
+| `ci-backend.yml`          | ruff · pytest · mypy · license · bandit · pyt · lizard · hadolint · dockle | `backend/**` |
+| `ci-node.yml`             | turbo lint/typecheck/build/storybook · license · イメージ疎通 | `extension/**` `frontend/**` workspace 設定 |
+| `ci-repo.yml`             | actionlint · shellcheck · yamllint · helm lint/template       | 全体           |
+| `codeql.yml`              | CodeQL（python / javascript-typescript）                       | 全体           |
+| `nginx.yml`               | nginx テンプレートの構文チェック                               | `nginx/**`     |
+| `storybook.yml`           | 両 Storybook を GitHub Pages のサブパスへ公開                  | main のみ      |
+| `code-quality-review.yml` | reviewdog（mypy / actionlint / textlint）                      | PR のみ        |
+| `release.yml`             | 統一リリース                                                   | 手動           |
 
-5. **ルートリポジトリで `backend/` や `chrome-extension/` 内のファイルを直接書き換えて
-   コミットしようとしない。** 変更はサブモジュール側のコミットとして扱うこと。
+## リリース
+
+`release` ワークフロー（`workflow_dispatch`）1 本で完結する。
+
+1. ルートの最新タグ `vX.Y.Z` と `bump_type` から次のバージョンを決める。
+2. 5 ファイルの version を書き換えて main へ 1 コミット、タグを打ち、GitHub Release を作る。
+3. backend / frontend を **arm64 ネイティブ**でビルドし、`ghcr.io/d-party/backend:vX.Y.Z` /
+   `ghcr.io/d-party/frontend:vX.Y.Z` へ push する。Raspberry Pi の k3s では
+   argocd-image-updater がこの semver タグを拾い、Argo CD がローリング更新する。
+4. 拡張機能をビルドして zip を Release に添付し、Chrome Web Store へ upload する
+   （`publish` 入力が true のときだけ公開まで行う）。
+
+モノレポ化前は root が各サブモジュールの `release` を workflow_dispatch で起動して
+待つ方式で、そのために GitHub App（`APP_ID` / `APP_PRIVATE_KEY`）へ他リポジトリの
+Actions:write を持たせていた。**それは不要になった。**
+
+代わりに **GHCR の 2 パッケージへ `d-party/d-party` の Write を 1 度だけ付ける**必要が
+ある（Package settings → Manage Actions access → Add repository）。もとは
+`d-party/backend` · `d-party/frontend` リポジトリからしか push できないため。
+イメージ名を変えないことで `infra/helm` の values と Argo CD 側は無改修で済む。
 
 ## Common commands
 
 ### スタック全体（このルートで実行）
 
-docker-compose はルートにある（backend サブモジュールは django 単体）。
-
 ```bash
 # 初回起動（migrate + collectstatic）
 docker compose build --no-cache
 docker compose up -d
-# migration ファイルは backend リポジトリにコミット済みなので migrate のみでよい
-# （モデル変更時だけ backend サブモジュール側で makemigrations して生成物をコミットする）
+# migration ファイルはコミット済みなので migrate のみでよい
+# （モデル変更時だけ backend/ で makemigrations して生成物をコミットする）
 docker compose exec django python manage.py migrate
 docker compose exec django python manage.py collectstatic
 
@@ -289,38 +367,51 @@ docker compose logs -f django
 docker compose --profile metrics up -d
 ```
 
-### backend 単体（`cd backend`, uv）
+### backend（`cd backend`, uv）
 
 ```bash
-# backend は django 単体。コンテナ無しで uv だけでも動かせる。
 cd backend
 uv sync
 uv run pytest                 # conftest が InMemoryChannelLayer を使うため Redis 不要（DB は要 PostgreSQL）
+uv run mypy .
+uv run ruff format --check . && uv run ruff check .   # CI と同じゲート
 uv run pip-licenses
 ```
 
-### chrome-extension（`cd chrome-extension`）
+### extension / frontend（ルートで実行）
 
 ```bash
-pnpm install
-pnpm build                    # dev ビルド（localhost 向け）→ dist/
-D_PARTY_ENV=production pnpm build   # 本番ビルド（d-party.net 向け）。= pnpm build:prod
-pnpm dev                      # rspack --watch
+pnpm install                  # ルートで 1 回。両パッケージぶん入る
 
-pnpm typecheck && pnpm lint   # CI と同じゲート
-pnpm api:generate             # openapi/openapi.json から REST クライアントを再生成
-pnpm storybook                # UI コンポーネントの確認
+# 拡張機能
+pnpm --filter d-party-chrome-extension run build        # dev ビルド（localhost 向け）→ extension/dist/
+pnpm --filter d-party-chrome-extension run build:prod   # 本番ビルド（d-party.net 向け）
+pnpm --filter d-party-chrome-extension run dev          # rspack --watch
+# chrome://extensions →「パッケージ化されていない拡張機能を読み込む」→ extension/dist/ を指定
 
-# chrome://extensions →「パッケージ化されていない拡張機能を読み込む」→ dist/ を指定
+# フロントエンド
+pnpm --filter d-party-frontend run dev
+pnpm --filter d-party-frontend run build
+
+# 両方まとめて（CI と同じゲート）
+pnpm run api:generate && pnpm run typecheck && pnpm run lint && pnpm run build
+```
+
+### インフラ（Helm）
+
+```bash
+helm lint infra/helm/d-party
+helm template d-party infra/helm/d-party | less
 ```
 
 ## ローカル CI（act）
 
-各サブモジュールとも GitHub Actions を持つ。Dev Container には `act` が入っているので、
-各サブモジュールディレクトリで `act` を実行すればローカルでワークフローを再現できる。
+Dev Container には `act` が入っている。ワークフローがルートに集約されたので、
+リポジトリのルートで実行する。
 
 ```bash
-cd backend && act push        # backend のワークフローを実行
+act push -W .github/workflows/ci-backend.yml
+act pull_request -W .github/workflows/ci-node.yml
 ```
 
 ## 動作確認 URL（ローカル backend 起動時）

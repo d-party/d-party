@@ -1,6 +1,6 @@
 # AGENTS.md — d-party Backend
 
-このサブモジュール（`d-party-Backend`）で作業する AI エージェント・開発者向けのガイドです。
+monorepo の `backend/` パッケージで作業する AI エージェント・開発者向けのガイドです。
 ルートの [`../AGENTS.md`](../AGENTS.md) も併せて参照してください。
 
 ## What this is
@@ -212,8 +212,16 @@ docker compose exec django python manage.py close_active_sessions
   `disable_reaction` は配信・永続化を行わない（自分の表示はクライアント側担保）。`room_setting`
   はサーバ push（join/create/更新時）で配布し、クライアント発の read は設けない。
 
-## サブモジュール運用
+## monorepo の中での位置づけ
 
-このディレクトリは独立した Git リポジトリ（`d-party-Backend`）です。変更はここで
-ブランチを切り、上流へ PR を出してください。ルート monorepo 側は参照 SHA のみ管理します。
+かつては独立した Git リポジトリ（`d-party/backend`）でしたが、履歴ごと monorepo へ
+統合済みです。変更はリポジトリのルートでブランチを切り、`d-party/d-party` へ PR を
+出してください。frontend や拡張機能にまたがる変更も 1 本の PR で構いません。
+
+- CI は `../.github/workflows/ci-backend.yml`（このディレクトリを
+  `working-directory` にして走る）。
+- pre-commit の設定はルートの `../.pre-commit-config.yaml`（`files: ^backend/`）。
+  `pre-commit install` はリポジトリのルートで実行します。
+- docker compose・nginx・env などのオーケストレーションは従来どおりルートが持ちます。
+
 詳細は [`../AGENTS.md`](../AGENTS.md) を参照。

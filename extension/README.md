@@ -1,8 +1,14 @@
 # d-party Chrome Extension
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/d-party/d-party-Chrome-Extensions/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/d-party/d-party/blob/main/extension/LICENSE)
 
-dアニメストアで『同時視聴』を実現する d-party の Chrome 拡張機能（Manifest V3 / TypeScript）。
+dアニメストアで『同時視聴』を実現する d-party のブラウザ拡張機能（Manifest V3 / TypeScript）。
+Manifest V3 なので Edge など Chromium 系ブラウザでも読み込めます。
+
+> d-party monorepo の `extension/`（旧 `chrome-extension/`）パッケージです。開発の全体像は
+> リポジトリのルートの [README.md](../README.md) / [AGENTS.md](../AGENTS.md) を参照してください。
+> 依存のインストールとビルドは**ルートで** `pnpm install` してから
+> `pnpm --filter d-party-chrome-extension run build` します。
 
 ## スタック
 
@@ -32,7 +38,7 @@ pnpm storybook        # UI コンポーネントカタログ
 
 UI コンポーネントのカタログを Storybook で公開しています（`main` へのマージ時に GitHub Pages へ自動デプロイ）。
 
-- 公開先: <https://d-party.github.io/chrome-extension/>
+- 公開先: <https://d-party.github.io/d-party/extension/>
 - ローカル: `pnpm storybook`（http://localhost:6006）
 
 ### 接続先の設定

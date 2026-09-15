@@ -1,13 +1,13 @@
 # d-party Backend
 
-[![CI](https://github.com/d-party/backend/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/d-party/backend/actions/workflows/ci.yml)
-[![Code Quality Review](https://github.com/d-party/backend/actions/workflows/code-quality-review.yml/badge.svg)](https://github.com/d-party/backend/actions/workflows/code-quality-review.yml)
+[![CI](https://github.com/d-party/d-party/actions/workflows/ci-backend.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/ci-backend.yml)
+[![Code Quality Review](https://github.com/d-party/d-party/actions/workflows/code-quality-review.yml/badge.svg)](https://github.com/d-party/d-party/actions/workflows/code-quality-review.yml)
 
-[![Coverage badge](https://raw.githubusercontent.com/d-party/backend/python-coverage-comment-action-data/badge.svg)](https://htmlpreview.github.io/?https://github.com/d-party/backend/blob/python-coverage-comment-action-data/htmlcov/index.html)
+[![Coverage badge](https://raw.githubusercontent.com/d-party/d-party/python-coverage-comment-action-data/badge.svg)](https://htmlpreview.github.io/?https://github.com/d-party/d-party/blob/python-coverage-comment-action-data/htmlcov/index.html)
 [![Website](https://img.shields.io/website?label=d-party.net&up_message=online&url=https%3A%2F%2Fd-party.net)](https://d-party.net)
 [![Security Headers](https://img.shields.io/security-headers?url=https%3A%2F%2Fd-party.net)](https://securityheaders.com/?q=https%3A%2F%2Fd-party.net&followRedirects=on)
 [![Mozilla HTTP Observatory Grade](https://img.shields.io/mozilla-observatory/grade/d-party.net?publish)](https://observatory.mozilla.org/analyze/d-party.net)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/d-Party/d-Party-Backend/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/d-party/d-party/blob/main/backend/LICENSE)
 [![room-par-day](https://img.shields.io/endpoint?url=https://d-party.net/api/shields/room-par-day)](https://d-party.net)
 [![user-par-day](https://img.shields.io/endpoint?url=https://d-party.net/api/shields/user-par-day)](https://d-party.net)
 
@@ -18,6 +18,10 @@
 [![Nginx](https://img.shields.io/badge/-Nginx-5.svg?logo=nginx&style=flat)](https://www.nginx.co.jp/)
 [![Redis](https://img.shields.io/badge/Redis:7-511.svg?logo=redis&style=flat)](https://redis.io/)
 [![uv](https://img.shields.io/badge/uv-managed-DE5FE9.svg?logo=uv&style=flat)](https://docs.astral.sh/uv/)
+
+> d-party monorepo の `backend/` パッケージです。開発の全体像はリポジトリのルートの
+> [README.md](../README.md) / [AGENTS.md](../AGENTS.md) を参照してください。
+> docker compose・nginx・env などのオーケストレーションはルートが持ちます。
 
 d-Party のバックエンド部分を担当するフォルダ
 
@@ -197,4 +201,4 @@ Chrome 130+ で塞がれているためです。
 
 #### リポジトリ
 
-- [d-party/d-party-Chrome-Extensions](https://github.com/d-party/d-party-Chrome-Extensions)
+- 拡張機能: 同じ monorepo の [`../extension/`](../extension/README.md)

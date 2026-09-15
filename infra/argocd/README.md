@@ -29,9 +29,10 @@ syncPolicy.automated: prune: true / selfHeal: true。ServerSideApply=true。
 ignoreDifferences: StatefulSet の volumeClaimTemplates 補完フィールドを無視（下記参照）。
 image-updater 注釈: image-list に backend/frontend、update-strategy: semver、 *.helm.image-tag で書き戻し先を指定。
 構築時に踏んだ要注意ポイント（恒久対処済み）
-repo-server のサブモジュール取得失敗 .gitmodules が SSH URL（git@github.com:...）のため、Argo CD repo-server が submodule clone で Permission denied (publickey) → manifest 生成不可。 chart はサブモジュール不要なので submodule 取得を無効化して解消:
+repo-server のサブモジュール取得失敗（モノレポ化で解消済み） かつては .gitmodules が SSH URL（git@github.com:...）だったため、Argo CD repo-server が submodule clone で Permission denied (publickey) → manifest 生成不可になっていた。サブモジュールを廃止して monorepo にしたので、この問題自体が無くなった。新しくクラスタを組む場合 ARGOCD_GIT_MODULES_ENABLED の設定は不要（既存クラスタに残っていても害はない）:
 
-kubectl -n argocd set env deploy/argocd-repo-server ARGOCD_GIT_MODULES_ENABLED=false
+# もはや不要:
+# kubectl -n argocd set env deploy/argocd-repo-server ARGOCD_GIT_MODULES_ENABLED=false
 image-updater のバージョン選定 最新の v1.x は CRD ベース（ImageUpdater CR を処理）に刷新されており、本 repo の 設計が前提とする Application 注釈方式が効かない（"No ImageUpdater CRs to process"）。 注釈方式の v0.18.0 を採用し、applications_api: kubernetes（argocd-server トークン 不要・Application CR を直接読み書き）で運用する。
 
 postgres StatefulSet が恒久 OutOfSync API サーバが volumeClaimTemplates に apiVersion / kind / status / spec.volumeMode を補完するため、Argo CD が差分を誤検出（kubectl diff / argocd app diff では空）。 redis は emptyDir（VCT なし）なので無関係。ignoreDifferences で補完フィールドのみ無視。

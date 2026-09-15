@@ -1,13 +1,14 @@
 # Contributing to d-party
 
-d-party は複数の Git サブモジュールを束ねた **疑似 monorepo** です。
+d-party は **monorepo** です。サーバ・拡張機能・フロントエンド・インフラ設定が
+すべてこの 1 リポジトリに入っています。
 貢献の前にこのドキュメントとルートの [AGENTS.md](AGENTS.md) を読んでください。
 
 ## 目次
 
 - [リポジトリ構成](#リポジトリ構成)
 - [開発フロー](#開発フロー)
-- [サブモジュールでの作業](#サブモジュールでの作業)
+- [monorepo での作業](#monorepo-での作業)
 - [ブランチ命名](#ブランチ命名)
 - [コミットメッセージ](#コミットメッセージ)
 - [開発環境のセットアップ](#開発環境のセットアップ)
@@ -16,13 +17,22 @@ d-party は複数の Git サブモジュールを束ねた **疑似 monorepo** �
 
 ## リポジトリ構成
 
-| パス                | サービス            | 上流リポジトリ                                                                    |
-| ------------------- | ------------------- | --------------------------------------------------------------------------------- |
-| `backend/`          | Django バックエンド | [backend](https://github.com/d-party/backend)                     |
-| `chrome-extension/` | Chrome 拡張機能     | [chrome-extension](https://github.com/d-party/chrome-extension) |
+| パス         | 中身                       |
+| ------------ | -------------------------- |
+| `backend/`   | Django バックエンド        |
+| `extension/` | ブラウザ拡張機能           |
+| `frontend/`  | ユーザー向けフロントエンド |
+| `infra/`     | k3s (Raspberry Pi) デプロイ設定 |
+| `loadtest/`  | k6 による WebSocket 負荷試験 |
+| ルート直下   | docker compose · nginx · postgres · redis · prometheus · grafana の設定 |
 
-**このルートリポジトリが管理するのは、サブモジュールの参照と開発環境の設定のみです。**
-サービスの実装コードは各サブモジュール（上流リポジトリ）にあります。
+> かつては backend / chrome-extension / frontend を Git サブモジュールとして束ねた
+> 「疑似 monorepo」でした。各リポジトリの履歴ごと取り込んで統合済みです。
+> 旧 `chrome-extension/` は `extension/`、旧 `deploy/` は `infra/` です。
+> `git submodule` 系のコマンドはもう使いません。
+
+`extension/` と `frontend/` は **pnpm workspace** の 2 パッケージで、
+ロックファイルはルートの `pnpm-lock.yaml` 1 本です。
 
 ---
 
@@ -39,44 +49,70 @@ d-party は複数の Git サブモジュールを束ねた **疑似 monorepo** �
 
 ---
 
-## サブモジュールでの作業
+## monorepo での作業
 
-**サービスのコードを変更する場合は、必ず該当サブモジュール内で作業します。**
+サーバとフロントエンドと拡張機能にまたがる変更も、**1 本のブランチ・1 本の PR**で出します。
 
 ```bash
-# 1. サブモジュールに入り、最新の main を取得
-cd backend
 git checkout main
 git pull
-
-# 2. 作業ブランチを切る
 git checkout -b feature/your-change
 
-# 3. 変更・コミット・プッシュ（上流リポジトリへ）
+# どのディレクトリも直接編集してよい
+$EDITOR backend/streamer/consumers.py
+$EDITOR extension/src/application/RoomSession.ts
+
 git commit -m "feat: ..."
 git push -u origin feature/your-change
-# → 上流リポジトリ (backend) で PR を出す
+# → d-party/d-party で PR を出す
 ```
 
-サブモジュールのコミットが進んだら、ルートリポジトリ側で参照を更新します。
+### 気をつけること
+
+- **JS の依存は必ずリポジトリのルートで入れる。**
+  `cd frontend && pnpm install` のようなパッケージ内での install はしないでください
+  （workspace 全体が再解決され、ロックファイルが意図せず動きます）。
+
+  ```bash
+  pnpm install                                   # 全体
+  pnpm --filter d-party-frontend add some-lib    # frontend へ依存を追加
+  ```
+
+- **ロックファイルはルートの `pnpm-lock.yaml` 1 本だけ。**
+  パッケージの下に `pnpm-lock.yaml` や `pnpm-workspace.yaml` を作らないでください。
+
+- **ワークフローはルートの `.github/workflows/` にしか置けない。**
+  GitHub は入れ子の `.github/workflows/` を読みません。
+
+- **バージョンは手で上げない。**
+  `release` ワークフローが全パッケージを同じ値へ揃えてタグを打ちます。
+
+### PR を出す前に回すゲート
+
+CI と同じものを手元で回せます。
 
 ```bash
-cd ..                                   # monorepo ルートへ
-git add backend                         # 進めたサブモジュールの参照を追加
-git commit -m "chore: bump backend submodule"
+# extension + frontend（turbo が変更のないタスクは飛ばす）
+pnpm run api:generate && pnpm run typecheck && pnpm run lint && pnpm run build
+
+# backend
+cd backend
+uv run ruff format --check . && uv run ruff check .
+uv run mypy .
+uv run pytest
+
+# インフラ（chart を触ったとき）
+helm lint infra/helm/d-party
 ```
 
-全サブモジュールを追跡ブランチ（`main`）の最新へ揃える場合:
-
-```bash
-git submodule update --remote --merge
-```
+`pre-commit install` を一度しておくと、backend の ruff と基本的な整形が
+コミット時に自動で走ります（ルートで実行してください）。
 
 ---
 
 ## ブランチ命名
 
-各サブモジュール内で以下の規則を用います（小文字 kebab-case）。
+小文字 kebab-case。
 
 | 目的         | パターン                      | 例                        |
 | ------------ | ----------------------------- | ------------------------- |
@@ -101,6 +137,9 @@ refactor:  バグ修正でも機能追加でもないコード変更
 ci:        CI/CD 設定の変更
 ```
 
+monorepo なので、どこを触ったかが分かるようスコープを付けると読みやすくなります
+（例: `feat(extension): ...` / `fix(backend): ...` / `ci: ...`）。
+
 ---
 
 ## 開発環境のセットアップ
@@ -108,15 +147,16 @@ ci:        CI/CD 設定の変更
 詳細は [README.md](README.md) を参照。最小手順:
 
 ```bash
-# サブモジュールごとクローン
-git clone --recurse-submodules git@github.com:d-party/d-party.git
+git clone git@github.com:d-party/d-party.git
 cd d-party
 
-# すでにクローン済みなら
-git submodule update --init --recursive
+pnpm install              # extension + frontend
+(cd backend && uv sync)   # backend
+pre-commit install        # ルートで実行する
 
-# バックエンドを起動（初回は README の migrate 手順を参照）
-cd backend && docker compose up -d
+# スタックを起動（初回は README の migrate 手順を参照）
+docker compose up -d
 ```
 
-推奨: `.devcontainer/` の Dev Container を使うと必要なツールが一括で揃います。
+推奨: `.devcontainer/` の Dev Container を使うと必要なツールが一括で揃い、
+上の 3 つのセットアップコマンドも自動で走ります。

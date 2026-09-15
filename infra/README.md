@@ -423,12 +423,13 @@ curl -s  "$URL/api/v1/extension/version/" | jq  # スキーマ通り返るか
 npx -y wscat -c "${URL/https/wss}/anime-store/party/?room_id=test"
 # 接続後、streamer/format.py の create_room ペイロードを送って疎通
 
-# (d) Chrome 拡張から繋ぐ（実ブラウザで体験確認）
-#   chrome-extension/src/infrastructure/env.ts を一時的に書き換える:
+# (d) 拡張機能から繋ぐ（実ブラウザで体験確認）
+#   extension/src/infrastructure/env.ts を一時的に書き換える:
 #     D_PARTY_BACKEND_HOST     = "<random>.trycloudflare.com"
 #     D_PARTY_BACKEND_PROTOCOL = "https://"
 #     D_PARTY_WEBSOCKET_PROTOCOL = "wss://"
-#   → `pnpm build` → chrome://extensions で dist/ を再読込
+#   → ルートで `pnpm --filter d-party-chrome-extension run build`
+#   → chrome://extensions で extension/dist/ を再読込
 ```
 
 ### 5.6 グレースフル更新の検証（核心）
@@ -516,13 +517,7 @@ kubectl create namespace argocd
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 kubectl -n argocd rollout status deploy/argocd-server --timeout=5m
 
-# 2) サブモジュール fetch を無効化（このリポジトリは backend/chrome-extension/
-#    frontend を SSH サブモジュールで持つため、Argo CD repo-server が clone に
-#    失敗する。chart 描画にサブモジュールは不要なので無効化する）
-kubectl -n argocd set env deploy/argocd-repo-server ARGOCD_GIT_MODULES_ENABLED=false
-kubectl -n argocd rollout status deploy/argocd-repo-server --timeout=60s
-
-# 3) UI を見る場合（任意。CLI でも完結する）
+# 2) UI を見る場合（任意。CLI でも完結する）
 kubectl -n argocd get secret argocd-initial-admin-secret \
   -o jsonpath='{.data.password}' | base64 -d ; echo
 kubectl -n argocd port-forward svc/argocd-server 8081:443
@@ -623,7 +618,7 @@ kubectl delete ns argocd
 
 | 事象 | 原因 | 回避 |
 |---|---|---|
-| `ComparisonError: Permission denied (publickey)` / `clone of git@github.com:d-party/backend.git failed` | repo-server がサブモジュールを SSH で clone しようとして失敗 | `kubectl -n argocd set env deploy/argocd-repo-server ARGOCD_GIT_MODULES_ENABLED=false` |
+| `ComparisonError: Permission denied (publickey)` / `clone of git@github.com:d-party/backend.git failed` | **モノレポ化で解消済み。** 以前はこのリポジトリが backend / chrome-extension / frontend を SSH のサブモジュールで持っており、repo-server がその clone に失敗していた | サブモジュールは無くなったので対処不要。古い repo-server に `ARGOCD_GIT_MODULES_ENABLED=false` が残っていても害はない |
 | `waiting for healthy state of networking.k8s.io/Ingress/d-party` から進まない | k3d を `--disable=servicelb` で起動しているため `LoadBalancer` Service が pending、Ingress に IP が付かず Argo CD が Unhealthy 判定 | `ingress.enabled=false` のまま検証する（HTTP 検証は `kubectl port-forward svc/d-party-nginx 8080:80` で代替）。本番 Pi では `--disable=servicelb` を外す |
 | `valuesObject` を patch しても古い render が残り `OutOfSync` が振動する | 進行中の sync 操作が古い snapshot で動いている | `kubectl -n argocd patch application d-party --type merge -p '{"operation":null}'` で in-flight op をクリア → `argocd.argoproj.io/refresh: hard` で再 sync |
 | `applicationsets.argoproj.io` CRD 適用時に `Too long: may not be more than 262144 bytes` の警告 | `kubectl apply` の annotation 上限に当たるだけ。`Application` CRD は別物で問題なし | 単一 `Application` 運用では無視可。`ApplicationSet` を使う場合は `kubectl apply --server-side -f ...` |

@@ -88,7 +88,7 @@ Satori（`next/og`）の制約でカードは**インラインスタイル + fle
    ページはこの要素を必ずレンダリングし、1秒間隔でポーリングする。**クラス名・ポーリング挙動を変えないこと。**
 2. **room_id 解決**: `room_id → dアニメストアのリダイレクト URL` は新バックンド API
    `GET /api/v1/anime-store/lobby/{room_id}` で解決する（旧 Django `web/views.py:AnimeRoomLobby` のサーバ側生成を置換）。
-   このエンドポイントは **backend サブモジュール側で別途実装が必要**。仕様は
+   このエンドポイントは **backend 側の実装が必要**（同じリポジトリの `../backend/`）。仕様は
    [docs/backend-lobby-endpoint.md](./docs/backend-lobby-endpoint.md)。`openapi/openapi.json` に定義済みで
    `pnpm api:generate` でクライアント生成済み。
 3. リダイレクト判定: `"true"`→ dアニメストアへ / `"false"`→（旧: webstore 自動遷移）**選択 UI** / 30秒無応答 →（旧: webstore 自動遷移）**選択 UI**。

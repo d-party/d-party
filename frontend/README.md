@@ -2,8 +2,14 @@
 
 dアニメストアで「同時視聴」を実現する **d-party** のユーザー向けフロントエンドです。
 旧 Django テンプレート（ランディング / 使い方 / ルーム遷移ロビー / 404）を **Next.js (App Router)** ベースに
-移行したもので、技術スタックと UI コンポーネントは [d-party Chrome 拡張機能](https://github.com/d-party/d-party-Chrome-Extensions)
+移行したもので、技術スタックと UI コンポーネントは [d-party の拡張機能](../extension/README.md)
 と共通化しています。
+
+
+> d-party monorepo の `frontend/` パッケージです。開発の全体像はリポジトリのルートの
+> [README.md](../README.md) / [AGENTS.md](../AGENTS.md) を参照してください。
+> 依存のインストールは**ルートで** `pnpm install`、ビルドは
+> `pnpm --filter d-party-frontend run build` です。
 
 ## スタック
 
@@ -87,4 +93,4 @@ monorepo（d-party ルート）の Compose では dev / prod で `NEXT_PUBLIC_*`
 - 拡張機能の `content-version` スクリプトが `https://d-party.net/anime-store/lobby/*` を match し、
   `.chrome_extension_field` 要素に互換性判定（`true`/`false`）を書き込みます。**この DOM 契約は維持しています。**
 - `room_id → dアニメストアのリダイレクト URL` の解決は、新しいバックエンド API
-  `GET /api/v1/anime-store/lobby/{room_id}` に委譲します（backend サブモジュール側の追加が必要）。
+  `GET /api/v1/anime-store/lobby/{room_id}` に委譲します（同じリポジトリの `../backend/` 側の追加が必要）。

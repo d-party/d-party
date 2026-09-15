@@ -161,7 +161,7 @@ dアニメストアの利用規約に従ってください。本サービス独�
 本ポリシーに関するお問い合わせは、以下までお願いします。
 
 - GitHub: <https://github.com/d-party>
-- リポジトリの Issue: <https://github.com/d-party/chrome-extension/issues>
+- リポジトリの Issue: <https://github.com/d-party/d-party/issues>
 
 ---
 
@@ -199,4 +199,4 @@ are operated by their respective providers under their own privacy
 policies.
 
 **Contact.** Please open an issue at
-<https://github.com/d-party/chrome-extension/issues>.
+<https://github.com/d-party/d-party/issues>.
