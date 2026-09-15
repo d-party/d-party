@@ -428,14 +428,31 @@ helm lint infra/helm/d-party
 helm template d-party infra/helm/d-party | less
 ```
 
-## ローカル CI（act）
+## ローカルで CI を再現する
 
-Dev Container には `act` が入っている。ワークフローがルートに集約されたので、
-リポジトリのルートで実行する。
+Dev Container には CI が使う lint がひととおり入っている（feature で導入）。
+
+```bash
+actionlint                                   # Repo/CI
+shellcheck $(git ls-files '*.sh')            # Repo/CI
+yamllint .                                   # Repo/CI（設定はルートの .yamllint）
+helm lint infra/helm/d-party                 # Infra/CI
+pre-commit run --all-files                   # backend の ruff と基本的な整形
+
+cd backend && uv run ruff check . && uv run mypy . && uv run pytest   # Backend/CI
+pnpm run typecheck && pnpm run lint && pnpm run build                 # Frontend/CI · Extension/CI
+```
+
+> **ruff はグローバルに入れない。** `backend/uv.lock` にピン留めされたものを
+> `uv run ruff` で使う。`uvx ruff` や devcontainer feature で入れると常に最新が
+> 取れてしまい、整形結果が CI とズレる。
+
+ワークフローそのものを回したい場合は `act`（Dev Container 同梱）。ワークフローは
+ルートに集約されているので、リポジトリのルートで実行する。
 
 ```bash
 act push -W .github/workflows/backend-ci.yml
-act pull_request -W .github/workflows/frontend-ci.yml / extension-ci.yml
+act pull_request -W .github/workflows/frontend-ci.yml
 ```
 
 ## 動作確認 URL（ローカル backend 起動時）
