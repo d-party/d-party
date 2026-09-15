@@ -8,7 +8,8 @@
 #        backend/pyproject.toml (+ uv.lock) · extension/package.json ·
 #        extension/public/manifest.json · frontend/package.json · package.json
 #   3. そのタグから成果物を作る:
-#        - backend / frontend: arm64 ネイティブでビルドし GHCR へ push
+#        - backend / frontend: amd64 / arm64 をネイティブランナーで並列ビルドし、
+#          manifest list にまとめて GHCR へ push
 #          （Raspberry Pi の k3s へ argocd-image-updater が拾いに来る配信元）
 #        - extension: build して zip を Release に添付し、Chrome Web Store へ upload
 #
@@ -52,12 +53,6 @@ concurrency:
   cancel-in-progress: false
 
 permissions: {}
-
-env:
-  # GHCR の配信先。ここを変えると Raspberry Pi 側（infra/helm の values と
-  # argocd-image-updater の annotation）も合わせて変える必要がある。
-  BACKEND_IMAGE: ghcr.io/d-party/backend
-  FRONTEND_IMAGE: ghcr.io/d-party/frontend
 
 jobs:
   # ── 1. バージョンを決めて、全パッケージへ反映し、タグを打つ ────────────────
@@ -177,49 +172,131 @@ jobs:
   # Raspberry Pi (arm64) の k3s が pull する配信元。QEMU を使わないよう
   # arm64 ランナーで焼く。タグは git タグと完全一致させる（`v` 付き・不変）ので、
   # argocd-image-updater が semver で拾って ops リポジトリの values を書き換える。
+  # ── 2. サーバ側のイメージをビルドして GHCR へ ────────────────────────────
+  #
+  # Raspberry Pi (arm64) の k3s が pull する配信元。amd64 も一緒に出しておくと、
+  # x86 のホストやローカルでも同じタグをそのまま使える。
+  #
+  # **アーキテクチャごとにネイティブランナーで並列ビルドする。** 片方のランナーで
+  # QEMU エミュレーションすると、backend の uv sync と frontend の next build が
+  # 数倍に伸びるため。各ジョブは**タグを付けずダイジェストだけを push**し、
+  # 後段の manifest ジョブがそれらを 1 つの manifest list にまとめる
+  # （docker/build-push-action の push-by-digest。マルチランナー分散の定石）。
   images:
-    name: Build & push ${{ matrix.name }} (arm64)
+    name: Build ${{ matrix.image }} (${{ matrix.arch }})
     needs: version
-    runs-on: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
     permissions:
       contents: read
       packages: write
     strategy:
       fail-fast: false
+      # image × platform の直積で 4 ジョブ。include は「元のマトリクスに無いキーだけ」
+      # だと全組み合わせへ適用されて最後の 1 つに潰れるので、platform を元の
+      # マトリクスのキーにして、include はそれに紐づく値（arch 名とランナー）の
+      # 付与に徹させる。
       matrix:
+        image: [backend, frontend]
+        platform: [linux/amd64, linux/arm64]
         include:
-          - name: backend
-            # backend は設定をすべて runtime env で読むため build-args は不要。
-            context: backend
-            dockerfile: backend/Dockerfile
-            image_var: BACKEND_IMAGE
-          - name: frontend
-            # frontend のビルドコンテキストはリポジトリのルート。pnpm workspace の
-            # ロックファイルがルートにあるため（frontend/Dockerfile 参照）。
-            # NEXT_PUBLIC_* は渡さない — prod-kube はブラウザの origin から
-            # 接続先を導出する。compose-prod は引き続き build.args で焼くので
-            # このジョブの影響を受けない。
-            context: .
-            dockerfile: frontend/Dockerfile
-            image_var: FRONTEND_IMAGE
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ needs.version.outputs.tag }}
           persist-credentials: false
+
+      - uses: docker/setup-buildx-action@v4
+
       - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v7
+
+      # backend は自分のディレクトリがコンテキスト。frontend はリポジトリのルート
+      # （pnpm workspace のロックファイルがルートにあるため。frontend/Dockerfile 参照）。
+      # NEXT_PUBLIC_* は渡さない — prod-kube はブラウザの origin から接続先を導出する。
+      # compose-prod は引き続き build.args で焼くのでこのジョブの影響を受けない。
+      # backend も設定をすべて runtime env で読むため build-args は不要。
+      - id: build
+        uses: docker/build-push-action@v7
         with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          platforms: linux/arm64
-          push: true
-          tags: ${{ env[matrix.image_var] }}:${{ needs.version.outputs.tag }}
+          context: ${{ matrix.image == 'backend' && 'backend' || '.' }}
+          file: ${{ matrix.image }}/Dockerfile
+          platforms: ${{ matrix.platform }}
+          outputs: >-
+            type=image,name=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }},push-by-digest=true,name-canonical=true,push=true
+
+      # ダイジェストをファイル名だけの空ファイルとして artifact に載せ、
+      # manifest ジョブが集めて 1 本にまとめる。
+      - name: Export the digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: digests-${{ matrix.image }}-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # 各アーキテクチャのダイジェストを 1 つの manifest list にまとめ、リリースタグを打つ。
+  # k3s / docker はこのタグを pull すると自分のアーキテクチャの層だけを取る。
+  manifest:
+    name: Publish the ${{ matrix.image }} manifest
+    needs: [version, images]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [backend, frontend]
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: digests-${{ matrix.image }}-*
+          merge-multiple: true
+          path: /tmp/digests
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # タグは git タグと完全一致させる（`v` 付き・不変）ので、
+      # argocd-image-updater が semver で拾って ops リポジトリの values を書き換える。
+      - name: Create the manifest list
+        working-directory: /tmp/digests
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
+          TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2046
+          # 各ダイジェストを引数へ展開したいので、ここは意図的にクォートしない。
+          docker buildx imagetools create -t "${IMAGE}:${TAG}" \
+            $(printf "${IMAGE}@sha256:%s " *)
+
+      - name: Inspect the published image
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
+          TAG: ${{ needs.version.outputs.tag }}
+        run: docker buildx imagetools inspect "${IMAGE}:${TAG}"
 
   # ── 3. 拡張機能をビルドして Release に添付し、Chrome Web Store へ ─────────
   extension:

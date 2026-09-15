@@ -458,9 +458,16 @@ fork や新しいリポジトリでは改めて必要になる。
 
 1. ルートの最新タグ `vX.Y.Z` と `bump_type` から次のバージョンを決める。
 2. 5 ファイルの version を書き換えて main へ 1 コミット、タグを打ち、GitHub Release を作る。
-3. backend / frontend を **arm64 ネイティブ**でビルドし、`ghcr.io/d-party/backend:vX.Y.Z` /
+3. backend / frontend を **amd64 / arm64 の両方**でビルドし、`ghcr.io/d-party/backend:vX.Y.Z` /
    `ghcr.io/d-party/frontend:vX.Y.Z` へ push する。Raspberry Pi の k3s では
    argocd-image-updater がこの semver タグを拾い、Argo CD がローリング更新する。
+
+   アーキテクチャごとに**ネイティブランナー**（`ubuntu-latest` / `ubuntu-24.04-arm`）で
+   並列ビルドする。片方で QEMU エミュレーションすると backend の `uv sync` と
+   frontend の `next build` が数倍に伸びるため。各ジョブはタグを付けず
+   **ダイジェストだけを push** し（`push-by-digest`）、後段の `manifest` ジョブが
+   `docker buildx imagetools create` で 1 つの manifest list にまとめてタグを打つ。
+   pull 側は自分のアーキテクチャの層だけを取るので、k3s も compose も同じタグで済む。
 4. 拡張機能をビルドして zip を Release に添付し、Chrome Web Store へ upload する
    （`publish` 入力が true のときだけ公開まで行う）。
 

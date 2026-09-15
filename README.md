@@ -241,9 +241,9 @@ Raspberry Pi で組んだ k3s クラスタへ Helm chart をデプロイし、CD
 [`infra/`](infra/README.md) にあります。
 
 リリースは GitHub Actions の `Release` ワークフロー（`workflow_dispatch`）1 本で完結します。
-全パッケージの version を揃えてタグを打ち、backend / frontend の arm64 イメージを GHCR へ
-push し、拡張機能を Chrome Web Store へ upload します。GHCR に上がった `vX.Y.Z` タグを
-argocd-image-updater が拾い、Argo CD がローリング更新します。
+全パッケージの version を揃えてタグを打ち、backend / frontend のイメージ（**amd64 / arm64 の
+マルチアーキテクチャ**）を GHCR へ push し、拡張機能を Chrome Web Store へ upload します。
+GHCR に上がった `vX.Y.Z` タグを argocd-image-updater が拾い、Argo CD がローリング更新します。
 
 ## 負荷試験
 
