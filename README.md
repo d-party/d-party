@@ -59,7 +59,7 @@ dアニメストアには「一緒に観る」機能がありません。d-party
 - **Docker** + Docker Compose v2
 - **Chromium 系ブラウザ**（拡張機能の動作確認用）
 - コンテナ無しで動かす場合: **Python 3.14** + [uv](https://docs.astral.sh/uv/) /
-  **Node.js 26** + [pnpm](https://pnpm.io/) 10
+  **Node.js 26** + [pnpm](https://pnpm.io/) 12
 
 > **Dev Container を推奨します。** VS Code でこのフォルダを開き
 > **Dev Containers: Reopen in Container** を選ぶと、上記に加えて CI と同じ lint
