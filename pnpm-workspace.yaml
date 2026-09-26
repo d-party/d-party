@@ -11,9 +11,13 @@ packages:
 # pnpm 10.28 以降、package.json の "pnpm" フィールドは読まれない。
 # 設定はこのファイルへ置く（https://pnpm.io/settings）。
 #
-# ビルドスクリプトの実行を許可する依存。
-onlyBuiltDependencies:
-  - "esbuild"
+# ビルドスクリプトの実行を許可する依存。pnpm 11 で onlyBuiltDependencies /
+# neverBuiltDependencies / ignoredBuiltDependencies は廃止され、`allowBuilds`
+# （パッケージ名 → 真偽値のマップ）に一本化された。既定ではどの依存も
+# postinstall を実行できず、宣言の無いものがスクリプトを持つと
+# strictDepBuilds（v11 から既定で true）が install を落とす。
+allowBuilds:
+  esbuild: true
 
 # 脆弱性のある推移的依存を、親パッケージのレンジに縛られずに修正版へ引き上げる。
 # 左辺のレンジ（= 脆弱なバージョン）に該当する解決結果だけを書き換えるため、

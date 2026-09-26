@@ -81,7 +81,7 @@ d-party/                  ← このリポジトリ（ルート）
 ## pnpm workspace と Turborepo
 
 pnpm workspace は 3 パッケージ。**ロックファイルはルートの `pnpm-lock.yaml` 1 本**で、
-全員が同じ解決結果を共有する（`overrides` と `onlyBuiltDependencies` も
+全員が同じ解決結果を共有する（`overrides` と `allowBuilds` も
 `pnpm-workspace.yaml` に集約）。backend は Python なので workspace の外。
 
 | パッケージ名 | パス | 役割 |
@@ -89,6 +89,23 @@ pnpm workspace は 3 パッケージ。**ロックファイルはルートの `p
 | `d-party-chrome-extension` | `extension/` | 拡張機能 |
 | `d-party-frontend` | `frontend/` | 公開サイト |
 | `@d-party/ui` | `packages/ui/` | 両者が共有する shadcn/ui プリミティブ |
+
+pnpm は **`packageManager` で 12 系にピン留め**してある（ルートと 2 パッケージの
+`package.json` で同じ値）。10 系から上げたときに効いた約束ごとは 3 つ:
+
+- **ビルドスクリプトの許可は `allowBuilds`。** v11 で `onlyBuiltDependencies` /
+  `neverBuiltDependencies` / `ignoredBuiltDependencies` は廃止された。v12 は
+  `pnpm-workspace.yaml` の見知らぬキーを `ERR_PNPM_UNRECOGNIZED_WORKSPACE_SETTINGS`
+  で**落とす**（`packageManager` のピンを満たす pnpm が動いているときだけ）ので、
+  古いキーを残したままにはできない。
+- **新しく公開されたバージョンは 1 日待つ。** v11 から `minimumReleaseAge` の既定が
+  1440 分。サプライチェーン攻撃に気づく猶予を作るための既定なので**そのまま使う**。
+  効くのは解決するとき（`pnpm add` / `pnpm update`）だけで、`--frozen-lockfile` の
+  install は解決しないため CI には影響しない。
+- **ロックファイルの先頭に YAML ドキュメントが 1 つ増える。** pnpm 自身の
+  ピン（`packageManagerDependencies`）を integrity 付きで記録するもので、
+  `---` 区切りの後ろに従来の `lockfileVersion: '9.0'` がそのまま続く。
+  差分に出ても壊れていない。
 
 `@d-party/ui` は **TypeScript のソースのまま**公開している（ビルド成果物を持たない）。
 消費側がそれぞれトランスパイルする:
@@ -129,8 +146,11 @@ turbo run lint typecheck build --filter='...[origin/main]'
 ```
 
 > **corepack は使わない。** Node 25 で本体同梱が廃止され、Dev Container の node
-> feature（v26）にも入っていない。feature が pnpm の実体（`packageManager` と同じ
-> 10.28.1）を直接入れるので、`corepack enable` は不要どころか失敗する。
+> feature（v26）にも入っていない。feature が pnpm の実体を直接入れるので、
+> `corepack enable` は不要どころか失敗する。入った pnpm が `packageManager` の
+> ピンより古くても、pnpm 自身の `managePackageManagerVersions`（v10 以降の既定）が
+> ピン留めされたバージョンを取ってきて差し替えるため、**feature の入れる版を
+> 合わせる必要はない**（Dev Container の作り直しも要らない）。
 > frontend の Dockerfile だけは `node:26-alpine` に pnpm が無いため、そこでは
 > `npm install --global corepack@latest && corepack enable` している。
 
