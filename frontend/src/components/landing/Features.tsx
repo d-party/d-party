@@ -40,7 +40,7 @@ const FEATURES: Feature[] = [
     icon: Gift,
     title: "完全無料・広告なし",
     description:
-      "料金も広告も一切なし。dアニメストアを契約していれば、追加コストゼロで使えます。",
+      "料金も広告も一切なし。dアニメストアや DMM TV を利用していれば、追加コストゼロで使えます。",
   },
   {
     icon: Zap,

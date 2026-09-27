@@ -33,10 +33,7 @@ export function Hero(): React.JSX.Element {
   return (
     <section className="relative overflow-hidden">
       {/* Decorative, low-key brand glow — purely graphical, behind content. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
-      >
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute left-1/2 top-[-6rem] size-[28rem] -translate-x-1/2 rounded-full bg-primary/15 blur-3xl" />
         <div className="absolute right-[-8rem] top-32 size-[22rem] rounded-full bg-primary/10 blur-3xl" />
       </div>
@@ -73,7 +70,7 @@ export function Hero(): React.JSX.Element {
           variants={item}
           className="mt-4 max-w-2xl text-lg text-muted-foreground sm:text-xl"
         >
-          dアニメストアでも、離れた友達とウォッチパーティー。
+          dアニメストア・DMM TV で、離れた友達とウォッチパーティー。
           <br className="hidden sm:block" />
           再生も一時停止も自動でシンクする、完全無料のブラウザ拡張機能。
         </motion.p>

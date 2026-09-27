@@ -54,6 +54,10 @@ export const ANIMESTORE_HOST = `${BACKEND_HOST}anime-store/`;
 export const WEBSOCKET_ENDPOINT = `${WEBSOCKET_PROTOCOL}${ANIMESTORE_HOST}party/`;
 export const ANIMESTORE_REDIRECT_ENDPOINT = `${BACKEND_PROTOCOL}${ANIMESTORE_HOST}lobby/`;
 
+// DMM TV 用。ロビー解決は REST（`api/v1/dmm-tv/lobby/{room_id}`）で、拡張機能の
+// content-version が書き込む互換判定を読んで再生ページへリダイレクトする。
+export const DMM_LOBBY_RESOLVE_ENDPOINT = `${API_ENDPOINT}dmm-tv/lobby/`;
+
 /** Base URL (no trailing slash) used by the generated REST client. */
 export const API_BASE_URL = `${BACKEND_PROTOCOL}${BACKEND_HOST}`.replace(
   /\/$/,

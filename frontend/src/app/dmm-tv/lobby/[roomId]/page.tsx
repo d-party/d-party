@@ -8,43 +8,44 @@ import {
   useSyncExternalStore,
 } from "react";
 import Image from "next/image";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Clock, Download, PictureInPicture2 } from "lucide-react";
+import { Download } from "lucide-react";
 
-import { openTimerPopup } from "@/components/timer/openTimerPopup";
-import { TimerView } from "@/components/timer/TimerView";
-import { lobbyResolve } from "@/infrastructure/api/generated/d-party";
-import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
+import {
+  CHROME_WEBSTORE_URL,
+  DMM_LOBBY_RESOLVE_ENDPOINT,
+} from "@/infrastructure/env";
 
 /**
- * Room-transition lobby — faithful port of web/templates/lobby_redirect.html.
+ * DMM TV のルーム遷移ロビー。dアニメの `anime-store/lobby/[roomId]` と同じ
+ * 拡張機能 DOM 契約（`.chrome_extension_field` に互換判定を書き込む）を使い、
+ * 判定が "true" になったら DMM の再生ページへリダイレクトする。
  *
- * The Chrome extension's `content-version` script matches
- * `https://d-party.net/anime-store/lobby/*` and writes the backend's version
- * compatibility verdict ("true" / "false") into the `.chrome_extension_field`
- * element below. We poll that element once per second:
- *   - "true"   → redirect to the dアニメストア player URL (resolved from the
- *                `GET /api/v1/anime-store/lobby/{room_id}` backend endpoint).
- *   - "false"  → extension too old → offer "view timer" or "update".
- *   - 30s pass with neither verdict → extension not installed → offer
- *                "view timer" or "install".
+ *   - "true"  → `GET /api/v1/dmm-tv/lobby/{room_id}` が返す再生ページ URL
+ *               （/vod/playback/on-demand/?season=..&content=..&party=join&room_id=..）へ遷移。
+ *   - "false" → 拡張機能が非対応 → アップデート導線。
+ *   - 30秒無応答 → 未インストール → インストール導線。
  *
- * タイマー機能: 拡張機能なし・dアニメストア不要のユーザー向けに、`?timer=true` を付けた
- * 同じロビー URL で「タイマー画面」を表示する（新規 URL は発行しない）。拡張機能が無い/
- * 非対応のときは、従来のウェブストア自動遷移に代えて「タイマーを見る or インストール/
- * アップデート」の選択を提示する。
+ * NOTE: DMM のタイマー画面（拡張機能なしの観覧）は後続対応。ここでは拡張機能あり
+ * のときの参加リダイレクトと、無い/非対応のときのインストール導線までを提供する。
+ * 拡張機能側の content-version マッチに `dmm-tv/lobby/*` を追加する必要がある。
  */
 
 const POLL_INTERVAL_MS = 1000;
-const MAX_POLLS = 29; // checks fire at t=1s..29s; gives a slow backend more time
-// to write its verdict before we give up and assume the extension is missing.
+const MAX_POLLS = 29;
 const NOTICE_FADE_MS = 2000;
 
 type Phase = "checking" | "incompatible" | "uninstalled" | "not-found";
 
-export default function LobbyPage(): React.JSX.Element {
-  // useSearchParams は Suspense 境界を要求する（Next のビルド要件）。
+interface LobbyResolveResponse {
+  redirect_url: string;
+  part_id: string;
+  room_id: string;
+  title: string;
+}
+
+export default function DmmLobbyPage(): React.JSX.Element {
   return (
     <Suspense fallback={<LobbyFallback />}>
       <LobbyContent />
@@ -70,63 +71,51 @@ const subscribeNoop = () => () => { };
 
 function LobbyContent(): React.JSX.Element {
   const { roomId } = useParams<{ roomId: string }>();
-  const searchParams = useSearchParams();
-  const isTimer = searchParams.get("timer") === "true";
-  // ポップアップ小窓で開いたタイマー（Header/Footer を覆う全面表示にする）。
-  const isPopup = searchParams.get("popup") === "1";
 
   const [phase, setPhase] = useState<Phase>("checking");
   const [loaderText, setLoaderText] = useState("ルームに接続しています");
-  // タイマー画面の初期タイトル（lobbyResolve から。以後は WS の video_operation で更新）。
-  const [title, setTitle] = useState("");
-  // 拡張機能は hydration 前に `.chrome_extension_field` を書き換えるため、SSR で出すと
-  // hydration mismatch になる。マウント後にクライアント限定で描画して SSR HTML に含めない
-  //（拡張機能は 1 秒間隔ポーリングなのでマウント直後に現れれば検出される）。
+
+  // 拡張機能は hydration 前に `.chrome_extension_field` の innerText を書き換えるため、
+  // SSR で出力すると必ず hydration mismatch になる（suppressHydrationWarning でも
+  // 完全には抑止できない）。そこでこの要素はマウント後にクライアント限定で描画する
+  // ＝ SSR HTML に一切含めない。拡張機能は 1 秒間隔でポーリングするので、マウント直後に
+  // 現れれば問題なく検出される。
   const mounted = useSyncExternalStore(
     subscribeNoop,
     () => true,
     () => false,
   );
 
-  // The resolved dアニメストア redirect URL; null until the backend responds.
   const redirectUrlRef = useRef<string | null>(null);
-  // Set when the extension reported "true" before the URL had resolved.
   const redirectPendingRef = useRef(false);
 
-  // Resolve room_id → dアニメストア redirect URL (and capture the title) via the backend.
+  // Resolve room_id → DMM 再生ページ URL via the backend.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const res = await lobbyResolve(roomId);
+        const res = await fetch(`${DMM_LOBBY_RESOLVE_ENDPOINT}${roomId}`);
         if (cancelled) return;
-        if (res.status === 200) {
-          setTitle(res.data.title ?? "");
-          redirectUrlRef.current = res.data.redirect_url;
-          // タイマー表示のときはリダイレクトしない（タイトル取得のみ）。
-          if (isTimer) return;
-          // The extension may have already approved while we were waiting.
+        if (res.ok) {
+          const data = (await res.json()) as LobbyResolveResponse;
+          redirectUrlRef.current = data.redirect_url;
           if (redirectPendingRef.current) {
-            window.location.href = res.data.redirect_url;
+            window.location.href = data.redirect_url;
           }
-        } else if (!isTimer) {
+        } else {
           setPhase("not-found");
         }
       } catch {
-        // タイマー表示ではルームの有無を WS(spectate) 側で判定するため無視。
-        if (!cancelled && !isTimer) setPhase("not-found");
+        if (!cancelled) setPhase("not-found");
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [roomId, isTimer]);
+  }, [roomId]);
 
   // Poll the extension-written field and drive the redirect state machine.
   useEffect(() => {
-    // タイマー表示では拡張機能の検出・遷移を行わない。
-    if (isTimer) return;
-
     let polls = 0;
     let settled = false;
 
@@ -147,7 +136,6 @@ function LobbyContent(): React.JSX.Element {
         if (redirectUrlRef.current) {
           window.location.href = redirectUrlRef.current;
         } else {
-          // URL not resolved yet — redirect as soon as the fetch completes.
           redirectPendingRef.current = true;
           setLoaderText("ルーム情報を取得しています");
         }
@@ -167,7 +155,6 @@ function LobbyContent(): React.JSX.Element {
       }
     }, POLL_INTERVAL_MS);
 
-    // After 30s with no verdict, treat the extension as not installed.
     const notInstalledTimer = window.setTimeout(
       () => {
         if (settled) return;
@@ -182,12 +169,7 @@ function LobbyContent(): React.JSX.Element {
       window.clearInterval(interval);
       window.clearTimeout(notInstalledTimer);
     };
-  }, [isTimer]);
-
-  // タイマー表示: 拡張機能の検出をスキップして再生状況を表示する。
-  if (isTimer) {
-    return <TimerView roomId={roomId} initialTitle={title} popup={isPopup} />;
-  }
+  }, []);
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 text-center">
@@ -247,34 +229,18 @@ function LobbyContent(): React.JSX.Element {
                   : "拡張機能が見つかりませんでした"}
               </p>
               <p className="text-muted-foreground">
-                拡張機能なしでも、タイマーで再生状況を見られます。
+                DMM TV で同時視聴するには d-party 拡張機能が必要です。
               </p>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <a
-                href={`/anime-store/lobby/${roomId}?timer=true`}
-                className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                <Clock className="size-4" aria-hidden /> タイマーを見る
-              </a>
-              <button
-                type="button"
-                onClick={() => openTimerPopup(roomId)}
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
-              >
-                <PictureInPicture2 className="size-4" aria-hidden />
-                ポップアップで開く
-              </button>
-              <a
-                href={CHROME_WEBSTORE_URL}
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
-              >
-                <Download className="size-4" aria-hidden />
-                {phase === "incompatible"
-                  ? "アップデートする"
-                  : "インストールする"}
-              </a>
-            </div>
+            <a
+              href={CHROME_WEBSTORE_URL}
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <Download className="size-4" aria-hidden />
+              {phase === "incompatible"
+                ? "アップデートする"
+                : "インストールする"}
+            </a>
           </motion.div>
         )}
       </AnimatePresence>
