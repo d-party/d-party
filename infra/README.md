@@ -618,7 +618,6 @@ kubectl delete ns argocd
 
 | 事象 | 原因 | 回避 |
 |---|---|---|
-| `ComparisonError: Permission denied (publickey)` / `clone of git@github.com:d-party/backend.git failed` | **モノレポ化で解消済み。** 以前はこのリポジトリが backend / chrome-extension / frontend を SSH のサブモジュールで持っており、repo-server がその clone に失敗していた | サブモジュールは無くなったので対処不要。古い repo-server に `ARGOCD_GIT_MODULES_ENABLED=false` が残っていても害はない |
 | `waiting for healthy state of networking.k8s.io/Ingress/d-party` から進まない | k3d を `--disable=servicelb` で起動しているため `LoadBalancer` Service が pending、Ingress に IP が付かず Argo CD が Unhealthy 判定 | `ingress.enabled=false` のまま検証する（HTTP 検証は `kubectl port-forward svc/d-party-nginx 8080:80` で代替）。本番 Pi では `--disable=servicelb` を外す |
 | `valuesObject` を patch しても古い render が残り `OutOfSync` が振動する | 進行中の sync 操作が古い snapshot で動いている | `kubectl -n argocd patch application d-party --type merge -p '{"operation":null}'` で in-flight op をクリア → `argocd.argoproj.io/refresh: hard` で再 sync |
 | `applicationsets.argoproj.io` CRD 適用時に `Too long: may not be more than 262144 bytes` の警告 | `kubectl apply` の annotation 上限に当たるだけ。`Application` CRD は別物で問題なし | 単一 `Application` 運用では無視可。`ApplicationSet` を使う場合は `kubectl apply --server-side -f ...` |

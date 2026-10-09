@@ -13,7 +13,7 @@ export const metadata: Metadata = pageMetadata({
 const UPDATED_AT = "2026-06-21";
 
 const SOURCE_URL =
-  "https://github.com/d-party/chrome-extension/blob/main/PRIVACY.md";
+  "https://github.com/d-party/d-party/blob/main/PRIVACY.md";
 
 export default function PrivacyPage(): React.JSX.Element {
   return (
@@ -327,8 +327,8 @@ export default function PrivacyPage(): React.JSX.Element {
           </li>
           <li>
             Issue:{" "}
-            <ExtLink href="https://github.com/d-party/chrome-extension/issues">
-              github.com/d-party/chrome-extension/issues
+            <ExtLink href="https://github.com/d-party/d-party/issues">
+              github.com/d-party/d-party/issues
             </ExtLink>
           </li>
         </ul>

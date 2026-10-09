@@ -21,10 +21,6 @@ d-party はモノレポで、リリースは **`release` ワークフロー 1 �
    （Raspberry Pi の k3s で argocd-image-updater がこの semver タグを拾う）
 4. 拡張機能をビルドして zip を Release に添付し、Chrome Web Store へ upload する
 
-> モノレポ化前は「各サブモジュールの release を workflow_dispatch で起動して待つ」
-> 方式だった。もう他リポジトリは起動しないし、GitHub App トークン
-> （`APP_ID` / `APP_PRIVATE_KEY`）も使わない。
-
 ## 1. バンプ種別を必ずユーザーに確認する
 
 **これは省略禁止。** 勝手に patch を選ばない。`AskUserQuestion` で選択肢として提示する。
@@ -112,8 +108,7 @@ gh api "orgs/d-party/packages/container/frontend/versions" -q '.[0].metadata.con
 
 - **`images` ジョブが `denied: permission_denied` で落ちる**
   → GHCR パッケージの書き込み許可が足りない。`ghcr.io/d-party/backend` と
-    `ghcr.io/d-party/frontend` はもともと旧リポジトリから push されていたため、
-    このリポジトリには write が紐づいていない。各パッケージの
+    `ghcr.io/d-party/frontend` の
     **Package settings → Manage Actions access → Add repository** で
     `d-party/d-party` に **Write** を付ける（1 回だけの手作業）。
 - **version ジョブは成功したが images / extension が落ちた**

@@ -22,7 +22,6 @@ keywords:
   - k3s
 home: https://github.com/d-party
 sources:
-  - https://github.com/d-party/backend
-  - https://github.com/d-party/frontend
+  - https://github.com/d-party/d-party
 maintainers:
   - name: d-party
