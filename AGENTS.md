@@ -129,6 +129,11 @@ pnpm は **`packageManager` で 12 系にピン留め**してある（ルート�
 `build` / `build-storybook` の依存と出力キャッシュを宣言してあるので、
 変わっていないタスクは再実行されない。
 
+`turbo.json` の `agentGuidance: false` は外さないこと。turbo 2.11.5 以降は、AI エージェント
+から呼ばれたと判定するとこの `AGENTS.md` の末尾へ英語の管理ブロックを書き足し、消しても
+次の実行でまた書き戻す。エージェントが turbo を回すたびに未コミットの差分が出るのを避けるため、
+無効化している。
+
 ```bash
 pnpm install                    # ルートで 1 回。両パッケージぶん入る
 pnpm run api:generate           # OpenAPI から REST クライアントを生成
