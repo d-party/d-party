@@ -26,11 +26,6 @@ d-party は **monorepo** です。サーバ・拡張機能・フロントエン�
 | `loadtest/`  | k6 による WebSocket 負荷試験 |
 | ルート直下   | docker compose · nginx · postgres · redis · prometheus · grafana の設定 |
 
-> かつては backend / chrome-extension / frontend を Git サブモジュールとして束ねた
-> 「疑似 monorepo」でした。各リポジトリの履歴ごと取り込んで統合済みです。
-> 旧 `chrome-extension/` は `extension/`、旧 `deploy/` は `infra/` です。
-> `git submodule` 系のコマンドはもう使いません。
-
 `extension/` と `frontend/` は **pnpm workspace** の 2 パッケージで、
 ロックファイルはルートの `pnpm-lock.yaml` 1 本です。
 

@@ -231,11 +231,7 @@ jobs:
           context: ${{ matrix.image == 'backend' && 'backend' || '.' }}
           file: ${{ matrix.image }}/Dockerfile
           platforms: ${{ matrix.platform }}
-          # OCI の標準ラベル。`org.opencontainers.image.source` は GHCR が
-          # 「どのリポジトリのパッケージか」を判断するのに使う。
-          # これらのパッケージは旧 d-party/backend · d-party/frontend から
-          # 作られたため、いまもそちらにリンクされている（どちらも archive 済み）。
-          # ラベルでこのリポジトリを指しておく。
+          # OCI の標準ラベル。イメージから出所・リビジョン・ライセンスを辿れるようにする。
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.url=${{ github.server_url }}/${{ github.repository }}
@@ -364,11 +360,9 @@ jobs:
         run: gh release upload "${TAG}" "d-party_${TAG}.zip" --clobber
 
       # Chrome Web Store API を curl で直接叩く。
-      # 以前は mnao305/chrome-extension-upload を使っていたが、API のレスポンスボディを
-      # 一切ログに出さない仕様のため 400 等の障害切り分けが不可能だった
-      # （`itemError[].error_code` / `uploadState` / `statusDetail` が見えない）。
-      # ここでは OAuth2 token exchange → upload(PUT) → publish(POST) を順に実行し、
-      # 各レスポンスを JSON のまま GitHub Actions ログへ出力する。
+      # OAuth2 token exchange → upload(PUT) → publish(POST) を順に実行し、
+      # 障害切り分けのため各レスポンスを JSON のまま GitHub Actions ログへ出力する
+      # （`itemError[].error_code` / `uploadState` / `statusDetail` を見る）。
       # 参考: https://developer.chrome.com/docs/webstore/using-api
       - name: Upload to the Chrome Web Store
         env:

@@ -8,11 +8,6 @@
 このリポジトリは **monorepo** で、サーバ・拡張機能・フロントエンド・インフラ設定が
 すべてここに入っています。
 
-**移行の経緯（重要）:** 以前は backend / chrome-extension / frontend を Git サブモジュールと
-して束ねた「疑似 monorepo」でした。各リポジトリの履歴を `git filter-repo` で
-サブディレクトリへ書き換えてから統合したため、**`git log` / `git blame` / `git bisect` は
-移行前まで辿れます**。旧 `chrome-extension/` は `extension/`、旧 `deploy/` は `infra/` です。
-
 ## Architecture
 
 | パス         | 中身                       | スタック                                                                     |
@@ -393,16 +388,13 @@ frontend/
 5. **リリースは `main` から tag を切って行う**（長命なリリースブランチは作らない）。
 6. CI のトリガ・Dependabot の `target-branch` はすべて `main`（`develop` は参照しない）。
 
-monorepo になったので、**backend と frontend と拡張機能にまたがる変更も 1 本の PR で出す**。
-以前のように「サブモジュールごとに PR を出し、マージ順を揃え、最後に参照を bump する」
-必要はない。
+**backend と frontend と拡張機能にまたがる変更も 1 本の PR で出す**。
 
 詳細な貢献手順は [CONTRIBUTING.md](CONTRIBUTING.md) を参照。
 
 ## monorepo としての約束ごと
 
 1. **どのディレクトリのコードも、このリポジトリで直接変更してコミットする。**
-   サブモジュールは無くなったので `git submodule` 系のコマンドは一切使わない。
 2. **JS の依存は必ずルートで入れる。** `cd frontend && pnpm install` のような
    パッケージ内での install はしない（workspace 全体が再解決され、ロックファイルが
    意図せず動く）。追加は `pnpm --filter <pkg> add <dep>`。
@@ -449,19 +441,17 @@ PR のときしか動かさない。
 どの領域のものか一目で分かるようにするため。
 
 ルートから走るツールの設定ファイルもルートに置く（`.yamllint` · `.textlintrc.json` ·
-`.dockleignore` · `.pre-commit-config.yaml`）。これらは元々 backend リポジトリの直下に
-あり、そのリポジトリのルート = カレントディレクトリだったので効いていた。
+`.dockleignore` · `.pre-commit-config.yaml`）。
 
 ### リポジトリ側で 1 度だけ必要な設定
 
-ワークフローを置くだけでは動かないものが 2 つある。どちらもリポジトリの設定なので、
+ワークフローを置くだけでは動かないものがある。どちらもリポジトリの設定なので、
 fork や新しいリポジトリでは改めて必要になる。
 
 | 何 | どこ | 未設定だと |
 | --- | --- | --- |
 | **GitHub Pages を有効化し、ソースを「GitHub Actions」にする** | Settings → Pages → Source: GitHub Actions<br>（`gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`） | `Storybook/Deploy` の build は通るのに deploy だけが `Failed to create deployment (status: 404)` で落ちる |
 | **GHCR パッケージへの write を許可する** | `ghcr.io/d-party/backend` と `ghcr.io/d-party/frontend` の Package settings → Manage Actions access → このリポジトリに Write | `Release` の images ジョブが denied で落ちる |
-| **GHCR パッケージをこのリポジトリへ接続する**（旧リポジトリから引き継いだ場合のみ） | 同じ Package settings で接続先リポジトリを選び直す | 動作はするが、パッケージページが旧リポジトリを指したままになる。push し直しても OCI ラベルを付けても**張り替わらない** |
 
 ### キャッシュ
 
@@ -497,37 +487,8 @@ fork や新しいリポジトリでは改めて必要になる。
 4. 拡張機能をビルドして zip を Release に添付し、Chrome Web Store へ upload する
    （`publish` 入力が true のときだけ公開まで行う）。
 
-モノレポ化前は root が各サブモジュールの `release` を workflow_dispatch で起動して
-待つ方式で、そのために GitHub App（`APP_ID` / `APP_PRIVATE_KEY`）へ他リポジトリの
-Actions:write を持たせていた。**それは不要になった。**
-
-代わりに **GHCR の 2 パッケージへ `d-party/d-party` の Write を 1 度だけ付ける**必要が
-ある（Package settings → Manage Actions access → Add repository）。もとは
-`d-party/backend` · `d-party/frontend` リポジトリからしか push できないため。
-イメージ名を変えないことで `infra/helm` の values と Argo CD 側は無改修で済む。
-
-> **パッケージのリンク先はパッケージ設定から繋ぎ直す。** `ghcr.io/d-party/{backend,frontend}`
-> は旧リポジトリから push されて作られたため、GHCR 上の「source repository」は
-> archive 済みの `d-party/backend` · `d-party/frontend` を指したままだった。
-> **パッケージ設定ページ（Package settings → リポジトリの接続）から手動で
-> このリポジトリへ繋ぎ直せる。** 対応済み。
->
-> 同じ状況に遭ったときのために、効かなかった方法を記録しておく。
->
-> - **`GITHUB_TOKEN` で push し直しても張り替わらない。** 自動リンクはパッケージの
->   **作成時**にしか効かない。
-> - **OCI の `org.opencontainers.image.source` ラベルでも張り替わらない。** v2.11.10 で
->   イメージのラベルと manifest list の annotation の両方に焼いたが、リンクは
->   旧リポジトリのままだった。ラベル自体はイメージから出所・リビジョン・
->   ライセンスを辿れるので、引き続き付けている。
-> - 消去法として「パッケージを削除して作り直す」「パッケージ名を変える」も
->   考えられるが、**どちらも不要**だった。削除は全バージョン（backend だけで 35 個）を
->   失い、作り直したパッケージは既定で private になる。改名は `infra/helm` の values と
->   運用リポジトリの argocd-image-updater の annotation まで波及する。
->
-> なお**リポジトリを接続しても権限は自動では継承されない**（GitHub のドキュメント:
-> 接続時に明示的に選ばない限り既存のアクセス権を保つ）。Actions から push できる
-> 状態は、上の Write 付与か、接続時の継承のどちらかで確保すること。
+GHCR の 2 パッケージには **`d-party/d-party` の Write を 1 度だけ付ける**必要が
+ある（Package settings → Manage Actions access → Add repository）。
 
 ## Common commands
 

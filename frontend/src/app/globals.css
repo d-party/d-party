@@ -9,7 +9,7 @@
 
 /*
  * d-party is a dark-only experience. shadcn/ui theme tokens use the dark
- * palette from the Chrome extension (chrome-extension/src/presentation/popup/
+ * palette from the Chrome extension (extension/src/presentation/popup/
  * styles.css). Brand colour is d-party red.
  */
 :root {

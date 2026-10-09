@@ -222,14 +222,13 @@ docker compose exec django python manage.py close_active_sessions
 
 ## monorepo の中での位置づけ
 
-かつては独立した Git リポジトリ（`d-party/backend`）でしたが、履歴ごと monorepo へ
-統合済みです。変更はリポジトリのルートでブランチを切り、`d-party/d-party` へ PR を
+変更はリポジトリのルートでブランチを切り、`d-party/d-party` へ PR を
 出してください。frontend や拡張機能にまたがる変更も 1 本の PR で構いません。
 
 - CI は `../.github/workflows/backend-ci.yml`（このディレクトリを
   `working-directory` にして走る）。
 - pre-commit の設定はルートの `../.pre-commit-config.yaml`（`files: ^backend/`）。
   `pre-commit install` はリポジトリのルートで実行します。
-- docker compose・nginx・env などのオーケストレーションは従来どおりルートが持ちます。
+- docker compose・nginx・env などのオーケストレーションはルートが持ちます。
 
 詳細は [`../AGENTS.md`](../AGENTS.md) を参照。

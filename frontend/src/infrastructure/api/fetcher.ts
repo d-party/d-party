@@ -21,7 +21,7 @@ function baseUrl(): string {
  * backend base URL and returns orval's `{ status, data, headers }` contract.
  *
  * Faithful port of the Chrome extension's `customFetch`
- * (chrome-extension/src/infrastructure/api/fetcher.ts).
+ * (extension/src/infrastructure/api/fetcher.ts).
  */
 export const customFetch = async <T>(
   url: string,
