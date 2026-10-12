@@ -154,7 +154,8 @@ sequenceDiagram
 > 発火し `leave_party` が DB を後始末します。ハードクラッシュ（OOM / ノード障害 /
 > SIGKILL）では `disconnect` が走らず alive 行が残るため、起動時の
 > `close_active_sessions` が **`updated_at` が 1 日以上前の alive 行だけ**を回収します
-> （稼働中セッションは更新が新しいので消さない）。旧来の「全 alive 行を削除」設計と異なり
+> （`updated_at` は保存時にしか動かないので、「セッションは 1 日以上続かない」ことが前提）。
+> 回収したルームのリアクションは通常の終了と同じく `ReactionStat` へ畳み込みます。旧来の「全 alive 行を削除」設計と異なり
 > **複数レプリカでも他 Pod の生きたセッションを巻き込まない**ので、`replicaCount` を増やしても
 > 安全です（既定は RPi 想定で 1）。時間ベースの保持期間 cron は廃止しました（リアクションは
 > ルーム終了時に `ReactionStat` へ畳み込み）。
