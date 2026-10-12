@@ -12,8 +12,8 @@ import type { RoomSettings } from "@/domain/roomSettings";
 import type { ReactionDisplayMode, Settings } from "@/domain/settings";
 
 export interface Notifier {
-  success(messageHtml: string): void;
-  info(messageHtml: string): void;
+  success(message: string): void;
+  info(message: string): void;
   alert(message: string): void;
 }
 
