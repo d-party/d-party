@@ -202,125 +202,94 @@ class ChromeExtensionVersionCheckAPI(APIView):
         )
 
 
-class AnimeActiveUserPerDayAPI(APIView):
+class _WindowedStatsView(APIView):
+    """Public stats over a ``?days=N`` window, cached per window length.
+
+    The frontend's stats dashboard reads these without authentication.
+    Subclasses set ``cache_key`` and implement ``produce``; count endpoints wrap
+    the value as ``{"count": n}``.
+    """
+
+    permission_classes = [AllowAny]
+    cache_key: str
+    wrap_as_count = False
+
+    def produce(self, since: datetime.date):
+        raise NotImplementedError
+
+    def get(self, request, format=None) -> Response:
+        days = _parse_days(request)
+        if days is None:
+            return _bad_days()
+        since = _since(days)
+        value = _cached(f"stats:{self.cache_key}:{days}", lambda: self.produce(since))
+        return Response({"data": {"count": value} if self.wrap_as_count else value})
+
+
+class AnimeActiveUserPerDayAPI(_WindowedStatsView):
     """Daily count of users that have ever been in a room."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
-    permission_classes = [AllowAny]
+    cache_key = "active-user-per-day"
 
-    def get(self, request, format=None) -> Response:
-        days = _parse_days(request)
-        if days is None:
-            return _bad_days()
-        since = _since(days)
-
-        def produce():
-            return _resample_per_day(_per_day_counts(AnimeUser, since), since)
-
-        return Response({"data": _cached(f"stats:active-user-per-day:{days}", produce)})
+    def produce(self, since):
+        return _resample_per_day(_per_day_counts(AnimeUser, since), since)
 
 
-class AnimeActiveRoomPerDayAPI(APIView):
+class AnimeActiveRoomPerDayAPI(_WindowedStatsView):
     """Daily count of rooms created by users."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
-    permission_classes = [AllowAny]
+    cache_key = "active-room-per-day"
 
-    def get(self, request, format=None) -> Response:
-        days = _parse_days(request)
-        if days is None:
-            return _bad_days()
-        since = _since(days)
-
-        def produce():
-            return _resample_per_day(_per_day_counts(AnimeRoom, since), since)
-
-        return Response({"data": _cached(f"stats:active-room-per-day:{days}", produce)})
+    def produce(self, since):
+        return _resample_per_day(_per_day_counts(AnimeRoom, since), since)
 
 
-class AnimeRoomReactionCountAPI(APIView):
+class AnimeRoomReactionCountAPI(_WindowedStatsView):
     """Per-type reaction counts."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
-    permission_classes = [AllowAny]
+    cache_key = "reaction-count"
 
-    def get(self, request, format=None) -> Response:
-        days = _parse_days(request)
-        if days is None:
-            return _bad_days()
-        since = _since(days)
-
-        def produce():
-            merged = _reaction_counts_by_type(since)
-            return [
-                {"count": merged.get(value, 0), "reaction_type": label}
-                for value, label in ReactionType.choices
-            ]
-
-        return Response({"data": _cached(f"stats:reaction-count:{days}", produce)})
+    def produce(self, since):
+        merged = _reaction_counts_by_type(since)
+        return [
+            {"count": merged.get(value, 0), "reaction_type": label}
+            for value, label in ReactionType.choices
+        ]
 
 
-class AnimeRoomReactionAllCountAPI(APIView):
+class AnimeRoomReactionAllCountAPI(_WindowedStatsView):
     """Total reaction count."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
-    permission_classes = [AllowAny]
+    cache_key = "reaction-all-count"
+    wrap_as_count = True
 
-    def get(self, request, format=None) -> Response:
-        days = _parse_days(request)
-        if days is None:
-            return _bad_days()
-        since = _since(days)
-
-        def produce():
-            return sum(_reaction_counts_by_type(since).values())
-
-        count = _cached(f"stats:reaction-all-count:{days}", produce)
-        return Response({"data": {"count": count}})
+    def produce(self, since):
+        return sum(_reaction_counts_by_type(since).values())
 
 
-class AnimeUserAllCountAPI(APIView):
+class AnimeUserAllCountAPI(_WindowedStatsView):
     """User count within the requested period (by creation date)."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
-    permission_classes = [AllowAny]
+    cache_key = "user-all-count"
+    wrap_as_count = True
 
-    def get(self, request, format=None) -> Response:
-        days = _parse_days(request)
-        if days is None:
-            return _bad_days()
-        since = _since(days)
-
-        def produce():
-            return AnimeUser.objects.filter(created_at__date__gte=since).count()
-
-        count = _cached(f"stats:user-all-count:{days}", produce)
-        return Response({"data": {"count": count}})
+    def produce(self, since):
+        return AnimeUser.objects.filter(created_at__date__gte=since).count()
 
 
-class AnimeRoomAllCountAPI(APIView):
+class AnimeRoomAllCountAPI(_WindowedStatsView):
     """Room count within the requested period (by creation date)."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
-    permission_classes = [AllowAny]
+    cache_key = "room-all-count"
+    wrap_as_count = True
 
-    def get(self, request, format=None) -> Response:
-        days = _parse_days(request)
-        if days is None:
-            return _bad_days()
-        since = _since(days)
-
-        def produce():
-            return AnimeRoom.objects.filter(created_at__date__gte=since).count()
-
-        count = _cached(f"stats:room-all-count:{days}", produce)
-        return Response({"data": {"count": count}})
+    def produce(self, since):
+        return AnimeRoom.objects.filter(created_at__date__gte=since).count()
 
 
 class AnimeUserAliveCountAPI(APIView):
     """Currently connected user count."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -330,7 +299,6 @@ class AnimeUserAliveCountAPI(APIView):
 class AnimeRoomAliveCountAPI(APIView):
     """Currently active room count."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
