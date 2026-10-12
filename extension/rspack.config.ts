@@ -81,8 +81,6 @@ const config: Configuration = {
       patterns: [
         { from: "public/manifest.json", to: "manifest.json" },
         { from: "public/icon", to: "icon", noErrorOnMissing: true },
-        { from: "public/images", to: "images", noErrorOnMissing: true },
-        { from: "public/assets", to: "assets", noErrorOnMissing: true },
         { from: "public/css", to: "css", noErrorOnMissing: true },
       ],
     }),

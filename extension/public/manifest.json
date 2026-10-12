@@ -70,7 +70,6 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "assets/*",
         "js/sidebar-style.css"
       ],
       "matches": [
