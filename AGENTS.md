@@ -196,8 +196,8 @@ infra/
 
 ```bash
 # chart の静的検証（クラスタ不要）
-helm lint infra/helm/d-party
-helm template d-party infra/helm/d-party | less
+helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret
+helm template d-party infra/helm/d-party --set secret.existingSecret=d-party-secret | less
 
 # 手元で実クラスタ検証（k3d）。詳細は infra/README.md
 k3d cluster create d-party --agents 2
@@ -546,8 +546,8 @@ pnpm run api:generate && pnpm run typecheck && pnpm run lint && pnpm run build
 ### インフラ（Helm）
 
 ```bash
-helm lint infra/helm/d-party
-helm template d-party infra/helm/d-party | less
+helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret
+helm template d-party infra/helm/d-party --set secret.existingSecret=d-party-secret | less
 ```
 
 ## ローカルで CI を再現する
@@ -558,7 +558,7 @@ Dev Container には CI が使う lint がひととおり入っている（featu
 actionlint                                   # Repo/CI
 shellcheck $(git ls-files '*.sh')            # Repo/CI
 yamllint .                                   # Repo/CI（設定はルートの .yamllint）
-helm lint infra/helm/d-party                 # Infra/CI
+helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret  # Infra/CI
 pre-commit run --all-files                   # backend の ruff と基本的な整形
 
 cd backend && uv run ruff check . && uv run mypy . && uv run pytest   # Backend/CI
