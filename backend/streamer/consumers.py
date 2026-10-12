@@ -39,6 +39,10 @@ from .util import is_valid_uuid
 ROOM_GRACE_SECONDS = 60.0
 _pending_room_deletes: dict[str, asyncio.Task] = {}
 
+# 1 接続は 1 ルームにだけ入る。入室済みの接続から再度これらを受けると、先の
+# AnimeUser が退室処理されないまま残り、旧グループにも所属し続けてしまう。
+ROOM_ENTRY_ACTIONS = frozenset({"create", "join", "spectate"})
+
 
 @database_sync_to_async
 def _logical_delete_room_if_empty(room_id_str: str) -> bool:
@@ -113,6 +117,11 @@ class AnimePartyConsumer(GenericAsyncAPIConsumer):
 
     async def connect(self):
         await self.accept()
+
+    async def handle_action(self, action: str, request_id: str, **kwargs):
+        if action in ROOM_ENTRY_ACTIONS and self.anime_room is not None:
+            return
+        await super().handle_action(action, request_id, **kwargs)
 
     async def disconnect(self, close_code):
         """websocketを閉じた場合の処理
