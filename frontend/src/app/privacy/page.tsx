@@ -10,10 +10,10 @@ export const metadata: Metadata = pageMetadata({
     "d-party のプライバシーポリシー。取得する情報、利用目的、第三者提供、保存期間、および問い合わせ先を定めます。",
 });
 
-const UPDATED_AT = "2026-06-21";
+const UPDATED_AT = "2026-10-12";
 
 const SOURCE_URL =
-  "https://github.com/d-party/d-party/blob/main/PRIVACY.md";
+  "https://github.com/d-party/d-party/blob/main/extension/PRIVACY.md";
 
 export default function PrivacyPage(): React.JSX.Element {
   return (
@@ -75,14 +75,30 @@ export default function PrivacyPage(): React.JSX.Element {
         <Table
           headers={["項目", "内容", "目的"]}
           rows={[
-            ["表示名", "ルーム内で表示するニックネーム", "同時視聴ルームでの識別"],
             [
-              "接続先ホスト / プロトコル設定",
-              "バックエンドの URL 設定（開発者向け）",
-              "接続先の切り替え",
+              "表示名・表示アイコン",
+              "ルーム内で表示するニックネームとアイコンの種類",
+              "同時視聴ルームでの識別",
+            ],
+            [
+              "表示・動作の設定",
+              "リアクションの表示方法、追加したエクストラリアクション、通知・別タブ・ピクチャーインピクチャー等の設定",
+              "拡張機能の動作の切り替え",
+            ],
+            [
+              "個人の利用統計",
+              "作成・参加したルーム数、送信したリアクション数、接続時間の合計",
+              "ポップアップでの表示（サーバには送信しません）",
             ],
           ]}
         />
+        <p className="mt-4">
+          このほか、初回インストール時に使い方ページを開いたかどうかのフラグを{" "}
+          <code className="rounded bg-muted px-1 py-0.5 text-xs">
+            chrome.storage.local
+          </code>{" "}
+          に保存します。
+        </p>
 
         <h3 className="mt-6 text-lg font-semibold">
           2.2 ルーム参加時にサーバへ送信される情報
@@ -110,24 +126,39 @@ export default function PrivacyPage(): React.JSX.Element {
               "上記 2.1 の表示名",
               "暗号化して保存（Fernet / cryptography）",
             ],
+            ["表示アイコン", "上記 2.1 のアイコンの種類", "平文"],
+            [
+              "作品タイトル",
+              "ルーム作成時に開いていたエピソードのタイトル（ページの表示から取得）",
+              "平文。ルームのリンクの OGP 画像・タイマー画面の表示に使用",
+            ],
             ["ホスト権限フラグ", "ルーム作成者かどうか", "平文"],
             [
+              "ルームの詳細設定",
+              "一方通行モード・オーナー退室時の自動削除・リアクション禁止",
+              "平文",
+            ],
+            [
+              "参加・退室の日時",
+              "ユーザー情報の作成日時・退室日時",
+              "平文。参加人数と統計に使用",
+            ],
+            [
               "プレイヤー操作イベント",
-              "再生 / 一時停止 / シーク位置 / 再生速度",
+              "再生 / 一時停止 / シーク位置 / 再生速度 / 視聴中のエピソードタイトル",
               "同期のため一時的に配信。永続化されません",
             ],
             [
-              "リアクション種別",
-              "5 種類の絵文字リアクション",
-              "統計目的で集計",
-            ],
-            [
-              "入退室イベント",
-              "ルーム ID と種別（join / leave）",
-              "統計目的",
+              "リアクション",
+              "5 種類のデフォルトリアクションとエクストラリアクション",
+              "デフォルトリアクションは統計目的で保存し、ルーム終了時に日別・種類別の件数へ集計。エクストラリアクションは配信のみで保存しません",
             ],
           ]}
         />
+        <p className="mt-4">
+          ルームの共有リンクを知っている人は、拡張機能が無くてもタイマー画面から
+          そのルームの作品タイトルと再生状況（再生中かどうか・再生位置）を閲覧できます。
+        </p>
 
         <p className="mt-4 font-semibold text-foreground">
           本サービスは以下の情報を取得しません。
@@ -201,21 +232,31 @@ export default function PrivacyPage(): React.JSX.Element {
           <li>
             <strong>GitHub</strong>（GitHub, Inc.）: ソースコードのホスティング。
           </li>
+          <li>
+            <strong>Google Fonts</strong>（Google LLC）:
+            dアニメストアの一覧ページで拡張機能が追加するボタンのアイコン（Material
+            Icons）を fonts.googleapis.com から読み込みます。このとき利用者のブラウザから
+            Google へリクエストが送られます。
+          </li>
+          <li>
+            <strong>Cloudflare</strong>（Cloudflare, Inc.）:
+            本番環境では、ウェブサイトとバックエンドへの通信が Cloudflare を経由します。
+          </li>
         </ul>
       </Section>
 
       <Section title="6. データの保存期間">
         <ul className="list-disc space-y-1 pl-6">
           <li>
-            <strong>ルーム関連データ</strong>
-            （ルーム、参加ユーザー、リアクション、入退室履歴）:
-            使用されなくなったルームは定期実行されるクリーンアップ処理により
-            自動的に削除されます。
+            <strong>ルームと参加ユーザー</strong>
+            （表示名・表示アイコン・作品タイトルを含む）:
+            退室やルームの終了で無効化（論理削除）されますが、現在のところ
+            データベースからの物理削除は行っていません。表示名は暗号化して保存されており、
+            復号鍵を失った場合は読み出し不能となります。
           </li>
           <li>
-            <strong>表示名</strong>:
-            ルームデータの削除と同時に削除されます。暗号化して保存されており、
-            復号鍵を失った場合は読み出し不能となります。
+            <strong>リアクション</strong>:
+            ルームの終了時に日別・種類別の件数へ集計され、個々の記録は削除されます。
           </li>
           <li>
             <strong>公開統計</strong>:
@@ -262,8 +303,9 @@ export default function PrivacyPage(): React.JSX.Element {
         <ul className="list-disc space-y-1 pl-6">
           <li>
             <strong>削除</strong>:
-            ルームから退室することで、参加ユーザー情報は論理削除されます。
-            ルーム自体が無人になれば、ルームおよび関連データは自動的に削除されます。
+            ルームから退室することで、参加ユーザー情報は無効化（論理削除）されます。
+            ルーム自体が無人になれば、ルームも無効化されます（上記 6
+            のとおり物理削除はしていません）。
           </li>
           <li>
             <strong>設定の消去</strong>: Chrome
