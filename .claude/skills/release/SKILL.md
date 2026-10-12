@@ -11,10 +11,10 @@ d-party はモノレポで、リリースは **`release` ワークフロー 1 �
 ワークフローがやること:
 
 1. ルートの最新タグ `vX.Y.Z` と `bump_type` から次のバージョンを算出する
-2. 5 ファイルの version を書き換えて `main` へ 1 コミット、タグを打ち、GitHub Release を作る
+2. 6 ファイルの version を書き換えて `main` へ 1 コミット、タグを打ち、GitHub Release を作る
    - `backend/pyproject.toml`（+ `backend/uv.lock`）
    - `extension/package.json` · `extension/public/manifest.json`
-   - `frontend/package.json`
+   - `frontend/package.json` · `packages/ui/package.json`
    - ルートの `package.json`
 3. `backend` / `frontend` を **arm64 ネイティブ**でビルドし、
    `ghcr.io/d-party/backend:vX.Y.Z` / `ghcr.io/d-party/frontend:vX.Y.Z` へ push する
@@ -90,10 +90,10 @@ gh run watch "$RUN" -R d-party/d-party --exit-status
 git fetch --tags origin && git log --oneline origin/main -3
 gh release view -R d-party/d-party --json tagName,name,assets
 
-# 5 ファイルの version がタグと揃っていること
+# 6 ファイルの version がタグと揃っていること
 TAG=$(git tag --list 'v*.*.*' | sort -V | tail -n1)
 git show "${TAG}:backend/pyproject.toml" | grep -m1 '^version'
-for f in extension/package.json extension/public/manifest.json frontend/package.json package.json; do
+for f in extension/package.json extension/public/manifest.json frontend/package.json packages/ui/package.json package.json; do
   echo -n "$f: "; git show "${TAG}:$f" | grep -m1 '"version"'
 done
 ```

@@ -407,8 +407,8 @@ frontend/
    約束ごとは各ディレクトリの `AGENTS.md` が持つ）。`LICENSE` も同様にルートの 1 本。
 6. バージョンは全パッケージで揃える。`release` ワークフローが
    `backend/pyproject.toml` · `extension/package.json` ·
-   `extension/public/manifest.json` · `frontend/package.json` · ルートの
-   `package.json` を同じ値へ書き換え、タグを 1 本打つ。手で個別に上げない。
+   `extension/public/manifest.json` · `frontend/package.json` ·
+   `packages/ui/package.json` · ルートの `package.json` を同じ値へ書き換え、タグを 1 本打つ。手で個別に上げない。
 
 ## CI
 
@@ -475,7 +475,7 @@ fork や新しいリポジトリでは改めて必要になる。
 `release` ワークフロー（`workflow_dispatch`）1 本で完結する。
 
 1. ルートの最新タグ `vX.Y.Z` と `bump_type` から次のバージョンを決める。
-2. 5 ファイルの version を書き換えて main へ 1 コミット、タグを打ち、GitHub Release を作る。
+2. 6 ファイルの version を書き換えて main へ 1 コミット、タグを打ち、GitHub Release を作る。
 3. backend / frontend を **amd64 / arm64 の両方**でビルドし、`ghcr.io/d-party/backend:vX.Y.Z` /
    `ghcr.io/d-party/frontend:vX.Y.Z` へ push する。Raspberry Pi の k3s では
    argocd-image-updater がこの semver タグを拾い、Argo CD がローリング更新する。

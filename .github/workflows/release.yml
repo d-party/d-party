@@ -6,7 +6,8 @@
 #   1. bump_type と最新タグ (vX.Y.Z) から次のバージョンを算出する。
 #   2. 全パッケージの version を書き換えて main へ 1 コミット、タグを打つ。
 #        backend/pyproject.toml (+ uv.lock) · extension/package.json ·
-#        extension/public/manifest.json · frontend/package.json · package.json
+#        extension/public/manifest.json · frontend/package.json ·
+#        packages/ui/package.json · package.json
 #   3. そのタグから成果物を作る:
 #        - backend / frontend: amd64 / arm64 をネイティブランナーで並列ビルドし、
 #          manifest list にまとめて GHCR へ push
@@ -108,7 +109,7 @@ jobs:
           set -euo pipefail
 
           # version 行だけを差し替え、フォーマット差分を出さない。
-          # 対象は backend の pyproject.toml と、JSON 側 4 つ。
+          # 対象は backend の pyproject.toml と、JSON 側 5 つ。
           python3 - <<'EOF'
           import os, re
 
@@ -124,6 +125,7 @@ jobs:
               "extension/package.json",
               "extension/public/manifest.json",
               "frontend/package.json",
+              "packages/ui/package.json",
               "package.json",
           ):
               s = open(path, encoding="utf-8").read()
@@ -131,7 +133,7 @@ jobs:
               assert n == 1, f"version field not found in {path}"
               open(path, "w", encoding="utf-8").write(s)
 
-          print(f"applied v{v} to 5 files")
+          print(f"applied v{v} to 6 files")
           EOF
 
           # uv.lock もプロジェクトの version を持つので、pyproject と乖離しないよう
@@ -142,7 +144,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add backend/pyproject.toml backend/uv.lock \
                   extension/package.json extension/public/manifest.json \
-                  frontend/package.json package.json
+                  frontend/package.json packages/ui/package.json package.json
           if git diff --cached --quiet; then
             echo "already at v${VERSION}; skipping the bump commit"
           else
