@@ -17,7 +17,8 @@
   同居する他サービスからも共用される singleton です（理想は別リポジトリへ切り出し）。
 - DB/Redis は **NetworkPolicy で同 release 内からのみ到達可能**にし、stateful には
   **PriorityClass** を当てて、同居サービスのメモリ逼迫時にも DB が evict されにくくします。
-- WebSocket を切らさないために **グレースフルなローリング更新**を前提に組んでいます。
+- 更新中も新規接続を受けられるよう **新 Pod を先に Ready にするローリング更新**を前提に組んでいます
+  （既存の WebSocket は旧 Pod の停止時に切れる。後述）。
 - **CD は Argo CD（GitOps）**。運用リポジトリの `Application` がこの chart を参照します。
 
 ```
@@ -114,11 +115,18 @@ flowchart LR
 
 ---
 
-## 2. グレースフル更新（WebSocket を切らさない）
+## 2. ローリング更新と WebSocket
 
 同時視聴の WebSocket セッション状態は **Django プロセス内**に保持されます
 （`streamer/consumers.py`。room/user の生死は Redis ではなくプロセスが持つ）。
-そのため更新時は「新 Pod を先に Ready にしてから旧 Pod を見送る」方式を取ります。
+更新時は「新 Pod を先に Ready にしてから旧 Pod を止める」方式で、新規接続を
+受けられない時間を作りません。
+
+**既存の WebSocket は旧 Pod の停止時に切れます。** uvicorn は SIGTERM を受けると開いている
+WebSocket をすぐに close code `1012`（service restart）で閉じ、各接続の `disconnect` →
+`leave_party` が DB を後始末します。拡張機能は自動で再接続しないので、利用者は
+「サーバーとの通信が終了」の表示のあと、共有リンクからルームに入り直します
+（ルームは DB に残っているので同じ URL で入れる）。
 
 ```mermaid
 sequenceDiagram
@@ -134,9 +142,9 @@ sequenceDiagram
     New-->>K8s: Readiness OK
     K8s->>Old: SIGTERM + preStop(sleep)
     Note over Old,NX: preStop 中に Endpoints から除外<br/>→ 新規 WS は New へ
-    Old->>Old: gunicorn graceful-timeout で既存接続を見送り
-    Cli-->>Old: 切断検知
-    Cli->>New: 自動再接続 → 同じ room に再 join
+    Old-->>Cli: WebSocket を 1012 で close（disconnect → leave_party）
+    Note over Cli: 自動再接続はしない
+    Cli->>New: 利用者が共有リンクから入り直す（join）
 ```
 
 実装上の効かせどころ（`values.yaml`）:
@@ -146,7 +154,7 @@ sequenceDiagram
 | 先出し起動 | `*.strategy.maxSurge=1` / `maxUnavailable=0` | 有効 |
 | 終了猶予 | `django.terminationGracePeriodSeconds` | 120s |
 | Endpoints 除外の伝播待ち | `django.preStopSleepSeconds` | 5s |
-| gunicorn graceful | `django.gunicornGracefulTimeout`（`GUNICORN_CMD_ARGS` で注入） | 110s |
+| gunicorn graceful（処理中の HTTP の完了待ち。WebSocket は待たない） | `django.gunicornGracefulTimeout`（`GUNICORN_CMD_ARGS` で注入） | 110s |
 | nginx graceful | preStop `nginx -s quit` + `nginx.terminationGracePeriodSeconds` | 60s |
 | WS 長時間タイムアウト | nginx `proxy_read/send_timeout 3600s` | 有効 |
 
@@ -424,18 +432,18 @@ npx -y wscat -c "${URL/https/wss}/anime-store/party/?room_id=test"
 # 接続後、streamer/format.py の create_room ペイロードを送って疎通
 
 # (d) 拡張機能から繋ぐ（実ブラウザで体験確認）
-#   extension/src/infrastructure/env.ts を一時的に書き換える:
-#     D_PARTY_BACKEND_HOST     = "<random>.trycloudflare.com"
-#     D_PARTY_BACKEND_PROTOCOL = "https://"
-#     D_PARTY_WEBSOCKET_PROTOCOL = "wss://"
+#   extension/src/infrastructure/env.ts の接続先を一時的に書き換える:
+#     BACKEND_HOST       = "<random>.trycloudflare.com/"
+#     BACKEND_PROTOCOL   = "https://"
+#     WEBSOCKET_PROTOCOL = "wss://"
 #   → ルートで `pnpm --filter d-party-chrome-extension run build`
 #   → chrome://extensions で extension/dist/ を再読込
 ```
 
 ### 5.6 グレースフル更新の検証（核心）
 
-Quick Tunnel 越しに WebSocket を張ったまま、django をローリング更新して **既存接続が
-切れずに見送られる／切れても自動再接続される**かを観察します。
+Quick Tunnel 越しに WebSocket を張ったまま、django をローリング更新して **新規接続が
+途切れないこと・既存接続が 1012 で閉じられ、ルームに入り直せること**を観察します。
 
 ```bash
 # (1) 並行 N 本の WS を張りっぱなしにする簡易 soak（Python）

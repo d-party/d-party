@@ -69,8 +69,8 @@ django:
   strategy:
     maxSurge: 1
     maxUnavailable: 0
-  # SIGTERM 後、既存 WebSocket をドレインするための猶予。終了時に nginx が
-  # 当該 Pod へ新規接続を流さなくなる時間 + gunicorn graceful を見込む。
+  # 停止の猶予。preStop の待ち + gunicorn の graceful（処理中の HTTP の完了待ち）を見込む。
+  # 既存の WebSocket は待たずに 1012 で閉じられる。
   terminationGracePeriodSeconds: 120
   # preStop: readiness を落としてから graceful させるためのスリープ秒。
   preStopSleepSeconds: 5

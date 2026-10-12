@@ -192,7 +192,8 @@ infra/
 - 機微値（`SECRET_KEY` / `POSTGRES_PASSWORD`）は values に直書きせず `secret.existingSecret`
   （SealedSecrets/SOPS 等）で渡すのが既定方針。`config.MY_DOMAIN` は単一ドメイン前提。
 - backend イメージは無改変で使う（gunicorn の workers / graceful などは env で上書き）。
-  WebSocket を切らさないため django は `replicas: 1` 固定＋グレースフルなローリング更新。
+  django は既定 `replicas: 1`＋新 Pod を先に Ready にするローリング更新。既存の WebSocket は
+  旧 Pod の停止時に 1012 で切れ、拡張機能は自動再接続しない（利用者が入り直す）。
 
 ```bash
 # chart の静的検証（クラスタ不要）
