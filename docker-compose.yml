@@ -25,8 +25,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    ports:
-      - 8000:8000
     volumes:
       - ./backend/:/usr/src/app/
       - ./backend/.env.django:/env_files/.env.django
@@ -67,8 +65,6 @@ services:
   postgres:
     image: postgres:16
     container_name: postgres
-    ports:
-      - 5432:5432
     volumes:
       - "./postgres/data:/var/lib/postgresql/data"
     env_file:
@@ -82,8 +78,6 @@ services:
   redis:
     image: redis:7.4
     container_name: redis
-    ports:
-      - 6379:6379
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
