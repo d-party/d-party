@@ -34,7 +34,6 @@ server {
     listen 443 ssl;
     http2 on;
     server_name ${MY_DOMAIN} www.${MY_DOMAIN};
-    client_max_body_size 4G;
     keepalive_timeout 10;
 
     ssl_certificate     /etc/letsencrypt/live/${MY_DOMAIN}/fullchain.pem;
@@ -47,7 +46,7 @@ server {
     }
 
 
-    # ── Django (ASGI): REST API・管理画面・統計・メトリクス・WebSocket ──
+    # ── Django (ASGI): REST API・管理画面・WebSocket ──
     location /api/ {
         add_header Access-Control-Allow-Origin "*" always;
         add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
@@ -75,9 +74,6 @@ server {
         return 301 /admin/;
     }
     location /admin/ {
-        try_files $uri @proxy_to_app;
-    }
-    location = /metrics {
         try_files $uri @proxy_to_app;
     }
     # WebSocket（同時視聴の同期）。party/ は Django、/anime-store/lobby/ はフロント。
@@ -114,8 +110,9 @@ server {
         proxy_pass http://frontend_server;
     }
 
-    error_page 500 502 503 504 /500.html;
-    location = /500.html {
+    # upstream が落ちているときなど nginx 自身が返すエラー用。公式イメージ同梱のページを使う。
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
         root /usr/share/nginx/html;
     }
 }
