@@ -23,16 +23,16 @@ WebSocket（`/anime-store/party/`）を Django へ振り分けます。
 | 言語 | Python 3.14 |
 | フレームワーク | Django 6.0 · Channels 4 · DRF · djangochannelsrestframework |
 | ASGI | gunicorn + `uvicorn-worker`（本番） / `runserver`（dev, DEBUG=1） |
-| DB | **PostgreSQL 16**（`django-prometheus` 経由で計測） |
+| DB | **PostgreSQL 16** |
 | キャッシュ/レイヤ | Redis 7（`channels-redis`） |
 | パッケージ管理 | **uv**（`pyproject.toml` / `uv.lock`、PEP 621 + dependency-groups） |
 | Lint/Format | **ruff**（`uv run ruff format` / `uv run ruff check`。isort 相当は `select` の `I`。black / isort / flake8 は全廃） |
 | テスト | pytest（`pytest-django` · `pytest-asyncio` · `factory-boy` · `pytest-cov`） |
 | 暗号化 | `streamer/fields.py` の Fernet ベース `EncryptedCharField`（`cryptography`） |
 | 論理削除 | `streamer/mixins.py` の `LogicalDeletionMixin`（自前実装） |
-| 監視 | Prometheus + Grafana + cadvisor + node-exporter |
+| 監視 | 持たない（Prometheus / Grafana 一式は使っていなかったため削除済み） |
 | リバースプロキシ | Nginx |
-| DB 管理 UI | Adminer（`http://localhost:8080`） |
+| DB / Redis の閲覧 | VSCode の SQLTools / Redis for VS Code 拡張（Dev Container 同梱） |
 
 ### モダナイズで置き換えた / 削除した依存（挙動は維持）
 
@@ -48,15 +48,15 @@ WebSocket（`/anime-store/party/`）を Django へ振り分けます。
 | distutils `StrictVersion` | `api/views.py` の strict `x.y.z` パーサ |
 | `.extra(select={"day": "date(...)"})`（MySQL 依存） | ORM `TruncDate`（DB 非依存） |
 | black / isort / flake8 | ruff（`format` + `check`。`select` に `I` を含むため import 整列も ruff） |
-| django-request / django-debreach | 削除（解析は Prometheus/Grafana、CSRF は Django 標準） |
+| django-request / django-debreach | 削除（CSRF は Django 標準） |
 
 ## レイアウト
 
-# このリポジトリ（backend）は django サーバ単体。nginx / postgres / redis /
-# prometheus / grafana / adminer 等のオーケストレーション（docker-compose）は
-# d-party モノレポのルートにあり、本リポジトリは build context として参照される。
+`backend/` は django サーバ単体。nginx / postgres / redis のオーケストレーション
+（docker-compose）はモノレポのルートにあり、`backend/` は build context として参照される。
+
 ```
-backend/   ← リポジトリ直下が django プロジェクト
+backend/   ← このディレクトリ直下が django プロジェクト
   pyproject.toml          uv（依存・ruff・pytest 設定）
   uv.lock
   Dockerfile              python:3.14-slim + uv（venv は /opt/venv）
@@ -76,9 +76,9 @@ backend/   ← リポジトリ直下が django プロジェクト
     routing.py            ws: anime-store/party/
     cron.py               fold_room_reactions（ルーム終了時にリアクションを ReactionStat へ畳み込む）
     management/commands/close_active_sessions.py  起動時に >1日経過の ghost セッションを回収
-  api/                    DRF（統計 / shields バッジ / 拡張機能バージョン確認）
-  web/                    管理者向け統計チャートのテンプレート（admin/chart のみ。
-                          LP・使い方・ロビーは frontend へ移行）
+  api/                    DRF（統計 / shields バッジ / 拡張機能バージョン確認 / ロビー解決）
+  templates/admin/        管理画面トップ（Unfold のダッシュボード）の上書き
+  assets/                 管理画面のブランディング素材（STATICFILES_DIRS）
 ```
 
 ### Request / data flow
@@ -102,7 +102,6 @@ Compose のサービス名で解決し、k3s 等へ移行する際は env（Conf
 | `REDIS_HOST` / `REDIS_PORT` | `redis` / `6379` | Channels レイヤ | `.env.django` |
 | `DJANGO_UPSTREAM` | `django:8000` | nginx → Django | ルート `.env.global` |
 | `FRONTEND_UPSTREAM` | `frontend:3000` | nginx → フロント | ルート `.env.global` |
-| `GRAFANA_UPSTREAM` | `grafana:3000` | nginx → Grafana | ルート `.env.global` |
 
 - nginx / `.env.global` 等のインフラ設定は **d-party モノレポのルート**にある。アプリ側の
   nginx 設定やコードを触らず、env だけで解決先を変更できる。
@@ -138,7 +137,7 @@ uv run ruff check . --fix     # Lint + import 整列（自動修正）
 uv run mypy .                 # 型検査（ダミー env が必要。下記参照）
 ```
 
-> `uvx ruff` ではなく `uv run ruff` を使うこと。CI（`.github/workflows/ci.yml`）は
+> `uvx ruff` ではなく `uv run ruff` を使うこと。CI（`.github/workflows/backend-ci.yml`）は
 > `uv.lock` にピン留めされた ruff を `uv run` で実行するため、`uvx`（常に最新を取得）
 > だとバージョン差で整形結果がズレることがある。
 
@@ -147,7 +146,7 @@ uv run mypy .                 # 型検査（ダミー env が必要。下記参�
 `DATABASE_ENGINE`, `REDIS_HOST`, `REDIS_PORT`, `LANGUAGE_CODE`, `TIME_ZONE`,
 `D_ANIME_STORE_DOMAIN`, `CHROME_EXTENSION_REQUIRED_VERSION`。
 
-### CI（`.github/workflows/ci.yml`）
+### CI
 
 `backend-ci.yml`（`Backend/CI`）のジョブ: `ruff` / `pytest` / `mypy` / `license-check`。
 
@@ -170,7 +169,7 @@ Dockerfile を検査し、イメージを組み、dockle にかけ、**本物の
 - **単体の linter を別プロセスで回さず ruff へ集約している**（<https://docs.astral.sh/ruff/rules/>）。
   SAST は flake8-bandit 相当の `S`、複雑度は mccabe 相当の `C90`（`max-complexity = 10`）と
   Pylint の `PLR09xx` が見る。そのため bandit / lizard の専用ジョブは持たない。
-  taint 解析は ruff の守備範囲外なので `repo-codeql.yml`（python）が担当する。
+  taint 解析は ruff の守備範囲外なので `repo-ci.yml` の CodeQL（python）が担当する。
 
 ### ghost セッションの回収
 
@@ -191,10 +190,8 @@ docker compose exec django python manage.py close_active_sessions
 | URL | 内容 |
 |-----|------|
 | `http://localhost` | アプリ（Nginx 経由） |
-| `http://localhost:8000` | Django 直接 |
-| `http://localhost:8080` | Adminer（PostgreSQL 管理） |
-| `http://localhost:9090` | Prometheus |
-| `http://localhost:3000` | Grafana |
+| `http://localhost:8000` | Django 直接（dev overlay が loopback に公開） |
+| `http://localhost:8000/admin/` | 管理画面（Unfold） |
 
 ## コアを壊さないための注意
 
