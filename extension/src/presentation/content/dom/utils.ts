@@ -1,4 +1,4 @@
-/** DOM/URL helpers shared by the content scripts (port of the old utils.js). */
+/** DOM/URL helpers shared by the content scripts. */
 
 /**
  * Read a query-string parameter (defaults to the current page URL).

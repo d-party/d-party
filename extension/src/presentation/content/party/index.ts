@@ -19,8 +19,7 @@ import { ReactionViewReact } from "./ReactionViewReact";
 
 /**
  * Content script for the dアニメストア player page (sc_d_pc). Wires the
- * dアニメストア player and the sidebar to a {@link RoomSession}. Faithful port
- * of the original player.js wiring.
+ * dアニメストア player and the sidebar to a {@link RoomSession}.
  */
 
 const video = () => document.getElementById("video") as HTMLVideoElement;
@@ -172,7 +171,7 @@ function shareTitle(): string {
   return `${text("backInfoTxt1")} - ${text("backInfoTxt2")} - ${text("backInfoTxt3")}`;
 }
 
-// --- general player event wiring (port of general_websocket) ----------------
+// --- general player event wiring -------------------------------------------
 function bindPlayerEvents(): void {
   if (playerEventsBound) return;
   playerEventsBound = true;
@@ -481,9 +480,8 @@ function nextPageAnotherTab(): void {
     subtree: true,
   };
   const callback = () => {
-    // (The original also injected an inline <script> here to strip the page's
-    // own .recommend click handlers; that is blocked by the page CSP and has
-    // been removed. We rebind onclick directly on the page elements instead.)
+    // ページの CSP がインライン script を禁じるので、ページ側のハンドラは外さず
+    // onclick を直接差し替える。
     document.querySelectorAll<HTMLElement>(".recommend").forEach((item) => {
       item.onclick = () => {
         // 遷移先はページ自身の DOM から読む。content script からの

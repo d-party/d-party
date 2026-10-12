@@ -36,12 +36,9 @@ const SERVER_DISCONNECTED = "サーバーとの通信が終了";
 const CONNECT_FAILED = "サーバーへの接続に失敗しました";
 
 /**
- * Orchestrates a watch-together session over the party WebSocket.
- *
- * This is a faithful extraction of the sync core from the original
- * `player.js`: the same messages are sent and the same incoming messages are
- * handled, including the `available_action` guard that prevents echoed remote
- * operations from looping back to the server.
+ * Orchestrates a watch-together session over the party WebSocket. Remote
+ * operations are applied under the {@link ActionGuard} so the media events
+ * they trigger are not echoed back to the server.
  */
 export class RoomSession {
   private readonly deps: RoomSessionDeps;

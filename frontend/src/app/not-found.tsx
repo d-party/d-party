@@ -10,7 +10,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-/** Ported from web/templates/404.html. */
 export default function NotFound(): React.JSX.Element {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">

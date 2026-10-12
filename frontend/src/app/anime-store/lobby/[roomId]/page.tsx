@@ -12,7 +12,7 @@ import { lobbyResolve } from "@/infrastructure/api/generated/d-party";
 import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
 
 /**
- * Room-transition lobby — faithful port of web/templates/lobby_redirect.html.
+ * Room-transition lobby.
  *
  * The Chrome extension's `content-version` script matches
  * `https://d-party.net/anime-store/lobby/*` and writes the backend's version

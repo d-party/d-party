@@ -10,7 +10,7 @@ const click = (selector: string) =>
 
 /**
  * Drives the dアニメストア HTML5 player by clicking its native controls and
- * setting media properties — a faithful port of the player.js control helpers.
+ * setting media properties.
  */
 export class PlayerControllerDom implements PlayerController {
   constructor(private readonly guard: ActionGuard) { }

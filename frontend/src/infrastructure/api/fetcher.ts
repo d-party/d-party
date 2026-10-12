@@ -18,10 +18,8 @@ function baseUrl(): string {
 
 /**
  * Custom fetch mutator used by the orval-generated REST client. Prefixes the
- * backend base URL and returns orval's `{ status, data, headers }` contract.
- *
- * Faithful port of the Chrome extension's `customFetch`
- * (extension/src/infrastructure/api/fetcher.ts).
+ * backend base URL and returns orval's `{ status, data, headers }` contract
+ * (same contract as the extension's `customFetch`).
  */
 export const customFetch = async <T>(
   url: string,
