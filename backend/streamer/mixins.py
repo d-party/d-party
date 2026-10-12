@@ -1,8 +1,6 @@
 """Logical (soft) deletion support.
 
-This module is a self-contained replacement for the now-unmaintained
-``django_boost`` ``LogicalDeletionMixin``. The public behaviour is kept
-identical so the streamer core logic does not have to change:
+Semantics the streamer relies on:
 
 * ``Model.objects.alive()`` / ``.dead()`` filter by the ``deleted_at`` flag.
 * ``instance.delete()`` performs a *logical* delete (sets ``deleted_at``)

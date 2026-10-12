@@ -3,9 +3,8 @@
 A room's per-tap ``AnimeReaction`` rows are folded into the compact
 ``ReactionStat`` aggregate the moment the room ends (host delete / grace-period
 delete) and the raw rows are hard-deleted, so the database only retains
-aggregates. This is part of the stats contract and runs from ``consumers.py`` —
-it is *not* a scheduled job (the previous time-based retention cron has been
-removed; ``AnimeReaction`` no longer accumulates unbounded thanks to folding).
+aggregates. Despite the module name this is *not* a scheduled job: it runs from
+``consumers.py`` (and ``close_active_sessions``) when a room ends.
 """
 
 from django.db.models import Count, F
