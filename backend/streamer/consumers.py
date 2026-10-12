@@ -39,6 +39,25 @@ from .util import is_valid_uuid
 ROOM_GRACE_SECONDS = 60.0
 _pending_room_deletes: dict[str, asyncio.Task] = {}
 
+# クライアントから受け取る文字列の上限。永続化するものは models の max_length と揃える。
+# 拡張機能側の入力制限は WebSocket を直接叩けば迂回できるので、受信時に切り詰めて
+# DataError（接続断）や過大なブロードキャストを防ぐ。
+USER_NAME_MAX_LENGTH = 20
+USER_ICON_MAX_LENGTH = 64
+PART_ID_MAX_LENGTH = 16
+TITLE_MAX_LENGTH = 255
+OPERATION_MAX_LENGTH = 32
+REACTION_TYPE_MAX_LENGTH = 32
+DEFAULT_USER_NAME = "user"
+DEFAULT_USER_ICON = "FaRegUser"
+
+
+def _clip(value, max_length: int, default: str = "") -> str:
+    """Return ``value`` cut to ``max_length``, or ``default`` if it is not a str."""
+    if not isinstance(value, str):
+        return default
+    return value[:max_length]
+
 
 @database_sync_to_async
 def _logical_delete_room_if_empty(room_id_str: str) -> bool:
@@ -133,16 +152,17 @@ class AnimePartyConsumer(GenericAsyncAPIConsumer):
 
     @action()
     async def create(
-        self, part_id, user_name, title="", user_icon="FaRegUser", **kwargs
+        self, part_id, user_name, title="", user_icon=DEFAULT_USER_ICON, **kwargs
     ):
-        # create room
-        self.anime_room = await self.database_create_room(part_id=part_id, title=title)
-        # create user
+        self.anime_room = await self.database_create_room(
+            part_id=_clip(part_id, PART_ID_MAX_LENGTH),
+            title=_clip(title, TITLE_MAX_LENGTH),
+        )
         self.anime_user = await self.database_create_user(
-            user_name=user_name,
+            user_name=_clip(user_name, USER_NAME_MAX_LENGTH, DEFAULT_USER_NAME),
             room_id=self.anime_room,
             is_host=True,
-            user_icon=user_icon,
+            user_icon=_clip(user_icon, USER_ICON_MAX_LENGTH, DEFAULT_USER_ICON),
         )
         await self.channel_layer.group_add(
             str(self.anime_room.room_id), self.channel_name
@@ -171,7 +191,9 @@ class AnimePartyConsumer(GenericAsyncAPIConsumer):
         )
 
     @action()
-    async def join(self, room_id: str, user_name: str, user_icon="FaRegUser", **kwargs):
+    async def join(
+        self, room_id: str, user_name: str, user_icon=DEFAULT_USER_ICON, **kwargs
+    ):
         """joinを受け取った場合のアクション
         joinを受け取った場合、ルームが存在していればルームに参加する
 
@@ -195,7 +217,9 @@ class AnimePartyConsumer(GenericAsyncAPIConsumer):
         _cancel_pending_room_delete(str(self.anime_room.room_id))
         # ルームが存在しているのであればAnimeUserオブジェクトを作成
         self.anime_user = await self.database_create_user(
-            user_name=user_name, room_id=self.anime_room, user_icon=user_icon
+            user_name=_clip(user_name, USER_NAME_MAX_LENGTH, DEFAULT_USER_NAME),
+            room_id=self.anime_room,
+            user_icon=_clip(user_icon, USER_ICON_MAX_LENGTH, DEFAULT_USER_ICON),
         )
         await self.channel_layer.group_add(
             str(self.anime_room.room_id), self.channel_name
@@ -293,10 +317,10 @@ class AnimePartyConsumer(GenericAsyncAPIConsumer):
             return
         video_operation = VideoOperation(
             room_id=self.anime_room.room_id,
-            operation=operation,
+            operation=_clip(operation, OPERATION_MAX_LENGTH),
             user=User(**self.anime_user.__dict__).model_dump(),
             option=option,
-            title=title,
+            title=None if title is None else _clip(title, TITLE_MAX_LENGTH),
         )
         response_data = GroupSend(
             response=video_operation,
@@ -304,6 +328,7 @@ class AnimePartyConsumer(GenericAsyncAPIConsumer):
         )
         if (
             video_operation.option.part_id != self.anime_room.part_id
+            and len(video_operation.option.part_id) <= PART_ID_MAX_LENGTH
             and self.anime_user.is_host
         ):
             await self.database_update_room_part_id(video_operation.option.part_id)
@@ -365,7 +390,7 @@ class AnimePartyConsumer(GenericAsyncAPIConsumer):
         await self.database_renew_state()
         operation_notification = OperationNotification(
             room_id=self.anime_room.room_id,
-            operation=operation,
+            operation=_clip(operation, OPERATION_MAX_LENGTH),
             user=User(**self.anime_user.__dict__).model_dump(),
         )
         response_data = GroupSend(
@@ -394,6 +419,11 @@ class AnimePartyConsumer(GenericAsyncAPIConsumer):
         # には拡張機能側がローカルに表示する（「自分にだけは表示される」）ため、サーバは
         # ここで黙って破棄するだけでよい。
         if self._disable_reaction():
+            return
+        if (
+            not isinstance(reaction_type, str)
+            or len(reaction_type) > REACTION_TYPE_MAX_LENGTH
+        ):
             return
         reaction = Reaction(
             reaction_type=reaction_type,
@@ -613,7 +643,7 @@ class AnimePartyConsumer(GenericAsyncAPIConsumer):
         user_name: str,
         room_id,
         is_host: bool = False,
-        user_icon: str = "FaRegUser",
+        user_icon: str = DEFAULT_USER_ICON,
     ):
         """データベース上にユーザーを作成する
 
