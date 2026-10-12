@@ -151,10 +151,6 @@ video().addEventListener(
   "loadeddata",
   () => {
     if (mode !== "join") return;
-    if (getParam("party") === "true") {
-      const title = document.querySelector("title");
-      if (title) title.textContent += " 🎉";
-    }
     addControlButtons();
     bindPlayerEvents();
     // 停止状態で ▶ を見せてから join する。プライミング中はまだ inRoom=false
