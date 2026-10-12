@@ -26,6 +26,8 @@ on:
     paths:
       - "extension/**"
       - "frontend/**"
+      # 両 Storybook は packages/ui の story も取り込む。
+      - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
