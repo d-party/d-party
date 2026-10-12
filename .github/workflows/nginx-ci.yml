@@ -16,6 +16,13 @@ on:
       - "nginx/**"
       - ".github/workflows/nginx-ci.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 # envsubst で展開する変数は明示する（無指定だと $host 等の nginx 変数まで潰れる）。
 env:
   MY_DOMAIN: localhost
@@ -26,8 +33,11 @@ env:
 jobs:
   syntax:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # prod テンプレートが参照する letsencrypt 一式をダミーで用意する。
       # nginx -t は ssl_certificate / ssl_dhparam を実際に読み込むため、中身が

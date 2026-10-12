@@ -51,7 +51,8 @@ jobs:
         with:
           persist-credentials: false
       - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
+        # ブランチ（master）ではなくリリースタグを参照する。
+        uses: ludeeus/action-shellcheck@2.0.0
 
   yamllint:
     name: yamllint
@@ -142,6 +143,8 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
@@ -175,6 +178,8 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: reviewdog/action-actionlint@v1
         with:
           reporter: "github-pr-review"
@@ -190,6 +195,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Setup node/npm
         uses: actions/setup-node@v7
         with:
