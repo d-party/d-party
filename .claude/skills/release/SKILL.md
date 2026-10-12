@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a unified d-party release by dispatching the root release.yml workflow with a patch / minor / major version bump. Always confirms the bump type with the user through explicit options before dispatching, then watches the run through the version bump, the arm64 GHCR image builds and the Chrome Web Store upload. Use when asked to release, cut a version, publish, or tag d-party.
+description: Cut a unified d-party release by dispatching the root release.yml workflow with a patch / minor / major version bump. Always confirms the bump type with the user through explicit options before dispatching (in the scheduled GitHub Actions run it picks the bump by the rules in its non-interactive section instead), then watches the run through the version bump, the arm64 GHCR image builds and the Chrome Web Store upload. Use when asked to release, cut a version, publish, or tag d-party.
 ---
 
 # Release (d-party)
@@ -23,7 +23,8 @@ d-party はモノレポで、リリースは **`release` ワークフロー 1 �
 
 ## 1. バンプ種別を必ずユーザーに確認する
 
-**これは省略禁止。** 勝手に patch を選ばない。`AskUserQuestion` で選択肢として提示する。
+**対話セッションでは省略禁止。** 勝手に patch を選ばない。`AskUserQuestion` で選択肢として提示する。
+唯一の例外は末尾の「非対話モード」（GitHub Actions の定期実行）で、そこでは決められた規則で選ぶ。
 
 - **patch** — バグ修正・依存更新のみ。ユーザー向けの機能変更なし
 - **minor** — 後方互換のある機能追加
@@ -121,3 +122,66 @@ gh api "orgs/d-party/packages/container/frontend/versions" -q '.[0].metadata.con
 - **argocd-image-updater が新しいタグを拾わない**
   → GHCR のパッケージが public になっているか、`update-strategy: semver` の
     許容レンジを確認する。詳細は `infra/argocd/README.md`。
+
+## 非対話モード（GitHub Actions の定期実行）
+
+`.github/workflows/maintenance.yml` が週 1 回、Dependabot の処理の後にこの skill を
+無人で動かす。ユーザーに質問できないので、§1 の確認を以下の規則に置き換える。
+対話セッションではこの節は無視する。
+
+### リリースするかどうか
+
+前回タグ以降の commit のうち、`chore: release vX.Y.Z` と merge commit を除いた
+「中身のある commit」を数える。
+
+```bash
+git fetch --tags origin
+LATEST=$(git tag --list 'v*.*.*' | sort -V | tail -n1)
+git log --no-merges --format='%h %s' "${LATEST}..origin/main" | grep -v '^[0-9a-f]* chore: release v'
+```
+
+- **0 件** → リリースしない。`$GITHUB_STEP_SUMMARY` に「変更なしのためスキップ」と書いて終わる。
+
+### バンプ種別
+
+上の commit の件名（Conventional Commits）と本文から決める。
+
+| 条件 | 種別 |
+| --- | --- |
+| `!:`（例 `feat!:`）か本文に `BREAKING CHANGE` がある | **リリースしない**（下記の issue を立てる） |
+| `feat` / `feat(...)` がある（同じ期間に `Revert` で打ち消されたものは数えない） | **minor** |
+| それ以外（`fix` · `chore(deps)` · `ci` · `docs` · `refactor` など） | **patch** |
+
+major は自動で選ばない。拡張機能とバックエンドの互換が切れうるので、人が判断する。
+
+### そのほかの入力
+
+- `publish` は **`false`**（Chrome Web Store にはアップロードのみ。公開は人が行う）
+- `release_note` は**空**（GitHub の自動生成に任せる）
+
+### 事前チェックの読み替え
+
+- Dependabot のマージは GITHUB_TOKEN で行われるので、**main への push で CI が起動しない**。
+  「main が緑」は、前回タグ以降にマージされた PR それぞれの head commit の
+  チェックがすべて成功していたことで確認する
+  （`gh pr list -R d-party/d-party --state merged --search "merged:>=<前回タグの日付>"` →
+  `gh pr view <N> --json statusCheckRollup`）。
+- main で直近に走った run に失敗があり、その後の run で解消されていなければリリースしない。
+- 開いている Dependabot PR は release blocker ではない。
+
+### 止めるとき・失敗したとき
+
+リリースしない判断をした場合（BREAKING / main が赤）と、`release.yml` の run が
+失敗した場合は、`$GITHUB_STEP_SUMMARY` に理由を書き、issue を 1 本立てる。
+同じタイトルの open な issue があればそこへコメントする（重複させない）。
+
+```bash
+gh issue list -R d-party/d-party --state open --search "in:title 週次リリース保留" --json number
+gh issue create -R d-party/d-party --title "週次リリース保留: <理由の要約>" --body "<根拠・run の URL>"
+```
+
+### 監視
+
+`gh run watch` は Bash の上限（30 分）に収まらないことがあるので、
+`gh run view "$RUN" --json status,conclusion` を数分おきに見て `completed` を待つ。
+完了したら §4 の確認を行い、結果を `$GITHUB_STEP_SUMMARY` に書く。
