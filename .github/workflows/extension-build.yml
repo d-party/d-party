@@ -98,6 +98,10 @@ jobs:
               if (!ok) bad++;
             }
             if (bad) { console.error(`${bad} 個の参照先が空か存在しない`); process.exit(1); }
+            // 本番パッケージに開発用バックエンドの権限・match を残さない。
+            if (/localhost/.test(JSON.stringify(m))) {
+              console.error("manifest に localhost が残っている"); process.exit(1);
+            }
             console.log(`manifest version: ${m.version}`);
           '
 

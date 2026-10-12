@@ -1,10 +1,57 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { rspack, type Configuration } from "@rspack/core";
+import { rspack, type Compiler, type Configuration } from "@rspack/core";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const src = (p: string) => path.resolve(__dirname, "src", p);
+const isProduction = process.env.D_PARTY_ENV === "production";
+
+const isLocalhost = (pattern: string) =>
+  /^https?:\/\/localhost[/:]/.test(pattern);
+
+interface Manifest {
+  host_permissions?: string[];
+  content_scripts?: { matches: string[] }[];
+}
+
+/**
+ * Drop the local-backend entries (`http://localhost/*`) from the copied
+ * manifest in production builds, so the store package does not ask for a
+ * localhost host permission or inject into local pages.
+ */
+class StripLocalhostFromManifestPlugin {
+  apply(compiler: Compiler): void {
+    const name = "StripLocalhostFromManifestPlugin";
+    compiler.hooks.thisCompilation.tap(name, (compilation) => {
+      compilation.hooks.processAssets.tap(
+        { name, stage: rspack.Compilation.PROCESS_ASSETS_STAGE_SUMMARIZE },
+        () => {
+          const asset = compilation.getAsset("manifest.json");
+          if (!asset) return;
+          const manifest = JSON.parse(
+            asset.source.source().toString(),
+          ) as Manifest;
+          manifest.host_permissions = manifest.host_permissions?.filter(
+            (p) => !isLocalhost(p),
+          );
+          manifest.content_scripts = manifest.content_scripts
+            ?.map((cs) => ({
+              ...cs,
+              matches: cs.matches.filter((m) => !isLocalhost(m)),
+            }))
+            .filter((cs) => cs.matches.length > 0);
+          compilation.updateAsset(
+            "manifest.json",
+            new rspack.sources.RawSource(
+              `${JSON.stringify(manifest, null, 2)}\n`,
+            ),
+          );
+        },
+      );
+    });
+  }
+}
 
 const config: Configuration = {
   mode: process.env.NODE_ENV === "development" ? "development" : "production",
@@ -86,6 +133,7 @@ const config: Configuration = {
         { from: "public/css", to: "css", noErrorOnMissing: true },
       ],
     }),
+    ...(isProduction ? [new StripLocalhostFromManifestPlugin()] : []),
   ],
 };
 
