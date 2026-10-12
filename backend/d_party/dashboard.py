@@ -35,7 +35,7 @@ def _reaction_breakdown():
 
     リアクションはルーム終了時に ``ReactionStat`` へ日次×種別で畳み込まれ、生の
     ``AnimeReaction`` はハードデリートされる。したがって「畳み込み済みの集計」と
-    「まだルームが生きている未畳み込みの生データ」を合算する。
+    「まだルームが生きている未畳み込みの生データ」を合算する（統計 API と同じ条件）。
     """
     counts: dict[str, int] = {value: 0 for value, _label in ReactionType.choices}
 
@@ -46,7 +46,7 @@ def _reaction_breakdown():
         )
 
     live = (
-        AnimeReaction.objects.alive()
+        AnimeReaction.objects.filter(room_id__deleted_at__isnull=True)
         .values("reaction_type")
         .annotate(total=Count("reaction_id"))
     )
