@@ -12,7 +12,7 @@
 #   LOADTEST_VUS=20 LOADTEST_ROOM_SIZE=5 LOADTEST_DURATION=2m \
 #     docker compose ... --profile loadtest run --rm k6
 #
-# 既定の TARGET は nginx 経由（本番に近い経路: nginx → django(daphne)）。
+# 既定の TARGET は nginx 経由（本番に近い経路: nginx → django）。
 # nginx/frontend を介さず django を直接叩く場合は:
 #   LOADTEST_TARGET=ws://django:8000/anime-store/party/
 
