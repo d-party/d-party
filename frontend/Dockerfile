@@ -50,7 +50,8 @@ WORKDIR /app/frontend
 RUN pnpm build
 
 # --- Runtime ----------------------------------------------------------------
-FROM base AS runner
+# 実行時は node だけで足りるので、corepack / pnpm を入れた base は継承しない。
+FROM node:26-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
