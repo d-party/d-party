@@ -42,7 +42,7 @@ def _parse_days(request) -> int | None:
         return DEFAULT_STATS_DAYS
     try:
         days = int(raw)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
     if days < 1 or days > MAX_STATS_DAYS:
         return None
