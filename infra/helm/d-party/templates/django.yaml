@@ -73,9 +73,9 @@ spec:
             {{- include "d-party.connectionEnv" . | nindent 12 }}
             # gunicorn.conf.py を改変せず graceful-timeout / timeout / workers を上書きする。
             - name: GUNICORN_CMD_ARGS
-              # 制御ソケットの既定は $HOME 配下で、非 root では書けないため /tmp に置く。
+              # 制御ソケット（gunicornc 用）は使わない。既定の $HOME 配下は非 root では書けない。
               value: >-
-                --control-socket /tmp/gunicorn.ctl
+                --no-control-socket
                 --graceful-timeout {{ .Values.django.gunicornGracefulTimeout }}
                 --timeout {{ .Values.django.gunicornGracefulTimeout }}
                 {{- if gt (int .Values.django.gunicornWorkers) 0 }}
