@@ -59,10 +59,10 @@ jobs:
         uses: actions/cache@v6
         with:
           path: .turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          key: turbo-${{ runner.os }}-${{ github.workflow }}-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-            turbo-${{ runner.os }}-
+            turbo-${{ runner.os }}-${{ github.workflow }}-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            turbo-${{ runner.os }}-${{ github.workflow }}-${{ github.job }}-
 
       # Next.js のビルドキャッシュ（.next/cache）は turbo の outputs から除いて
       # あるので別枠で持ち越す。こちらも pnpm-lock.yaml のハッシュで区切る。
