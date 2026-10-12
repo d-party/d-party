@@ -454,6 +454,7 @@ fork や新しいリポジトリでは改めて必要になる。
 | **GitHub Pages を有効化し、ソースを「GitHub Actions」にする** | Settings → Pages → Source: GitHub Actions<br>（`gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`） | `Storybook/Deploy` の build は通るのに deploy だけが `Failed to create deployment (status: 404)` で落ちる |
 | **GHCR パッケージへの write を許可する** | `ghcr.io/d-party/backend` と `ghcr.io/d-party/frontend` の Package settings → Manage Actions access → このリポジトリに Write | `Release` の images ジョブが denied で落ちる |
 | **Actions secret `CLAUDE_CODE_OAUTH_TOKEN` を登録する** | Claude の Pro / Max プランで `claude setup-token` を実行し、出たトークンを Settings → Secrets and variables → Actions へ | `Repo/Maintenance` が認証エラーで落ちる |
+| **Private vulnerability reporting を有効化する** | Settings → Security → Private vulnerability reporting: Enable<br>（`gh api -X PUT repos/<owner>/<repo>/private-vulnerability-reporting`） | `.github/SECURITY.md` の報告先リンクが使えない |
 
 ### キャッシュ
 
