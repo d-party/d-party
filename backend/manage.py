@@ -8,8 +8,11 @@ import dotenv
 
 
 def main():
-    dotenv.load_dotenv("/env_files/.env.django", verbose=True, override=True)
-    dotenv.load_dotenv("/env_files/.env.global", verbose=True, override=True)
+    # コンテナに渡された環境変数（compose の env_file / k8s の env）を優先し、
+    # ファイルは不足分を補うだけにする。上書きすると、本番の SECRET_KEY 等が
+    # 管理コマンドの実行時だけ開発用の値へ戻ってしまう。
+    dotenv.load_dotenv("/env_files/.env.django", verbose=True)
+    dotenv.load_dotenv("/env_files/.env.global", verbose=True)
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "d_party.settings")
     try:
         from django.core.management import execute_from_command_line
