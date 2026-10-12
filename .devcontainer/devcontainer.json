@@ -54,10 +54,12 @@
         "mtxr.sqltools",
         "mtxr.sqltools-driver-pg",
         "Redis.redis-for-vscode",
-        "lottiefiles.vscode-lottie"
+        "lottiefiles.vscode-lottie",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/backend/.venv/bin/python",
         "editor.formatOnSave": true,
         "[python]": {
           "editor.defaultFormatter": "charliermarsh.ruff"
