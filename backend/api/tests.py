@@ -233,3 +233,22 @@ class TestStatsCache(APITestCase):
         ReactionStat.objects.filter(date=today, reaction_type="S").update(count=99)
         second = self.client.get(self.endpoint, {"days": "30"})
         assert second.data["data"]["count"] == 3  # キャッシュヒット
+
+
+class TestReactionCountShieldsAPI(APITestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.endpoint = "/api/shields/total-reaction"
+        _clear_reaction_tables()
+
+    @pytest.mark.django_db
+    def test_counts_folded_and_live_reactions(self):
+        """畳み込み済み（ReactionStat）と生存ルームの未畳み込み分を合算する"""
+        today = timezone.localdate()
+        ReactionStat.objects.create(date=today, reaction_type="S", count=5)
+        live_room = AnimeRoomFactory()
+        AnimeReaction.objects.create(room_id=live_room, reaction_type="F")
+        response = self.client.get(self.endpoint)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["schemaVersion"] == 1
+        assert response.data["message"] == "6"
