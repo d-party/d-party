@@ -150,13 +150,15 @@ jobs:
             git push origin HEAD:main
           fi
 
-      - name: Force-update the release tag
+      # タグは不変として扱う（argocd-image-updater と GHCR のイメージタグが同じ値を指す）。
+      # 既に同名のタグがあれば上書きせずに失敗させる。
+      - name: Create the release tag
         env:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
-          git tag -f "${TAG}"
-          git push origin "refs/tags/${TAG}" --force
+          git tag "${TAG}"
+          git push origin "refs/tags/${TAG}"
 
       - name: Create the GitHub Release
         uses: softprops/action-gh-release@v3
@@ -167,11 +169,6 @@ jobs:
           generate_release_notes: true
           target_commitish: main
 
-  # ── 2. サーバ側のイメージを arm64 ネイティブでビルドして GHCR へ ──────────
-  #
-  # Raspberry Pi (arm64) の k3s が pull する配信元。QEMU を使わないよう
-  # arm64 ランナーで焼く。タグは git タグと完全一致させる（`v` 付き・不変）ので、
-  # argocd-image-updater が semver で拾って ops リポジトリの values を書き換える。
   # ── 2. サーバ側のイメージをビルドして GHCR へ ────────────────────────────
   #
   # Raspberry Pi (arm64) の k3s が pull する配信元。amd64 も一緒に出しておくと、
