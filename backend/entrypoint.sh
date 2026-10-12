@@ -9,9 +9,12 @@ set -e
 # safe to run on every start even with multiple replicas.
 python manage.py close_active_sessions || true
 
+# exec でシェルをサーバに置き換える。sh が PID 1 のまま残ると SIGTERM が gunicorn へ
+# 届かず、graceful 停止（各 WebSocket の disconnect → leave_party）が走らないまま
+# 猶予切れで SIGKILL される。
 if [ "$DEBUG" = "1" ]; then
-    python manage.py runserver 0.0.0.0:8000
+    exec python manage.py runserver 0.0.0.0:8000
 else
     # ASGI app served by gunicorn with the uvicorn worker (see gunicorn.conf.py).
-    gunicorn
+    exec gunicorn
 fi
