@@ -78,11 +78,10 @@
         ],
         "sqltools.autoOpenSession": false,
         "sqltools.useNodeRuntime": true,
+        // 任意のコードを実行できるインタプリタ（python / pip）と、-exec / -delete を持つ find は
+        // 自動承認しない。下の rm 等の拒否指定を `python -c` などで迂回できてしまうため。
         "chat.tools.terminal.autoApprove": {
           "uv": true,
-          "python": true,
-          "python3": true,
-          "pip": true,
           "pytest": true,
           "ruff": true,
           "pnpm": true,
@@ -105,7 +104,6 @@
           "wc": true,
           "tree": true,
           "which": true,
-          "find": true,
           "grep": true,
           "rg": true,
           "/^git (status|log|diff|branch|show|fetch|remote|rev-parse)\\b/": true,
