@@ -1,0 +1,187 @@
+# 週次の定期保守。Claude Code（anthropics/claude-code-action）に
+# リポジトリの skill を無人で実行させる。
+#
+#   1. dependabot: `.claude/skills/dependabot-review-and-merge` で
+#      Dependabot PR を調査・検証し、条件を満たすものだけマージする。
+#   2. release:    `.claude/skills/release` で release.yml を dispatch する。
+#      dependabot の後に走らせ、その週のマージを含めてリリースする。
+#
+# どちらの skill も対話前提の手順を持つので、無人実行時のルールは各 SKILL.md の
+# 「非対話モード」節に書いてある。ここのプロンプトはそれを指すだけにする。
+#
+# 必要な設定:
+#
+#   ★ CLAUDE_CODE_OAUTH_TOKEN（Actions secret）
+#     Claude の Pro / Max プランで `claude setup-token` を実行して得たトークン。
+#     消費はプランの利用枠から引かれ、手元の Claude Code と枠を共有する。
+#
+# GITHUB_TOKEN で動かすことによる制約（SKILL.md の非対話モード節もこれに合わせてある）:
+#   - GITHUB_TOKEN による push / マージは後続のワークフローを起動しない。
+#     Dependabot ブランチへ push すると PR の CI が回らず検証できないので、push はしない。
+#     マージ後の main で走る push トリガのワークフロー（storybook-deploy など）も起動しない。
+#   - GITHUB_TOKEN には `workflows` 権限が無いため、.github/workflows/ を書き換える
+#     PR（github-actions ecosystem）はマージできない。検証結果をコメントして人に回す。
+#   - workflow_dispatch は GITHUB_TOKEN からでも起動できるので、release.yml は動く。
+name: Repo/Maintenance
+
+on:
+  schedule:
+    # 毎週火曜 10:00 JST（01:00 UTC）。Dependabot は月曜 12:00 JST に PR を立てるので、
+    # その CI が一巡した後に拾う。
+    - cron: "0 1 * * 2"
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Run the release skill after the Dependabot review"
+        required: false
+        type: boolean
+        default: true
+
+# 保守は重ねて走らせない。走行中のものは止めない（マージ途中で切らない）。
+concurrency:
+  group: maintenance
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  dependabot:
+    name: Review & merge Dependabot PRs
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+      checks: read
+    # backend のゲート（pytest）用。backend-ci.yml と同じ構成。
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: d_party
+          POSTGRES_USER: d_party
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U d_party -d d_party"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.4
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SECRET_KEY: django-insecure-ci
+      DEBUG: "1"
+      MY_DOMAIN: localhost
+      D_ANIME_STORE_DOMAIN: animestore.docomo.ne.jp
+      TIME_ZONE: Asia/Tokyo
+      LANGUAGE_CODE: ja
+      DATABASE_ENGINE: django.db.backends.postgresql
+      DATABASE_USER: d_party
+      DATABASE_HOST: localhost
+      DATABASE_PORT: "5432"
+      POSTGRES_DB: d_party
+      POSTGRES_PASSWORD: password
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
+      CHROME_EXTENSION_REQUIRED_VERSION: 1.0.0
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      # skill のゲートが使うツールチェーンは先に入れておく（Claude に入れさせない）。
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          working-directory: backend
+          cache-dependency-glob: "backend/uv.lock"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Skill ツールで `dependabot-review-and-merge` を実行してください。
+            これは GitHub Actions 上の無人実行です。ユーザーへの質問はできません。
+            SKILL.md の「非対話モード（GitHub Actions の定期実行）」節のルールを
+            他のすべての手順より優先して守ってください。
+          # ゲートの build / storybook / pytest は数分かかるので Bash の上限を延ばす。
+          settings: |
+            {
+              "env": {
+                "BASH_DEFAULT_TIMEOUT_MS": "1200000",
+                "BASH_MAX_TIMEOUT_MS": "1800000"
+              }
+            }
+          claude_args: |
+            --allowedTools "Skill,Bash,Read,Edit,Write,Glob,Grep,WebFetch,WebSearch,TodoWrite"
+
+  release:
+    name: Cut the weekly release
+    needs: dependabot
+    # dependabot が失敗しても main にあるもの（マージ済みの分）はリリースしてよい。
+    # 手動実行で release=false のときだけ止める。
+    if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.release) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: write
+      actions: write
+      checks: read
+      packages: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Skill ツールで `release` を実行してください。
+            これは GitHub Actions 上の無人実行です。ユーザーへの質問はできません。
+            SKILL.md の「非対話モード（GitHub Actions の定期実行）」節のルールで
+            バンプ種別を決め、そのほかの手順より優先して守ってください。
+          # release.yml の arm64 ビルドを待つので Bash の上限を延ばす。
+          settings: |
+            {
+              "env": {
+                "BASH_DEFAULT_TIMEOUT_MS": "1800000",
+                "BASH_MAX_TIMEOUT_MS": "3600000"
+              }
+            }
+          claude_args: |
+            --allowedTools "Skill,Bash,Read,Glob,Grep,TodoWrite"

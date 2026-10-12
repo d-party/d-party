@@ -22,6 +22,47 @@ description: Review, verify and merge the open Dependabot PRs on the d-party mon
 > しかないため、`extension/package.json` だけを触る PR でも `pnpm-lock.yaml` の
 > 解決結果が frontend に波及することがある。**必ず両方のゲートを回す。**
 
+## 非対話モード（GitHub Actions の定期実行）
+
+`.github/workflows/maintenance.yml` が週 1 回この skill を無人で動かす。そのときは
+以下を**本文の手順より優先**する。対話セッションではこの節は無視してよい。
+
+**環境（ワークフローが用意済み）**
+
+- postgres / redis はジョブの `services` で `localhost:5432` / `localhost:6379` に
+  立っている。`docker compose up -d postgres redis` は**しない**（ポートが衝突する）。
+- §4 の backend 用 env はジョブの `env` に入っている。`export` し直さなくてよい。
+- uv · pnpm · Node 26 · gh · docker はインストール済み。`GH_TOKEN` は GITHUB_TOKEN。
+
+**GITHUB_TOKEN の制約から来るルール**
+
+- **Dependabot のブランチへ push しない**（§6 の移行コード push も含む）。
+  GITHUB_TOKEN の push では PR の CI が起動せず、緑を確認できないため。
+  移行コードが要る PR は、調べた内容と必要な修正を PR にコメントして残す。
+- **`.github/workflows/` を変更する PR（github-actions ecosystem）はマージしない。**
+  GITHUB_TOKEN には `workflows` 権限が無く、マージが拒否される。`actionlint` で
+  検証した結果をコメントし、「手動マージ待ち」とする。
+- `@dependabot rebase` コメントには頼らない（bot からのコマンドは無視されうる）。
+  lockfile が衝突した PR は Dependabot が自動で rebase するので、`mergeStateStatus`
+  を数分おきにポーリングして待つ。**合計 30 分**待っても CLEAN かつ新しい commit の
+  CI が緑にならなければ、その PR は翌週に回す。
+
+**マージ条件（すべて満たすものだけ）**
+
+1. PR の head commit のチェックがすべて成功している
+2. §2 · §3 の調査で、使っている API への影響が無いと根拠付きで言える
+3. §4 のゲートが「全部入れた最終状態」で通っている。落ちたら `origin/main` で control を取り、
+   bump 由来なら原因の PR を外して残りで再検証する
+4. **major bump ではない。** major は調査とゲートまで実施し、結果をコメントして人に回す
+
+条件を満たさない PR は**閉じない**。理由と調査結果をその PR にコメントする
+（同じ内容のコメントが既にあれば重ねない）。
+
+**報告先**
+
+§7 の報告は `$GITHUB_STEP_SUMMARY` に Markdown で追記する（Actions の実行画面に出る）。
+対象の PR が 0 件なら「対象なし」と書いて終わる。
+
 ## 1. 棚卸し
 
 ```bash

@@ -428,6 +428,7 @@ frontend/
 | `repo-ci.yml`          | `Repo/CI`          | actionlint · shellcheck · yamllint · CodeQL · reviewdog       | 全体  |
 | `storybook-deploy.yml` | `Storybook/Deploy` | 両 Storybook を GitHub Pages のサブパスへ公開                  | main のみ |
 | `release.yml`          | `Release`          | 統一リリース                                                   | 手動  |
+| `maintenance.yml`      | `Repo/Maintenance` | 週次保守。Claude Code が `dependabot-review-and-merge` → `release` の skill を無人実行 | 毎週火曜 10:00 JST・手動 |
 
 **`<Scope>/CI` と `<Scope>/Build` を分ける。** CI は lint と型検査とテスト、Build は
 「出荷するものが実際に組み上がって動くか」。lint が通ってもイメージが起動しない、
@@ -452,6 +453,7 @@ fork や新しいリポジトリでは改めて必要になる。
 | --- | --- | --- |
 | **GitHub Pages を有効化し、ソースを「GitHub Actions」にする** | Settings → Pages → Source: GitHub Actions<br>（`gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`） | `Storybook/Deploy` の build は通るのに deploy だけが `Failed to create deployment (status: 404)` で落ちる |
 | **GHCR パッケージへの write を許可する** | `ghcr.io/d-party/backend` と `ghcr.io/d-party/frontend` の Package settings → Manage Actions access → このリポジトリに Write | `Release` の images ジョブが denied で落ちる |
+| **Actions secret `CLAUDE_CODE_OAUTH_TOKEN` を登録する** | Claude の Pro / Max プランで `claude setup-token` を実行し、出たトークンを Settings → Secrets and variables → Actions へ | `Repo/Maintenance` が認証エラーで落ちる |
 
 ### キャッシュ
 
