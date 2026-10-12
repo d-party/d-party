@@ -216,7 +216,7 @@ docker compose exec django python manage.py close_active_sessions
 - **ルーム詳細設定（後方互換）**: `Setting` は create 時に既定値（すべて `False`）で自動生成。
   設定は create メッセージを変えず、オーナー限定の `update_setting` アクションで適用する
   （旧拡張は送らないため全 `False` = 現行挙動）。一方通行モード（`one_way`）は非オーナーの
-  `video_operation` をブロックし、オーナー退室で自動削除（`owner_leave_delete` を含意）。
+  `video_operation` をブロックする（自動削除は含意しない。オーナー退室時の削除は `owner_leave_delete`）。
   `disable_reaction` は配信・永続化を行わない（自分の表示はクライアント側担保）。`room_setting`
   はサーバ push（join/create/更新時）で配布し、クライアント発の read は設けない。
 
