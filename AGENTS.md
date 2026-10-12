@@ -418,7 +418,7 @@ frontend/
 | ワークフロー           | name               | 対象                                                          | paths |
 | ---------------------- | ------------------ | ------------------------------------------------------------- | ----- |
 | `backend-ci.yml`       | `Backend/CI`       | ruff · pytest · mypy · license-check                          | `backend/**` |
-| `backend-build.yml`    | `Backend/Build`    | hadolint · dockerlint · イメージ build → dockle → migrate → 起動 → API 応答 | `backend/**` |
+| `backend-build.yml`    | `Backend/Build`    | hadolint · イメージ build → dockle → migrate → 起動 → API 応答 | `backend/**` |
 | `frontend-ci.yml`      | `Frontend/CI`      | 生成物の drift · typecheck · lint · license-check              | `frontend/**` `packages/**` + workspace 設定 |
 | `frontend-build.yml`   | `Frontend/Build`   | next build（standalone 出力の確認）· storybook · イメージ build → 起動 → ページ疎通 | 同上 |
 | `extension-ci.yml`     | `Extension/CI`     | 生成物の drift · typecheck · lint · license-check              | `extension/**` `packages/**` + workspace 設定 |

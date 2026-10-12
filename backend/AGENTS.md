@@ -151,7 +151,7 @@ uv run mypy .                 # 型検査（ダミー env が必要。下記参�
 
 `backend-ci.yml`（`Backend/CI`）のジョブ: `ruff` / `pytest` / `mypy` / `license-check`。
 
-イメージ側は `backend-build.yml`（`Backend/Build`）が見る。hadolint / dockerlint で
+イメージ側は `backend-build.yml`（`Backend/Build`）が見る。hadolint で
 Dockerfile を検査し、イメージを組み、dockle にかけ、**本物の PostgreSQL / Redis に
 つないで migrate し、起動して `/api/v1/health` が 200 を返すところまで**確認する。
 ビルドが通っても起動だけ落ちる壊れ方をここで拾う。
@@ -166,7 +166,7 @@ Dockerfile を検査し、イメージを組み、dockle にかけ、**本物の
 - **カバレッジ**は `py-cov-action/python-coverage-comment-action` が PR へコメントし、
   バッジを `python-coverage-comment-action-data` ブランチへ保存する（Codecov は廃止）。
 - コンテナイメージの CVE スキャン（trivy）は廃止した。イメージの静的チェックは
-  `hadolint` / `dockle` / `dockerlint` が担当する。
+  `hadolint` / `dockle` が担当する。
 - **単体の linter を別プロセスで回さず ruff へ集約している**（<https://docs.astral.sh/ruff/rules/>）。
   SAST は flake8-bandit 相当の `S`、複雑度は mccabe 相当の `C90`（`max-complexity = 10`）と
   Pylint の `PLR09xx` が見る。そのため bandit / lizard の専用ジョブは持たない。

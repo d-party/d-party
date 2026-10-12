@@ -1,7 +1,7 @@
 # backend の成果物（コンテナイメージ）が実際に作れて、実際に起動するかを見る。
 #
 # Backend/CI は lint とテストだけを見るので、Dockerfile が壊れていても気づけない。
-# ここではイメージを組み、静的チェック（hadolint / dockerlint / dockle）にかけ、
+# ここではイメージを組み、静的チェック（hadolint / dockle）にかけ、
 # **本物の PostgreSQL / Redis につないで起動させ、API が応答するところまで**確認する。
 name: Backend/Build
 
@@ -35,17 +35,11 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+      # apt を使わなくなったので DL3008 / DL3009 等の ignore は不要。dockerlint は
+      # hadolint と検査内容が重なり、メンテもされていないため使わない。
       - uses: hadolint/hadolint-action@v3.5.0
         with:
           dockerfile: backend/Dockerfile
-          ignore: "DL3008,SC2174,DL3009,DL3059,SC3009"
-      - name: Setup node/npm
-        uses: actions/setup-node@v7
-        with:
-          node-version: "20"
-      - name: install dockerlint
-        run: npm install -g dockerlint
-      - run: dockerlint backend/Dockerfile
 
   image:
     name: Build & smoke-test the runtime image
