@@ -9,13 +9,14 @@ description: Review, verify and merge the open Dependabot PRs on the d-party mon
 実際に使っている import / API を照合し、ローカルで動かして**から初めてマージする。
 
 このリポジトリは monorepo。Dependabot PR は**すべて `d-party/d-party` に立つ**
-（`.github/dependabot.yml` に 4 つの ecosystem が定義されている）:
+（`.github/dependabot.yml` に 5 つの ecosystem が定義されている）:
 
 | ecosystem | 対象 | 主なゲート |
 | --- | --- | --- |
 | `uv` (`/backend`) | backend の Python 依存 | pytest · mypy · ruff · makemigrations --check |
 | `npm` (`/`) | extension + frontend（**ロックファイルは 1 本**） | typecheck · lint · rspack build · next build · build-storybook · Docker smoke |
 | `docker` (`/backend`, `/frontend`) | ベースイメージ | hadolint · dockle · Docker smoke |
+| `docker-compose` (`/`) | compose のイメージ（nginx · postgres · redis · certbot · k6） | `docker compose config` · nginx の構文チェック · 起動確認 |
 | `github-actions` (`/`) | ワークフロー | actionlint |
 
 > **npm の PR は 1 本で両パッケージを動かしうる。** ロックファイルがルートに 1 本
