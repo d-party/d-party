@@ -3,7 +3,7 @@ x-env_file: &env_file ./.env.global
 services:
   nginx:
     container_name: nginx
-    image: nginx:1.27
+    image: nginx:1.31
     ports:
       - "80:80"
       - "443:443"

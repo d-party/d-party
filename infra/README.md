@@ -294,7 +294,7 @@ kubectl -n d-party port-forward svc/d-party-nginx 8080:80
 | ローカルレジストリ | **registry:2（CNCF Distribution）** | CNCF プロジェクト、ARM64 提供、業界標準 |
 | DB | **postgres:16（公式）** | Docker 公式、ARM64 提供、長期メンテ |
 | キャッシュ/レイヤ | **redis:8.10（公式）** | Docker 公式、ARM64 提供 |
-| リバースプロキシ | **nginx:1.27（公式）** | Docker 公式 |
+| リバースプロキシ | **nginx:1.31（公式）** | Docker 公式 |
 | 永続化 | **local-path-provisioner** | k3s 同梱の既定 StorageClass |
 | 機微情報 | **SealedSecrets / SOPS**（運用リポジトリ） | 業界標準。Sealed Secrets は Bitnami の方針変更の影響を受けない |
 

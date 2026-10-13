@@ -4,7 +4,7 @@ name: Nginx/CI
 # 変数を展開してからでないと nginx -t にかけられない。dev はそのまま、prod は
 # TLS 証明書ファイル（letsencrypt）を include するためダミーの自己署名証明書・
 # dhparam・空 conf を生成してから検証する。展開先は本番 nginx イメージと同じ
-# nginx:1.27-alpine を docker run して構文チェックする。
+# nginx:1.31-alpine を docker run して構文チェックする。
 on:
   pull_request:
     paths:
@@ -28,7 +28,7 @@ env:
   MY_DOMAIN: localhost
   DJANGO_UPSTREAM: 127.0.0.1:8000
   FRONTEND_UPSTREAM: 127.0.0.1:3000
-  NGINX_IMAGE: nginx:1.27-alpine
+  NGINX_IMAGE: nginx:1.31-alpine
 
 jobs:
   syntax:
