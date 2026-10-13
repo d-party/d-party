@@ -70,8 +70,10 @@ def _cached(key: str, producer):
     return cache.get_or_set(key, producer, STATS_CACHE_SECONDS)
 
 
-def _reaction_counts_by_type(since: datetime.date) -> dict[str, int]:
+def _reaction_counts_by_type(since: datetime.date | None = None) -> dict[str, int]:
     """Per-type reaction counts in ``[since, today]`` (folded + live rooms).
+
+    ``since=None`` counts every reaction ever recorded.
 
     Historical reactions live in ``ReactionStat`` (folded on room end); reactions
     of still-alive rooms remain in ``AnimeReaction`` and are added on top so the
@@ -79,20 +81,15 @@ def _reaction_counts_by_type(since: datetime.date) -> dict[str, int]:
     value (e.g. ``"S"``).
     """
     merged: dict[str, int] = defaultdict(int)
-    folded = (
-        ReactionStat.objects.filter(date__gte=since)
-        .values("reaction_type")
-        .annotate(total=Sum("count"))
-    )
+    folded_qs = ReactionStat.objects.all()
+    live_qs = AnimeReaction.objects.filter(room_id__deleted_at__isnull=True)
+    if since is not None:
+        folded_qs = folded_qs.filter(date__gte=since)
+        live_qs = live_qs.filter(created_at__date__gte=since)
+    folded = folded_qs.values("reaction_type").annotate(total=Sum("count"))
     for row in folded:
         merged[row["reaction_type"]] += row["total"]
-    live = (
-        AnimeReaction.objects.filter(
-            room_id__deleted_at__isnull=True, created_at__date__gte=since
-        )
-        .values("reaction_type")
-        .annotate(total=Count("reaction_id"))
-    )
+    live = live_qs.values("reaction_type").annotate(total=Count("reaction_id"))
     for row in live:
         merged[row["reaction_type"]] += row["total"]
     return merged
@@ -380,10 +377,9 @@ class UserCountParDayShieldsAPI(_ShieldsView):
 
 class ReactionCountShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
-        return {
-            "label": "TotalReaction",
-            "message": str(AnimeReaction.objects.all().count()),
-        }
+        # 終了したルームのリアクションは ReactionStat へ畳み込まれ、元の行は消える。
+        total = sum(_reaction_counts_by_type().values())
+        return {"label": "TotalReaction", "message": str(total)}
 
 
 class AnimeStoreLobbyResolveAPI(APIView):
