@@ -5,7 +5,7 @@ AI エージェント・開発者向けガイド。dアニメストアで「同�
 
 ## スタック
 
-- **Next.js 15**（App Router）/ **Turbopack** でビルド（`next dev/build --turbopack`）
+- **Next.js 16**（App Router）/ **Turbopack** でビルド（`next dev/build --turbopack`）
 - **React 19** / **TypeScript**（strict）
 - **Tailwind CSS v4** + **shadcn/ui**（Radix）— テーマトークンは Chrome 拡張機能 popup と共通
 - **orval** でバックエンド REST API を型安全に生成（`openapi/openapi.json` → `src/infrastructure/api/generated/`）
@@ -85,11 +85,9 @@ Satori（`next/og`）の制約でカードは**インラインスタイル + fle
 1. **拡張機能 DOM 契約**: 拡張機能の `content-version` スクリプトが `https://d-party.net/anime-store/lobby/*`
    を match し、`.chrome_extension_field` 要素の `innerText` に互換性判定（`"true"`/`"false"`）を書き込む。
    ページはこの要素を必ずレンダリングし、1秒間隔でポーリングする。**クラス名・ポーリング挙動を変えないこと。**
-2. **room_id 解決**: `room_id → dアニメストアのリダイレクト URL` は新バックンド API
-   `GET /api/v1/anime-store/lobby/{room_id}` で解決する（旧 Django `web/views.py:AnimeRoomLobby` のサーバ側生成を置換）。
-   このエンドポイントは **backend 側の実装が必要**（同じリポジトリの `../backend/`）。仕様は
-   [docs/backend-lobby-endpoint.md](./docs/backend-lobby-endpoint.md)。`openapi/openapi.json` に定義済みで
-   `pnpm api:generate` でクライアント生成済み。
+2. **room_id 解決**: `room_id → dアニメストアのリダイレクト URL` は backend の
+   `GET /api/v1/anime-store/lobby/{room_id}`（`backend/api/views.py` の `AnimeStoreLobbyResolveAPI`）で解決する。
+   レスポンスの形は `openapi/openapi.json` が正で、`pnpm api:generate` で生成したクライアントから呼ぶ。
 3. リダイレクト判定: `"true"`→ dアニメストアへ / `"false"`→（旧: webstore 自動遷移）**選択 UI** / 30秒無応答 →（旧: webstore 自動遷移）**選択 UI**。
    拡張機能が無い/非対応のときは、ウェブストアへ自動遷移する代わりに「**タイマーを見る**（`?timer=true`）or **インストール/アップデート**（webstore）」を提示する。`.chrome_extension_field` の DOM 契約・1秒ポーリングは不変。
 
@@ -123,5 +121,5 @@ shadcn/ui のプリミティブと `cn` は **`@d-party/ui`（`../packages/ui`�
 `transpilePackages` と `globals.css` の `@source` が要る。どちらかを外すと
 ビルドが通らない / クラスが purge される。
 
-> 注意: ロビーの拡張機能結合（`content-version` の DOM 書き込み）は `d-party.net` 実ホスト、または拡張機能
-> manifest の一時的な match 追加でしか完全検証できない。それ以外の挙動（webstore フォールバック等）はローカルで検証可能。
+> 注意: ロビーの拡張機能結合（`content-version` の DOM 書き込み）は、`d-party.net` 実ホストか、
+> dev ビルドの拡張機能（`http://localhost/anime-store/lobby/*` を match する）で検証する。それ以外の挙動（webstore フォールバック等）はローカルで検証可能。

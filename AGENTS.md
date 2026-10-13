@@ -368,7 +368,7 @@ frontend/
 - ビルドは Turbopack（`pnpm dev` / `pnpm build`）。
 - ルーム遷移 `/anime-store/lobby/[roomId]` は拡張機能の `.chrome_extension_field` DOM 契約を維持しつつ、
   `room_id → リダイレクト URL` を backend の `GET /api/v1/anime-store/lobby/{room_id}` で解決する
-  （`frontend/docs/backend-lobby-endpoint.md` 参照）。
+  （形は `frontend/openapi/openapi.json`）。
 - 接続先は `src/infrastructure/env.ts`（`NEXT_PUBLIC_*` で上書き、既定 `localhost`）。
 - **Dockerfile のビルドコンテキストはルート**。workspace 配下でビルドすると Next の
   `outputFileTracingRoot` がワークスペースのルートになり、standalone の中身が
