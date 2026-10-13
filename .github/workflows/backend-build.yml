@@ -81,11 +81,13 @@ jobs:
 
       # 実行時 env はすべてイメージの外から渡す（Dockerfile は設定を焼き込まない）。
       # --env-file にすることで、シェル上で展開せずに済ませる。
+      # DEBUG=0 にして、本番と同じ gunicorn + uvicorn-worker の経路で起動させる
+      # （DEBUG=1 だと entrypoint.sh は runserver を選ぶ）。
       - name: Write the runtime env
         run: |
           cat > ci.env <<'EOF'
           SECRET_KEY=django-insecure-ci
-          DEBUG=1
+          DEBUG=0
           MY_DOMAIN=localhost
           D_ANIME_STORE_DOMAIN=animestore.docomo.ne.jp
           TIME_ZONE=Asia/Tokyo
@@ -99,6 +101,7 @@ jobs:
           REDIS_HOST=127.0.0.1
           REDIS_PORT=6379
           CHROME_EXTENSION_REQUIRED_VERSION=1.0.0
+          GUNICORN_CMD_ARGS=--workers 2
           EOF
 
       # イメージ名は dockle とローカルの compose に合わせて固定する。
@@ -126,7 +129,7 @@ jobs:
       - name: Wait for the server
         run: |
           for _ in $(seq 1 30); do
-            if curl -fsS -o /dev/null http://127.0.0.1:8000/api/v1/health 2>/dev/null; then
+            if curl -fsS -o /dev/null http://localhost:8000/api/v1/health 2>/dev/null; then
               echo "server is up"
               exit 0
             fi
@@ -139,13 +142,17 @@ jobs:
       # 壊れ方があるので、実際に引いて確認する。
       - name: Check the API responds
         run: |
-          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/v1/health)
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/v1/health)
           echo "/api/v1/health -> $code"
           [ "$code" = "200" ] || exit 1
           # 存在しない API が 404 を返すこと（500 との取り違えを拾う）。
-          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/v1/__does_not_exist__)
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/v1/__does_not_exist__)
           echo "/api/v1/__does_not_exist__ -> $code"
           [ "$code" = "404" ] || exit 1
+
+      # 本番経路で起動していること（runserver ではなく gunicorn）を確かめる。
+      - name: Check the server is gunicorn
+        run: docker logs backend-ci 2>&1 | grep -q "Booting worker"
 
       - name: Container logs
         if: always()
