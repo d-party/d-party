@@ -35,11 +35,10 @@ on:
       - ".github/workflows/storybook-deploy.yml"
   workflow_dispatch:
 
-# Allow the workflow to publish to GitHub Pages.
+# 既定は読み取りのみ。Pages への書き込みは deploy ジョブにだけ与える
+# （build ジョブは pnpm install でサードパーティのコードを実行するため）。
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # Only one concurrent Pages deployment; don't cancel an in-progress one.
 concurrency:
@@ -120,6 +119,10 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

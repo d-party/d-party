@@ -51,7 +51,8 @@ jobs:
         with:
           persist-credentials: false
       - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
+        # ブランチ（master）ではなくリリースタグを参照する。
+        uses: ludeeus/action-shellcheck@2.0.0
 
   yamllint:
     name: yamllint
