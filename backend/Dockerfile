@@ -30,8 +30,9 @@ COPY pyproject.toml uv.lock ./
 # autobahn (daphne 経由) は NVX CFFI 拡張のコンパイルに失敗すると pure-Python
 # wheel へのフォールバックを拒否する。arm64 ネイティブビルドでこれに当たるため、
 # pure-Python ビルドを明示する（NVX は UTF-8 検証の最適化にすぎず挙動は同じ）。
+# --no-dev: pytest / mypy / ruff などの開発用グループを本番イメージへ入れない。
 RUN --mount=type=cache,target=/root/.cache/uv \
-    AUTOBAHN_USE_NVX=0 uv sync --frozen --no-install-project
+    AUTOBAHN_USE_NVX=0 uv sync --frozen --no-dev --no-install-project
 
 # The app runs from UV_PROJECT_ENVIRONMENT (/opt/venv) and never uses the base
 # image's pip/setuptools — uv is the only installer. Drop them so their CVEs do
