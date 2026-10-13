@@ -136,7 +136,7 @@ frontend:
 nginx:
   image:
     repository: nginx
-    tag: "1.27"
+    tag: "1.31"
     pullPolicy: IfNotPresent
   # RPi クラスタで他サービスと相乗りする前提のため既定 1。可用性が要るなら上げる。
   replicaCount: 1
