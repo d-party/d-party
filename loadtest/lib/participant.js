@@ -1,9 +1,9 @@
 // 1 つの WebSocket 接続（= 1 参加者）を Promise ベースで扱うラッパ。
-// k6/experimental/websockets はイベント駆動（open/message/close/error）なので、
+// k6/websockets はイベント駆動（open/message/close/error）なので、
 // 「open まで待つ」「特定 action を受け取るまで待つ」「ping を受信したら遅延を記録」
 // といった操作を async/await で書けるように薄くまとめる。
 
-import { WebSocket } from 'k6/experimental/websockets';
+import { WebSocket } from 'k6/websockets';
 import { withTimeout, pingSentAt } from './protocol.js';
 
 export class Participant {

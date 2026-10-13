@@ -248,7 +248,7 @@ LOADTEST_VUS=20 LOADTEST_ROOM_SIZE=5 LOADTEST_DURATION=2m \
 
 # スクリプトの静的検証（スタック不要・実行しない）
 docker run --rm -v "$PWD/loadtest:/loadtest" -w /loadtest \
-  grafana/k6:0.55.0 inspect /loadtest/scenarios/ws_party.js
+  grafana/k6:2.3.0 inspect /loadtest/scenarios/ws_party.js
 ```
 
 ## backend/（Django）

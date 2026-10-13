@@ -18,7 +18,7 @@
 
 services:
   k6:
-    image: grafana/k6:0.55.0
+    image: grafana/k6:2.3.0
     container_name: k6
     profiles: ["loadtest"]
     # k6 公式イメージは非 root（uid 12345）で動くため、バインドマウントした
