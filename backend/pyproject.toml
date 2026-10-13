@@ -11,7 +11,6 @@ dependencies = [
     "redis>=5,<9",
     "daphne>=4.1",
     "djangorestframework>=3.15",
-    "django-filter>=24.3",
     "djangochannelsrestframework>=1.2",
     "django-unfold>=0.100",
     "django-axes>=7.0",
@@ -23,7 +22,6 @@ dependencies = [
     "uvicorn-worker>=0.3",
     "python-dotenv>=1.0",
     "cryptography>=44.0",
-    "packaging>=24.2",
 ]
 
 [dependency-groups]
@@ -37,7 +35,6 @@ dev = [
     "mypy>=1.13",
     "django-stubs[compatible-mypy]>=5.1",
     "djangorestframework-stubs>=3.15",
-    "werkzeug>=3.1",
     "pip-licenses>=5.0",
     "pipdeptree>=2.23",
 ]
