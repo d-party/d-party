@@ -27,7 +27,7 @@ const STEPS = [
   { title: "一緒に視聴", text: "全員そろったら再生。あとは自動でシンクします。" },
 ];
 
-/** Landing page — modernised port of web/templates/index.html. */
+/** Landing page. */
 export default function HomePage(): React.JSX.Element {
   return (
     <>

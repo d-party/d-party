@@ -1,8 +1,6 @@
 /**
  * Backend connection configuration.
  *
- * Port of the old `js/common/settings.js` constants.
- *
  * 接続先はビルド時の環境変数 `D_PARTY_ENV` で切り替える。`rspack.DefinePlugin`
  * が `process.env.D_PARTY_ENV` をビルド時にリテラルへ置換する（rspack.config.ts 参照）。
  *

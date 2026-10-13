@@ -49,8 +49,8 @@ export function sidebarWidth(state: {
 }
 
 /**
- * Mounts the React sidebar into a Shadow DOM host. To match the original
- * implementation the host is laid out *beside* the video (it pushes the player
+ * Mounts the React sidebar into a Shadow DOM host. The host is laid out
+ * *beside* the video (it pushes the player
  * aside) rather than overlaying it: the video wrapper is moved into a flex row
  * and the host becomes its sibling. The host width is driven by the store so
  * collapsing/expanding reflows the player. Falls back to a fixed overlay if the

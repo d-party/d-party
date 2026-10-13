@@ -12,24 +12,16 @@ import { DEFAULT_SETTINGS, type Settings } from "@/domain/settings";
  * button is hijacked to open the player in a new tab, or an extra "別タブで開く"
  * icon button is shown next to it.
  *
- * Ported from the original store.js. Robustness fixes over the original:
- *  - content scripts run at `document_idle`, frequently *after* `window.load`
- *    has fired, so a bare `load` listener never ran and no icons appeared —
- *    we run immediately when the document is already loaded;
- *  - the episode list is loaded/extended dynamically (Swiper), so we
- *    (idempotently) re-decorate as new items appear via a MutationObserver.
+ * Content scripts run at `document_idle`, often *after* `window.load`, so we run
+ * immediately when the document is already loaded. The episode list grows
+ * dynamically (Swiper), so a MutationObserver re-decorates new items
+ * (idempotently).
  *
- * The original also injected an inline <script> into the page to strip dアニメ
- * ストア's own click handlers; that violated the page CSP (inline scripts are
- * blocked) and never worked from the isolated world, so it has been removed.
- *
- * Layout: the buttons are added as an absolutely-positioned overlay on top of
- * the card (see public/css/style.css). We deliberately do NOT restructure
- * dアニメストア's native list layout (no flexbox / width overrides on the
- * <section>/<a>). The previous approach shrank the real link to 80% and made
- * the icons flex siblings at height:100%, which stretched the row and drew a
- * line between the thumbnail and its frame — worse when an episode carried a
- * NEW tag (`optionIconContainer`) that changed the card height.
+ * Layout: the buttons are an absolutely-positioned overlay on top of the card
+ * (see public/css/style.css). Do NOT restructure dアニメストア's native list
+ * layout (flexbox / width overrides on the <section>/<a>): it stretches the row
+ * and draws a line between the thumbnail and its frame, worse on cards with a
+ * NEW tag (`optionIconContainer`).
  */
 
 const DECORATED_ATTR = "data-dparty-decorated";

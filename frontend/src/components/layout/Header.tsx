@@ -28,7 +28,6 @@ type NavLink = {
   external?: boolean;
 };
 
-/** Ported from web/templates/header.html (Bootstrap navbar → icon nav). */
 const NAV_LINKS: NavLink[] = [
   { label: "ホーム", href: "/", icon: Home },
   { label: "使い方", href: "/usage", icon: BookOpen },
