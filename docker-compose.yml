@@ -80,7 +80,7 @@ services:
       timeout: 5s
       retries: 10
   redis:
-    image: redis:7.4
+    image: redis:8.10
     container_name: redis
     ports:
       - 6379:6379
