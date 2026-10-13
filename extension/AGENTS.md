@@ -6,7 +6,7 @@ AI エージェント・開発者向けガイド。dアニメストアで「同�
 
 - **Manifest V3** / TypeScript（strict）
 - **pnpm** + **rspack**（swc）でビルド、エントリごとに自己完結バンドル
-- **React 18** + **shadcn/ui**（Radix + Tailwind CSS v4）で popup を実装
+- **React 19** + **shadcn/ui**（Radix + Tailwind CSS v4）で popup・サイドバーを実装。primitive は `@d-party/ui`（`../packages/ui`）を使う
 - **Storybook**（react-vite）でUIコンポーネントを文書化
 - **ESLint**（flat config, typescript-eslint）+ **Prettier**
 - **orval** でバックエンドREST APIを型安全に生成（`openapi/openapi.json` → `src/infrastructure/api/generated/`）
@@ -33,12 +33,12 @@ src/
     content/party/   プレイヤーページ（sc_d_pc）: Sidebar + Player + Reaction
     content/version/ d-party.net ロビーのバージョン確認
     popup/           React + shadcn の設定UI
-  components/ui/   shadcn コンポーネント（Button/Switch/Label/Input）
-  lib/utils.ts     cn()
+  components/ui/   Button のみ自前（ほかの primitive と cn() は @d-party/ui）
 ```
 
-**rspack エントリ**: `background` / `content-store` / `content-party` / `content-version` / `popup`。
-content script はバンドラCSSではなく `manifest.json` の `css` 配列で注入する（`public/css/*`）。
+**rspack エントリ**: `background` / `content-store` / `content-party` / `content-version` / `popup` /
+`sidebar-style`。ページへ直接当てる CSS は `manifest.json` の `css` 配列で注入し（`public/css/*`）、
+サイドバーとトーストの Shadow DOM 用 CSS（`sidebar-style`）だけをバンドラで出力して実行時に読み込む。
 
 ## コアロジックは不変
 
@@ -65,7 +65,7 @@ WebSocket同期プロトコル（`domain/protocol.ts`）はバックエンド `s
 ## コマンド
 
 ```bash
-pnpm install
+# 依存はリポジトリのルートで 1 回だけ入れる（このディレクトリで pnpm install しない）
 pnpm api:generate     # orval でRESTクライアント再生成
 pnpm typecheck        # tsc --noEmit
 pnpm build            # rspack → dist/（chrome://extensions で読み込む）
@@ -77,14 +77,15 @@ pnpm storybook        # Storybook 起動 (:6006)
 ## 拡張機能の読み込み
 
 `pnpm build` 後、`chrome://extensions` →「パッケージ化されていない拡張機能を読み込む」で
-`dist/` を選択する。接続先は `src/infrastructure/env.ts`（既定 `wss://d-party.net`）。
-ローカルバックエンドへは `localhost/` `http://` `ws://` に変更する。
+`dist/` を選択する。接続先はビルド時の `D_PARTY_ENV` で決まる（`src/infrastructure/env.ts`）。
+`pnpm build` は `localhost`（http / ws）、`pnpm build:prod` は `d-party.net`（https / wss）向け。
+本番ビルドでは manifest から localhost の権限と match を取り除く（`rspack.config.ts`）。
 
 ## 対象サイト
 
-- `https://anime.dmkt-sp.jp/animestore/sc_d_pc?*`（プレイヤー）
-- `https://anime.dmkt-sp.jp/animestore/{ci_pc,tp_pc}*`（一覧）
-- `https://d-party.net/anime-store/lobby/*`（バージョン確認）
+- `https://animestore.docomo.ne.jp/animestore/sc_d_pc?*`（プレイヤー。旧ドメイン `anime.dmkt-sp.jp` も同様）
+- `https://animestore.docomo.ne.jp/animestore/*`（一覧などプレイヤー以外）
+- `https://d-party.net/anime-store/lobby/*`（バージョン確認。dev ビルドは `http://localhost/anime-store/lobby/*`）
 
 > 注意: content script の DOM 動作は有料の dアニメストア実ページでしか完全検証できない。
 > ロジック層（domain/application）は移植で挙動を保持しているが、UI結合の最終確認は実機で行うこと。
