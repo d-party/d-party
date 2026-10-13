@@ -99,7 +99,7 @@ flowchart TB
 ```mermaid
 flowchart LR
     NGINX[nginx<br/>Deployment x2<br/>HTTP ルーティング] -->|/| FE[frontend<br/>Next.js x2]
-    NGINX -->|/api /admin /metrics<br/>/anime-store/party WS| DJ[django<br/>ASGI/Channels x1]
+    NGINX -->|/api /admin<br/>/anime-store/party WS| DJ[django<br/>ASGI/Channels x1]
     DJ --> PG[(postgres<br/>StatefulSet)]
     DJ --> RD[(redis<br/>Channels レイヤ)]
     NGINX -. initContainer .-> ST[collectstatic→emptyDir]

@@ -10,7 +10,6 @@ upstream frontend_server {
 
 server {
     listen 80 default;
-    client_max_body_size 4G;
     server_name $MY_DOMAIN www.$MY_DOMAIN;
 
     keepalive_timeout 10;
@@ -24,7 +23,7 @@ server {
         alias /.well-known/;
     }
 
-    # ── Django (ASGI): REST API・管理画面・統計チャート・メトリクス ──
+    # ── Django (ASGI): REST API・管理画面 ──
     location /api/ {
         # REST API は公開エンドポイント（統計・shields バッジ・ロビー解決・
         # 拡張機能バージョン確認）のみ。ローカル開発で Next の `pnpm dev`
@@ -57,9 +56,6 @@ server {
         return 301 /admin/;
     }
     location /admin/ {
-        try_files $uri @proxy_to_app;
-    }
-    location = /metrics {
         try_files $uri @proxy_to_app;
     }
     # WebSocket（同時視聴の同期）。/anime-store/lobby/ はフロント、party/ は Django。
@@ -96,8 +92,4 @@ server {
         proxy_pass http://frontend_server;
     }
 
-    error_page 500 502 503 504 /500.html;
-    location = /500.html {
-        root /path/to/app/current/public;
-    }
 }

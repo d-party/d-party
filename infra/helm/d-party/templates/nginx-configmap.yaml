@@ -33,7 +33,6 @@ data:
 
         server {
             listen 80 default;
-            client_max_body_size 4G;
             keepalive_timeout 10;
 
             # nginx 自身の生死判定（upstream/ALLOWED_HOSTS に依存しない）。
@@ -46,7 +45,7 @@ data:
                 alias /static/;
             }
 
-            # ── Django (ASGI): REST API・管理画面・統計・メトリクス・WebSocket ──
+            # ── Django (ASGI): REST API・管理画面・WebSocket ──
             location /api/ {
                 add_header Access-Control-Allow-Origin "*" always;
                 add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
@@ -69,9 +68,6 @@ data:
                 proxy_pass http://app_server;
             }
             location /admin/ {
-                try_files $uri @proxy_to_app;
-            }
-            location = /metrics {
                 try_files $uri @proxy_to_app;
             }
             # WebSocket（同時視聴の同期）。party/ は Django、/anime-store/lobby/ はフロント。
