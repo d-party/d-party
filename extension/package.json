@@ -21,7 +21,7 @@
     "@d-party/ui": "workspace:*",
     "@radix-ui/react-slot": "^1.4.0",
     "class-variance-authority": "^0.7.1",
-    "framer-motion": "^13.4.2",
+    "framer-motion": "^14.1.0",
     "lottie-react": "^3.1.2",
     "lucide-react": "^1.54.0",
     "react": "^19.2.8",
