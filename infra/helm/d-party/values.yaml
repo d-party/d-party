@@ -183,7 +183,7 @@ postgres:
 redis:
   image:
     repository: redis
-    tag: "7.4"
+    tag: "8.10"
     pullPolicy: IfNotPresent
   service:
     port: 6379

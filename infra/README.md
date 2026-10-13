@@ -105,7 +105,7 @@ flowchart LR
     NGINX -. initContainer .-> ST[collectstatic→emptyDir]
 ```
 
-- **postgres / redis は公式イメージ（`postgres:16` / `redis:7.4`）+ 自前 StatefulSet**。
+- **postgres / redis は公式イメージ（`postgres:16` / `redis:8.10`）+ 自前 StatefulSet**。
   > Bitnami の Helm chart は採用しません。Bitnami は 2025-08〜09 で公開カタログ
   > (`docker.io/bitnami`) を Legacy 化／削除し、無償の versioned イメージが
   > 廃止されました（出典: bitnami/charts#35164）。公式イメージなら ARM64 提供・
@@ -293,7 +293,7 @@ kubectl -n d-party port-forward svc/d-party-nginx 8080:80
 | クラスタ内ビルド | **moby/buildkit（rootless）** | Moby/CNCF 系、活発。daemonless で K8s Job 向き |
 | ローカルレジストリ | **registry:2（CNCF Distribution）** | CNCF プロジェクト、ARM64 提供、業界標準 |
 | DB | **postgres:16（公式）** | Docker 公式、ARM64 提供、長期メンテ |
-| キャッシュ/レイヤ | **redis:7.4（公式）** | Docker 公式、ARM64 提供 |
+| キャッシュ/レイヤ | **redis:8.10（公式）** | Docker 公式、ARM64 提供 |
 | リバースプロキシ | **nginx:1.27（公式）** | Docker 公式 |
 | 永続化 | **local-path-provisioner** | k3s 同梱の既定 StorageClass |
 | 機微情報 | **SealedSecrets / SOPS**（運用リポジトリ） | 業界標準。Sealed Secrets は Bitnami の方針変更の影響を受けない |
