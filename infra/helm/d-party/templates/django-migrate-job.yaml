@@ -51,6 +51,8 @@ spec:
         - name: migrate
           image: "{{ .Values.django.image.repository }}:{{ .Values.django.image.tag }}"
           imagePullPolicy: {{ .Values.django.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.django.securityContext | nindent 12 }}
           command: ["python", "manage.py", "migrate", "--noinput"]
           envFrom:
             - secretRef:
