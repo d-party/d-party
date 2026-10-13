@@ -33,6 +33,16 @@ const settings: SettingsProvider = { current: () => currentSettings };
 void settingsRepo.getAll().then((s) => (currentSettings = s));
 settingsRepo.onChange((s) => (currentSettings = s));
 
+/**
+ * Subscribe a mounted component to settings: deliver the stored value right
+ * away (the initial load is async and may not have resolved by mount time),
+ * then keep it live on changes.
+ */
+const subscribeSettings = (cb: (s: Settings) => void): (() => void) => {
+  void settingsRepo.getAll().then(cb);
+  return settingsRepo.onChange(cb);
+};
+
 // --- personal stats (client-only, independent of the backend) ---------------
 const statsRepo = new ChromePersonalStatsRepository();
 const stats: StatsRecorder = {
@@ -381,14 +391,7 @@ function addControlButtons(): void {
   mountPlayerControls({
     anchor: space,
     initialSettings: currentSettings,
-    // Deliver the stored value immediately (the settings load is async and may
-    // not have resolved by mount time), then keep it live on changes. Without
-    // the eager getAll the added extra reactions wouldn't appear until the next
-    // settings change.
-    subscribe: (cb) => {
-      void settingsRepo.getAll().then(cb);
-      return settingsRepo.onChange(cb);
-    },
+    subscribe: subscribeSettings,
     handlers: {
       onSync: () => {
         if (guard.available && session.inRoom) session.requestSync();
@@ -439,12 +442,7 @@ function mountPipControl(): void {
     mountPipButton({
       fullscreenButton,
       initialSettings: currentSettings,
-      // Deliver the stored value immediately (the settings load is async and
-      // may not have resolved by mount time), then keep it live on changes.
-      subscribe: (cb) => {
-        void settingsRepo.getAll().then(cb);
-        return settingsRepo.onChange(cb);
-      },
+      subscribe: subscribeSettings,
       onToggle: () => void togglePictureInPicture(),
     });
   };
