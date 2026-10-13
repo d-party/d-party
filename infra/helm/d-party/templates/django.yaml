@@ -50,8 +50,8 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       # ── グレースフル更新の要 ──
-      # SIGTERM → preStop で readiness を落として nginx の振り分けから外し、
-      # gunicorn の graceful-timeout で既存 WebSocket を見送る猶予を確保する。
+      # preStop の間に Endpoints から外れて新規接続が新 Pod へ向き、その後の SIGTERM で
+      # gunicorn が停止する（WebSocket は uvicorn が 1012 で閉じ、leave_party が後始末する）。
       terminationGracePeriodSeconds: {{ .Values.django.terminationGracePeriodSeconds }}
       containers:
         - name: django
