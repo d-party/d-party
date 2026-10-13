@@ -43,6 +43,12 @@ RUN /usr/local/bin/python -m pip uninstall --yes setuptools pip
 
 COPY . .
 
+# root で動かさない。uid は compose のバインドマウント（./backend）の所有者として
+# 一般的な 1000 に合わせ、開発中の collectstatic などが書き込めるようにしている。
+RUN groupadd --system --gid 1000 app \
+    && useradd --system --uid 1000 --gid app --no-create-home app
+USER 1000:1000
+
 EXPOSE 8000
 
 CMD ["sh", "entrypoint.sh"]
