@@ -9,7 +9,7 @@
 | api/urls.py                                             |        3 |        0 |    100% |           |
 | api/views.py                                            |      195 |       36 |     82% |142-145, 158, 225-233, 245, 267, 286, 303-312, 322, 332, 341, 344, 349, 354-356, 366, 371-373, 383, 411 |
 | d\_party/\_\_init\_\_.py                                |        0 |        0 |    100% |           |
-| d\_party/settings.py                                    |       40 |        0 |    100% |           |
+| d\_party/settings.py                                    |       39 |        0 |    100% |           |
 | d\_party/urls.py                                        |        7 |        2 |     71% |     13-16 |
 | streamer/\_\_init\_\_.py                                |        0 |        0 |    100% |           |
 | streamer/admin.py                                       |       54 |        6 |     89% |15, 20, 33, 51, 56, 61 |
@@ -25,7 +25,7 @@
 | streamer/mixins.py                                      |       38 |        7 |     82% |31, 34, 65, 71-72, 75, 78 |
 | streamer/models.py                                      |       62 |        1 |     98% |       117 |
 | streamer/util.py                                        |        7 |        2 |     71% |     27-28 |
-| **TOTAL**                                               |  **855** |   **98** | **89%** |           |
+| **TOTAL**                                               |  **854** |   **98** | **89%** |           |
 
 
 ## Setup coverage badge
