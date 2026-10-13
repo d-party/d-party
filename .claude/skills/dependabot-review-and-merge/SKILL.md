@@ -29,8 +29,8 @@ description: Review, verify and merge the open Dependabot PRs on the d-party mon
 
 **環境（ワークフローが用意済み）**
 
-- postgres / redis はジョブの `services` で `localhost:5432` / `localhost:6379` に
-  立っている。`docker compose up -d postgres redis` は**しない**（ポートが衝突する）。
+- postgres はジョブの `services` で `localhost:5432` に立っている（テストは Redis を使わない）。
+  `docker compose up -d postgres` は**しない**（ポートが衝突する）。
 - §4 の backend 用 env はジョブの `env` に入っている。`export` し直さなくてよい。
 - uv · pnpm · Node 26 · gh · docker はインストール済み。`GH_TOKEN` は GITHUB_TOKEN。
 
@@ -125,11 +125,11 @@ CI は **PR 単体**しか見ていない。付加価値は「**全部入れた�
 
 ### backend
 
-postgres / redis を立て、CI と同じ env を用意する（`CHROME_EXTENSION_REQUIRED_VERSION`
+postgres を立て、CI と同じ env を用意する（`CHROME_EXTENSION_REQUIRED_VERSION`
 が無いと version-check テストが 406 で落ちるので必ず入れる）:
 
 ```bash
-docker compose up -d postgres redis     # リポジトリルートで
+docker compose up -d postgres           # リポジトリルートで（テストは Redis 不要）
 
 cd backend
 export SECRET_KEY=django-insecure-local-test DEBUG=1 MY_DOMAIN=localhost \

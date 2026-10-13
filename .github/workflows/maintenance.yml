@@ -55,7 +55,7 @@ jobs:
       issues: write
       actions: read
       checks: read
-    # backend のゲート（pytest）用。backend-ci.yml と同じ構成。
+    # backend のゲート（pytest）用。backend-ci.yml と同じ構成（Redis はテストで使わない）。
     services:
       postgres:
         image: postgres:16
@@ -69,15 +69,6 @@ jobs:
           --health-cmd "pg_isready -U d_party -d d_party"
           --health-interval 5s
           --health-timeout 5s
-          --health-retries 10
-      redis:
-        image: redis:7.4
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
           --health-retries 10
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -65,7 +65,7 @@ jobs:
         run: uv run ruff check .
 
   pytest:
-    name: Pytest (PostgreSQL + Redis)
+    name: Pytest (PostgreSQL)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -74,7 +74,8 @@ jobs:
       # 書き、PR へコメントするために必要。
       contents: write
       pull-requests: write
-    # postgres と redis はサービスコンテナで与える（ルートの compose は CI では使わない）。
+    # postgres はサービスコンテナで与える（ルートの compose は CI では使わない）。
+    # Redis は不要（conftest.py が InMemoryChannelLayer / LocMemCache に差し替える）。
     services:
       postgres:
         image: postgres:16
@@ -88,15 +89,6 @@ jobs:
           --health-cmd "pg_isready -U d_party -d d_party"
           --health-interval 5s
           --health-timeout 5s
-          --health-retries 10
-      redis:
-        image: redis:7.4
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
           --health-retries 10
     env:
       SECRET_KEY: django-insecure-ci
