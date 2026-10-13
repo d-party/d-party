@@ -3,6 +3,9 @@
 #   - frontend: node イメージで `pnpm dev`（Turbopack HMR）。ソースをマウントして
 #               ホットリロードする。NEXT_PUBLIC_* は実行時に .env.dev から参照する。
 #   - 環境固有値（DEBUG / MY_DOMAIN / 接続先）は .env.dev を後勝ちで注入する。
+#   - django / postgres / redis のポートはここでだけ公開する（SQLTools・Redis 拡張・
+#     ホスト側の pytest から使う）。本番では公開しないため base には書かない。
+#     loopback に限定し、LAN 側からは届かないようにする。
 #
 # 本番起動時はこのファイルを読み込ませない（-f を明示する）:
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile letsencrypt up -d
@@ -11,6 +14,16 @@ services:
   django:
     env_file:
       - ./.env.dev
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"
 
   nginx:
     env_file:
