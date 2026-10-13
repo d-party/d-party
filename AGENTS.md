@@ -428,7 +428,7 @@ frontend/
 | `extension-build.yml`  | `Extension/Build`  | build:prod（manifest の参照先が実在するか）· zip · storybook   | 同上 |
 | `infra-ci.yml`         | `Infra/CI`         | helm lint · helm template                                     | `infra/**` |
 | `nginx-ci.yml`         | `Nginx/CI`         | nginx テンプレートの構文チェック                               | `nginx/**` |
-| `repo-ci.yml`          | `Repo/CI`          | actionlint · shellcheck · yamllint · CodeQL · reviewdog       | 全体  |
+| `repo-ci.yml`          | `Repo/CI`          | actionlint · shellcheck · yamllint · CodeQL                   | 全体  |
 | `storybook-deploy.yml` | `Storybook/Deploy` | 両 Storybook を GitHub Pages のサブパスへ公開                  | main のみ |
 | `release.yml`          | `Release`          | 統一リリース                                                   | 手動  |
 | `maintenance.yml`      | `Repo/Maintenance` | 週次保守。Claude Code が `dependabot-review-and-merge` → `release` の skill を無人実行 | 毎週火曜 10:00 JST・手動 |
@@ -437,15 +437,16 @@ frontend/
 「出荷するものが実際に組み上がって動くか」。lint が通ってもイメージが起動しない、
 バンドルが空、という壊れ方は CI だけでは拾えない。
 
-`Repo/CI` は横断の lint に加えて CodeQL と reviewdog も持つ。reviewdog のジョブは
-PR の差分へコメントするのが目的なので `if: github.event_name == 'pull_request'` で
-PR のときしか動かさない。
+`Repo/CI` は横断の lint（actionlint · shellcheck · yamllint）と CodeQL を持つ。actionlint は
+reviewdog 経由で PR にも注釈を付けるが、`fail_level: any` で指摘があれば失敗させる
+（reviewdog の既定は `none` で、指摘があっても成功扱いになる）。mypy の PR コメントは
+`Backend/CI` の mypy と重複するため持たない。
 
 ワークフローの `name` は `<Scope>/<Kind>` で揃えている。PR のチェック一覧で
 どの領域のものか一目で分かるようにするため。
 
-ルートから走るツールの設定ファイルもルートに置く（`.yamllint` · `.textlintrc.json` ·
-`.dockleignore` · `.pre-commit-config.yaml`）。
+ルートから走るツールの設定ファイルもルートに置く（`.yamllint` · `.dockleignore` ·
+`.pre-commit-config.yaml`）。
 
 ### リポジトリ側で 1 度だけ必要な設定
 

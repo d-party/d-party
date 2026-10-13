@@ -194,7 +194,7 @@ UI コンポーネントのカタログを GitHub Pages へ公開しています
 | `Extension/Build` | 本番ビルド · manifest の参照先の実在確認 · zip · storybook |
 | `Infra/CI` | helm lint · helm template |
 | `Nginx/CI` | nginx テンプレートの構文チェック |
-| `Repo/CI` | actionlint · shellcheck · yamllint · CodeQL · reviewdog |
+| `Repo/CI` | actionlint · shellcheck · yamllint · CodeQL |
 | `Storybook/Deploy` | 両 Storybook を GitHub Pages のサブパスへ公開 |
 | `Release` | 統一リリース（手動実行） |
 

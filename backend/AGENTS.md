@@ -156,7 +156,7 @@ Dockerfile を検査し、イメージを組み、dockle にかけ、**本物の
 つないで migrate し、起動して `/api/v1/health` が 200 を返すところまで**確認する。
 ビルドが通っても起動だけ落ちる壊れ方をここで拾う。
 
-リポジトリ横断の lint（actionlint / shellcheck / yamllint）と CodeQL、reviewdog は
+リポジトリ横断の lint（actionlint / shellcheck / yamllint）と CodeQL は
 `repo-ci.yml`（`Repo/CI`）が担当する。
 
 - **フォーマットは検証のみ**。違反は CI 失敗として扱い、自動コミットや force-push はしない
