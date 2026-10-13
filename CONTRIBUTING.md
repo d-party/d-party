@@ -24,7 +24,7 @@ d-party は **monorepo** です。サーバ・拡張機能・フロントエン�
 | `frontend/`  | ユーザー向けフロントエンド |
 | `infra/`     | k3s (Raspberry Pi) デプロイ設定 |
 | `loadtest/`  | k6 による WebSocket 負荷試験 |
-| ルート直下   | docker compose · nginx · postgres · redis · prometheus · grafana の設定 |
+| ルート直下   | docker compose · nginx · postgres · redis の設定 |
 
 `extension/` と `frontend/` は **pnpm workspace** の 2 パッケージで、
 ロックファイルはルートの `pnpm-lock.yaml` 1 本です。

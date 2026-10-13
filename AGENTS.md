@@ -29,7 +29,7 @@
 Chrome 拡張機能 (dアニメストアのページに content script を注入)
         │  WebSocket (wss://d-party.net, 既定)
         ▼
-Nginx :80/443 ──▶ Django (daphne/uvicorn, Channels)
+Nginx :80/443 ──▶ Django (gunicorn + uvicorn-worker / dev は runserver, Channels)
         ├─ REST API (DRF)            : /api/*
         ├─ WebSocket (Channels)      : 同時視聴の同期
         └─ 管理画面 (Unfold)         : /admin/*
@@ -209,7 +209,7 @@ k3d cluster delete d-party        # 後始末
 ## 負荷試験（loadtest/）
 
 backend の **WebSocket（Channels）同時視聴同期** を主対象とした負荷試験。**k6** で
-nginx → django(daphne) → Redis channel layer / PostgreSQL という組み上がったスタックを
+nginx → django → Redis channel layer / PostgreSQL という組み上がったスタックを
 本番に近い経路でブラックボックス的に叩く。詳細は [`loadtest/README.md`](loadtest/README.md)。
 
 ```
@@ -229,8 +229,10 @@ docker-compose.loadtest.yml   k6 サービス（compose の loadtest profile。�
   なので、`backend/` ではなくルート直下に置く。`infra/` と同じカテゴリ。
 - 負荷の本質は **ブロードキャスト増幅**: 1 ルーム N 人で 1 人の操作が `group_send` で N-1 接続へ
   配信される（O(N) ファンアウト）。単発 RPS ではなく多接続常時接続下の捌きを測る。
-- `consumers.py` の `_pending_room_deletes` は **プロセス内 dict + asyncio.Task で「単一 daphne
-  ワーカー前提」**。マルチワーカー / 水平スケール下でのルーム整合はスケール試験で要確認。
+- `consumers.py` の `_pending_room_deletes` はプロセスごとの dict + asyncio.Task で、本番の gunicorn は複数
+  ワーカー（Helm 既定 3）で動く。再参加が別ワーカーに着地すると猶予削除を cancel できないが、
+  削除の直前に生存ユーザーを DB で確かめるので誤削除にはならない。プロセスが落ちると予約は消え、
+  そのルームは alive のまま残る。
 
 ```bash
 # スタックを起動してから loadtest profile を run（スモーク: 1 ルーム×3 人、30s）
@@ -255,14 +257,14 @@ backend/                  ← このディレクトリ直下が django プロジ
   d_party/                プロジェクト設定 (settings.py, asgi.py, urls.py)
   streamer/               同時視聴の WebSocket consumers / cron / models
   api/                    DRF REST API (views, urls)
-  web/                    管理者向け統計チャートのテンプレート
+  templates/admin/        管理画面トップ（Unfold ダッシュボード）の上書き
   pyproject.toml          uv 依存定義
   uv.lock
   Dockerfile              python:3.14-slim + uv（build context は ./backend）
 ```
 
 - 依存管理は **uv**（`backend/pyproject.toml`）。インフラ設定は backend には無く、ルートが持つ。
-- WebSocket は **Django Channels** + `channels-redis` + `djangochannelsrestframework`、ASGI サーバは daphne/uvicorn。
+- WebSocket は **Django Channels** + `channels-redis` + `djangochannelsrestframework`、ASGI サーバは本番が gunicorn + uvicorn-worker、dev（`DEBUG=1`）が runserver（daphne）。
 - テストは **pytest**（`pytest-django`, `pytest-asyncio`, `factory-boy`, `pytest-cov`）。
 - Lint / フォーマッタ / import 順序 / SAST / 複雑度はすべて **ruff** に集約する
   （<https://docs.astral.sh/ruff/rules/>）。単体 linter を別プロセスで回さない。
@@ -510,8 +512,6 @@ docker compose exec django python manage.py collectstatic
 docker compose up -d
 docker compose ps
 docker compose logs -f django
-# 監視系も起動する場合
-docker compose --profile metrics up -d
 ```
 
 ### backend（`cd backend`, uv）

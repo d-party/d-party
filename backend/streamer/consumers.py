@@ -34,8 +34,8 @@ from .util import is_valid_uuid
 # ホストの WS が一瞬落ちた / タブをリロードしただけでルームが即消え
 # すると、ゲストが共有リンクを踏んだときにもう failed_join になる。
 # 最後のユーザが離脱しても N 秒はルームを生かしておき、その間に誰かが
-# 再参加したら削除をキャンセルして生かす。ディスクに状態を持たずプロセス
-# 内の dict + asyncio.Task で追跡（runserver / 単一 daphne ワーカー前提）。
+# 再参加したら削除をキャンセルして生かす。予約はプロセスごとの dict + asyncio.Task
+# で持つ。gunicorn の別ワーカーに再参加しても、削除直前の生存ユーザー確認で守られる。
 ROOM_GRACE_SECONDS = 60.0
 _pending_room_deletes: dict[str, asyncio.Task] = {}
 

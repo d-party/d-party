@@ -1,7 +1,7 @@
 # loadtest — d-party 負荷試験（k6 / WebSocket 同時視聴）
 
 dアニメストア同時視聴サービスの **WebSocket（Channels）同期** を主対象とした負荷試験。
-スタック全体（nginx → django(daphne) → Redis channel layer / PostgreSQL）を、本番に近い経路で叩く。
+スタック全体（nginx → django → Redis channel layer / PostgreSQL）を、本番に近い経路で叩く。
 
 > この負荷試験は `backend/` ではなく**ルート直下**に置く
 > （オーケストレーション層の関心事のため）。詳細は [`../AGENTS.md`](../AGENTS.md)。
@@ -81,8 +81,11 @@ LOADTEST_SCENARIO=ws_timer.js LOADTEST_ROOM_SIZE=4 \
 
 ## 既知の注意点（コードベース由来）
 
-- `consumers.py` の `_pending_room_deletes` は **プロセス内 dict + asyncio.Task で「単一 daphne ワーカー前提」**。
-  マルチワーカー / 水平スケール下では grace 削除やルーム整合が壊れうる。スケール試験で要確認。
+- `consumers.py` の `_pending_room_deletes` はプロセスごとの dict + asyncio.Task で、本番の gunicorn は複数
+  ワーカー（Helm 既定 3）で動く。再参加が別ワーカーに着地すると猶予削除を cancel できないが、
+  削除の直前に生存ユーザーを DB で確かめるので誤削除にはならない。プロセスが落ちると予約は消え、
+  そのルームは alive のまま残る。
+  なお compose の dev スタック（`DEBUG=1`）は runserver の 1 プロセスなので、本番の複数ワーカー構成とは異なる。
 - 既定 `TARGET` は nginx 経由のため、`docker compose up -d` で nginx が healthy になっている必要がある
   （nginx は frontend の healthy を待つ。frontend を避けたい場合は `TARGET` を django 直叩きにする）。
 - `OriginValidator` は dev（`DEBUG=1`）では全 Origin 許可。本番相当の検証時は `D_ANIME_STORE_DOMAIN` の
