@@ -19,12 +19,16 @@ if DEBUG:
     # 開発・テスト用の明示的な許可ホスト。``["*"]`` だと誤って DEBUG=1 のまま本番に
     # 出たとき Host ヘッダインジェクションを許してしまうため、ワイルドカードは使わない。
     ALLOWED_HOSTS += ["localhost", "127.0.0.1", "[::1]", "testserver"]
-CSRF_TRUSTED_ORIGINS = [
-    "https://*." + os.environ["MY_DOMAIN"],
-    "https://*.127.0.0.1",
-    "wss://*." + os.environ["MY_DOMAIN"],
-    "wss://*.127.0.0.1",
-]
+# 公開ドメインは TLS 終端（nginx / Cloudflare）の後ろにあり、Django から見た scheme は
+# http になりうるため、https の Origin を明示的に信頼する。`*.` は apex も含む。
+CSRF_TRUSTED_ORIGINS = ["https://*." + os.environ["MY_DOMAIN"]]
+
+if not DEBUG:
+    # 管理画面のセッション / CSRF Cookie を https 以外で送らない。
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # nginx がクライアントの値を上書きして付ける X-Forwarded-Proto を信頼する。
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 # Application definition
