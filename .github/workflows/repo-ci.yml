@@ -95,8 +95,6 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           # 解析範囲は言語ごとの設定ファイルで絞る（.github/codeql/）。
-          # 絞らないと javascript の解析が backend/web/static/ のベンダー製
-          # minified ライブラリまで舐めに行く。
           config-file: ${{ matrix.config-file }}
 
       - name: Autobuild
