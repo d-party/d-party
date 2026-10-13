@@ -467,8 +467,11 @@ fork や新しいリポジトリでは改めて必要になる。
 | --- | --- | --- |
 | pnpm ストア | `actions/setup-node` の `cache: pnpm` | `pnpm-lock.yaml` |
 | uv（Python） | `astral-sh/setup-uv` の `enable-cache` + `cache-dependency-glob` | `backend/uv.lock` |
-| Turborepo（`.turbo`） | `actions/cache` | `turbo-<os>-${{ hashFiles('pnpm-lock.yaml') }}-<sha>`（restore-keys で前回分へフォールバック） |
+| Turborepo（`.turbo`） | `actions/cache` | `turbo-<os>-<workflow>-<job>-${{ hashFiles('pnpm-lock.yaml') }}-<sha>`（restore-keys で同じジョブの前回分へフォールバック） |
 | Next.js（`frontend/.next/cache`） | `actions/cache` | `next-<os>-${{ hashFiles('pnpm-lock.yaml') }}-<sha>` |
+
+Actions のキャッシュは同じキーへ上書き保存できないので、turbo のキャッシュを複数のジョブで
+同じキーにすると最初に保存したジョブの分しか残らない。キーにワークフロー名とジョブ名を含めるのはそのため。
 
 ロックファイルが変われば依存の解決結果が変わり、turbo のタスクハッシュも総入れ替えに
 なるので、キャッシュもそこで切る。同じロックファイルのあいだは `restore-keys` で
