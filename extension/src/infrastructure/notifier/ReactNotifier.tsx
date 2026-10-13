@@ -19,9 +19,8 @@ import type { SidebarStore } from "@/presentation/content/party/react/sidebarSto
 interface ToastItemData {
   id: number;
   variant: ToastVariant;
-  /** Pre-rendered HTML. Existing call sites pass small fragments like
-   * `<i class='fas...'></i>` mixed with text, so we render as innerHTML. */
-  html: string;
+  /** プレーンテキスト。他の参加者の表示名を含むため HTML として解釈しない。 */
+  message: string;
 }
 
 const DEFAULT_DURATION_MS = 3000;
@@ -39,9 +38,9 @@ class ToastStore {
 
   getSnapshot = (): ToastItemData[] => this.toasts;
 
-  push(variant: ToastVariant, html: string): number {
+  push(variant: ToastVariant, message: string): number {
     const id = ++this.seq;
-    this.toasts = [...this.toasts, { id, variant, html }];
+    this.toasts = [...this.toasts, { id, variant, message }];
     this.emit();
     return id;
   }
@@ -82,7 +81,7 @@ function ToastItem({
       className={leaving ? "translate-x-2 opacity-0" : "translate-x-0 opacity-100"}
     >
       <ToastIcon variant={toast.variant} />
-      <ToastBody dangerouslySetInnerHTML={{ __html: toast.html }} />
+      <ToastBody>{toast.message}</ToastBody>
       <ToastClose onClick={() => setLeaving(true)} />
     </Toast>
   );
@@ -113,8 +112,7 @@ function Toaster({
 }
 
 /** Notifier backed by a shadcn-style React toast viewport mounted in its own
- * Shadow DOM. Replaces awesome-notifications. Keeps the same HTML-string API
- * so existing call sites (which embed Font Awesome `<i>` icons) keep working.
+ * Shadow DOM. Messages are rendered as plain text.
  *
  * Pass `sidebarStore` so the viewport offsets itself by the current sidebar
  * width and the toasts land on the player area to the left of the sidebar. */
@@ -126,16 +124,16 @@ export class ReactNotifier implements Notifier {
     this.mount();
   }
 
-  success(html: string): void {
-    this.store.push("success", html);
+  success(message: string): void {
+    this.store.push("success", message);
   }
 
-  info(html: string): void {
-    this.store.push("info", html);
+  info(message: string): void {
+    this.store.push("info", message);
   }
 
-  alert(html: string): void {
-    this.store.push("alert", html);
+  alert(message: string): void {
+    this.store.push("alert", message);
   }
 
   private mount(): void {
