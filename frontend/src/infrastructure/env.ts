@@ -11,7 +11,8 @@
  *      `/api`·`/admin`·WS→django), so the browser can reach the backend at its
  *      own origin. This is what prod-kube uses (image built without build-args),
  *      moving domain resolution from build time to access time.
- *   3) **SSR fallback** — non-public runtime env, then the local default.
+ *   3) **SSR fallback** — the local default. Server-side requests use
+ *      `BACKEND_INTERNAL_ORIGIN` instead (see `api/fetcher.ts`).
  *
  * Example for a build-time pinned deploy (compose-prod):
  *   NEXT_PUBLIC_BACKEND_HOST="d-party.net/"
@@ -35,11 +36,7 @@ function conn(): { host: string; protocol: string; ws: string } {
       ws: protocol === "https:" ? "wss://" : "ws://",
     };
   }
-  return {
-    host: process.env.PUBLIC_BACKEND_HOST ?? "localhost/",
-    protocol: process.env.PUBLIC_BACKEND_PROTOCOL ?? "http://",
-    ws: process.env.PUBLIC_WEBSOCKET_PROTOCOL ?? "ws://",
-  };
+  return { host: "localhost/", protocol: "http://", ws: "ws://" };
 }
 
 const c = conn();
