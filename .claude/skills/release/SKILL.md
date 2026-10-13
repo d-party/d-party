@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a unified d-party release by dispatching the root release.yml workflow with a patch / minor / major version bump. Always confirms the bump type with the user through explicit options before dispatching (in the scheduled GitHub Actions run it picks the bump by the rules in its non-interactive section instead), then watches the run through the version bump, the arm64 GHCR image builds and the Chrome Web Store upload. Use when asked to release, cut a version, publish, or tag d-party.
+description: Cut a unified d-party release by dispatching the root release.yml workflow with a patch / minor / major version bump. Always confirms the bump type with the user through explicit options before dispatching (in the scheduled GitHub Actions run it picks the bump by the rules in its non-interactive section instead), then watches the run through the version bump, the amd64 / arm64 GHCR image builds and the Chrome Web Store upload. Use when asked to release, cut a version, publish, or tag d-party.
 ---
 
 # Release (d-party)
@@ -16,7 +16,7 @@ d-party はモノレポで、リリースは **`release` ワークフロー 1 �
    - `extension/package.json` · `extension/public/manifest.json`
    - `frontend/package.json` · `packages/ui/package.json`
    - ルートの `package.json`
-3. `backend` / `frontend` を **arm64 ネイティブ**でビルドし、
+3. `backend` / `frontend` を **amd64 / arm64 それぞれのネイティブランナー**でビルドし、
    `ghcr.io/d-party/backend:vX.Y.Z` / `ghcr.io/d-party/frontend:vX.Y.Z` へ push する
    （Raspberry Pi の k3s で argocd-image-updater がこの semver タグを拾う）
 4. 拡張機能をビルドして zip を Release に添付し、Chrome Web Store へ upload する
@@ -82,7 +82,7 @@ RUN=$(gh run list -R d-party/d-party --workflow release.yml --limit 1 --json dat
 gh run watch "$RUN" -R d-party/d-party --exit-status
 ```
 
-`images` ジョブは arm64 ランナーで 2 イメージを焼くので**数分以上かかる**。
+`images` ジョブは 2 イメージ × 2 アーキテクチャを焼くので**数分以上かかる**。
 
 ## 4. 完了確認
 
@@ -113,9 +113,12 @@ gh api "orgs/d-party/packages/container/frontend/versions" -q '.[0].metadata.con
     **Package settings → Manage Actions access → Add repository** で
     `d-party/d-party` に **Write** を付ける（1 回だけの手作業）。
 - **version ジョブは成功したが images / extension が落ちた**
-  → タグと Release はすでに存在する。修正後に同じバージョンで再実行すれば、
-    version ジョブは「already at vX.Y.Z」でコミットを飛ばし、タグを force-update
-    するだけで済む。バージョンを進め直す必要はない。
+  → タグと Release はすでに存在する。原因が一時的なもの（ランナー・レジストリ・
+    ストアの障害）なら、その run を **Re-run failed jobs** で再実行する（version ジョブは
+    再実行されず、同じタグで続きが走る）。`gh run rerun "$RUN" -R d-party/d-party --failed`
+  → 修正にコードの変更が要るなら、修正を main にマージしてから新しいバージョンで
+    リリースし直す。`release.yml` をもう一度 dispatch すると最新タグから次の版を計算するので、
+    同じバージョンにはならない。タグは上書きしない。
 - **Chrome Web Store で 400**
   → 同じバージョンを二重に上げている可能性。タグの最大値を確認する。
     レスポンスボディはログに出しているので `itemError[].error_code` を読む。
