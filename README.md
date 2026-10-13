@@ -24,8 +24,8 @@
 | streamer/management/commands/close\_active\_sessions.py |       16 |        0 |    100% |           |
 | streamer/mixins.py                                      |       38 |        7 |     82% |31, 34, 65, 71-72, 75, 78 |
 | streamer/models.py                                      |       62 |        1 |     98% |       117 |
-| streamer/util.py                                        |        7 |        2 |     71% |     27-28 |
-| **TOTAL**                                               |  **858** |  **101** | **88%** |           |
+| streamer/util.py                                        |        9 |        0 |    100% |           |
+| **TOTAL**                                               |  **860** |   **99** | **88%** |           |
 
 
 ## Setup coverage badge
