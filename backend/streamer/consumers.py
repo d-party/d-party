@@ -183,10 +183,7 @@ class AnimePartyConsumer(GenericAsyncAPIConsumer):
         # 接続要求されたルームのオブジェクトがあれば取得（deleted_at が入っているものは弾く）
         self.anime_room = await self.database_get_or_none_room(room_id=room_id)
         if self.anime_room is None:
-            # ルームが存在しない/既に終了している場合は failed_join を通知してクローズ。
-            # 旧実装は send 後に leave_party() を呼んでいたが anime_user 未生成のため
-            # 早期 return するだけで WS が開いたままになり、後続の sync_request 等が
-            # self.anime_user.__dict__ で AttributeError を起こして 1011 close を招く。
+            # ルームが存在しない/既に終了している場合は failed_join を通知してクローズする。
             failed = ServerMessage(message_type="failed_join")
             await self.send(text_data=json.dumps(failed.model_dump(mode="json")))
             await self.close()
@@ -659,9 +656,7 @@ class AnimePartyConsumer(GenericAsyncAPIConsumer):
             part_id (str): 現在視聴している動画のID(dアニメストアが発行)
         """
         self.anime_room.part_id = part_id
-        # 接続ごとにキャッシュした行の全カラムを書き戻さない。旧実装は素の save() で
-        # 参加時点の古い値ごと上書きしており、廃止前の num_people / sum_people が
-        # 巻き戻る原因になっていた。
+        # 接続ごとにキャッシュした行の他のカラムを、参加時点の古い値で書き戻さない。
         self.anime_room.save(update_fields=["part_id", "updated_at"])
 
     @database_sync_to_async
@@ -683,8 +678,7 @@ class AnimePartyConsumer(GenericAsyncAPIConsumer):
 
         次ホストの選定と昇格を 1 トランザクション（``select_for_update``）で行う。
         「選定 → 昇格」の await 境界で当人が離脱し、論理削除済みの行をホストに
-        昇格させてしまう競合を防ぐ（旧実装は ``.earliest()`` で空のとき
-        ``DoesNotExist`` を投げて 1011 close を招いていた）。ルームが空なら ``None``。
+        昇格させてしまう競合を防ぐ。ルームが空なら ``None``。
         """
         with transaction.atomic():
             next_user = (
@@ -723,8 +717,7 @@ class AnimePartyConsumer(GenericAsyncAPIConsumer):
         """
         if not is_valid_uuid(uuid_to_test=room_id):
             return None
-        # 論理削除済みのルームには参加させない（旧実装は .filter() だけで deleted_at を
-        # 無視していたため、削除直後のルームに join できてしまうバグがあった）。
+        # 論理削除済みのルームには参加させない。
         return AnimeRoom.objects.alive().filter(room_id=room_id).first()
 
     @database_sync_to_async

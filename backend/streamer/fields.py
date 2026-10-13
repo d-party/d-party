@@ -1,13 +1,10 @@
 """Transparent application-level encryption for model fields.
 
-Replaces the unmaintained ``django-cryptography`` ``encrypt()`` wrapper with a
-small, dependency-light ``EncryptedCharField`` built on top of the maintained
-``cryptography`` package (Fernet / AES-128-CBC + HMAC).
-
-The encryption key is derived from ``settings.SECRET_KEY`` to preserve the
-previous behaviour where ``CRYPTOGRAPHY_KEY`` defaulted to ``SECRET_KEY``.
-Plaintext is encrypted on write and decrypted on read, so application code
-keeps reading and writing ordinary ``str`` values.
+``EncryptedCharField`` stores values as Fernet tokens (AES-128-CBC + HMAC, from
+the ``cryptography`` package). The key is derived from ``settings.SECRET_KEY``,
+so rotating ``SECRET_KEY`` makes existing values undecryptable. Plaintext is
+encrypted on write and decrypted on read, so application code keeps reading and
+writing ordinary ``str`` values.
 """
 
 from __future__ import annotations

@@ -21,8 +21,7 @@ from streamer.models import (
     ReactionType,
 )
 
-# Matches the previous ``distutils.version.StrictVersion`` accepted form: a
-# strict ``major.minor.patch`` triple. ``distutils`` was removed in Python 3.12.
+# A strict ``major.minor.patch`` triple.
 _STRICT_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
 # 統計の集計期間（``?days=N``）。未指定は 1 年、上限も 1 年。
@@ -110,9 +109,7 @@ def _parse_strict_version(value: str) -> tuple[int, int, int] | None:
 def _per_day_counts(model, since: datetime.date | None = None) -> list[dict]:
     """Return ``[{"day": date, "count": n}, ...]`` grouped by creation day.
 
-    When ``since`` is given, only rows created on/after it are counted. Uses
-    ``TruncDate`` so the query works across database backends (the previous
-    ``.extra(select={"day": "date(created_at)"})`` was MySQL-specific).
+    When ``since`` is given, only rows created on/after it are counted.
     """
     qs = model.objects
     if since is not None:
@@ -136,8 +133,6 @@ def _resample_per_day(
     ``since`` so the window has a fixed length regardless of when the first
     event happened.
 
-    A plain loop replaces the former ``pandas.DataFrame.asfreq`` round-trip,
-    which pulled in the heavy pandas dependency only to forward-fill zero days.
     """
     # 集計側の TruncDate と同じく settings の TIME_ZONE で「今日」を決める。
     today = timezone.localdate()
@@ -159,7 +154,7 @@ def _resample_per_day(
 
 
 def _mean_per_day(rows: list[dict]) -> float:
-    """Mean of the daily counts over the window (matches pandas ``Series.mean``)."""
+    """Mean of the daily counts over the window."""
     return sum(row["count"] for row in rows) / len(rows) if rows else 0.0
 
 
@@ -338,11 +333,7 @@ class AnimeRoomAliveCountAPI(APIView):
 
 
 class _ShieldsView(APIView):
-    """Base view returning a shields.io endpoint badge payload.
-
-    Replaces the unmaintained ``django-dynamic-shields`` dependency while
-    keeping the public badge JSON contract (``schemaVersion`` 1).
-    """
+    """Base view returning a shields.io endpoint badge payload (``schemaVersion`` 1)."""
 
     permission_classes = [AllowAny]
 
@@ -398,16 +389,14 @@ class ReactionCountShieldsAPI(_ShieldsView):
 class AnimeStoreLobbyResolveAPI(APIView):
     """Resolve a room id to the dアニメストア redirect URL.
 
-    Server-side replacement for the old ``web.views.AnimeRoomLobby`` template
-    view: the React frontend's room-transition page (``/anime-store/lobby/
-    <room_id>``) calls this to learn where to redirect the user once the
-    extension has confirmed it is installed and compatible.
+    The frontend's room-transition page (``/anime-store/lobby/<room_id>``) calls
+    this to learn where to redirect the user once the extension has confirmed it
+    is installed and compatible.
     """
 
     permission_classes = [AllowAny]
 
     def get(self, request, room_id, format=None) -> Response:
-        # 旧 anime.dmkt-sp.jp から animestore.docomo.ne.jp へ移行済み。
         anime_store_domain = os.environ.get(
             "D_ANIME_STORE_DOMAIN", "animestore.docomo.ne.jp"
         )
