@@ -1,8 +1,10 @@
 {{- if .Values.networkPolicy.enabled -}}
-# postgres / redis への ingress を「同一 release の Pod のみ」に絞る。
+# postgres / redis への ingress を、同一 release のうち実際に接続するコンポーネントだけに絞る。
 # from.podSelector は同一 namespace 内でマッチするため、他 namespace / 他サービス
 # からの接続は（policyType: Ingress を当てた時点で）既定遮断される。
-# 許可されるのは django / migrate Job など selectorLabels を持つ Pod。
+#   postgres … django と migrate Job
+#   redis    … django（Channels レイヤとキャッシュ）
+# nginx / frontend は DB にも Redis にも触れないので許可しない。
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -22,6 +24,10 @@ spec:
         - podSelector:
             matchLabels:
               {{- include "d-party.selectorLabels" . | nindent 14 }}
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: ["django", "migrate"]
       ports:
         - protocol: TCP
           port: {{ .Values.postgres.service.port }}
@@ -45,6 +51,7 @@ spec:
         - podSelector:
             matchLabels:
               {{- include "d-party.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: django
       ports:
         - protocol: TCP
           port: {{ .Values.redis.service.port }}
