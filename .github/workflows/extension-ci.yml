@@ -83,11 +83,12 @@ jobs:
       - name: Verify the generated API client is up to date
         run: git diff --exit-code -- extension/src/infrastructure/api/generated
 
+      # `<pkg>...` は依存する workspace パッケージ（@d-party/ui）も含める。
       - name: Type check
-        run: pnpm exec turbo run typecheck --filter=d-party-chrome-extension
+        run: pnpm exec turbo run typecheck --filter=d-party-chrome-extension...
 
       - name: Lint
-        run: pnpm exec turbo run lint --filter=d-party-chrome-extension
+        run: pnpm exec turbo run lint --filter=d-party-chrome-extension...
 
   license-check:
     name: Check dependency licenses

@@ -83,11 +83,12 @@ jobs:
       - name: Verify the generated API client is up to date
         run: git diff --exit-code -- frontend/src/infrastructure/api/generated
 
+      # `<pkg>...` は依存する workspace パッケージ（@d-party/ui）も含める。
       - name: Type check
-        run: pnpm exec turbo run typecheck --filter=d-party-frontend
+        run: pnpm exec turbo run typecheck --filter=d-party-frontend...
 
       - name: Lint
-        run: pnpm exec turbo run lint --filter=d-party-frontend
+        run: pnpm exec turbo run lint --filter=d-party-frontend...
 
   license-check:
     name: Check dependency licenses
