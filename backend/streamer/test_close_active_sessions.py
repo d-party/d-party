@@ -12,7 +12,7 @@ from django.core.management import call_command
 from django.utils import timezone
 
 from .factories import AnimeRoomFactory, AnimeUserFactory
-from .models import AnimeRoom, AnimeUser
+from .models import AnimeReaction, AnimeRoom, AnimeUser, ReactionStat
 
 
 def _set_updated_at(instance, when):
@@ -50,3 +50,19 @@ def test_idempotent_and_keeps_recent_room():
     call_command("close_active_sessions")
 
     assert AnimeRoom.objects.alive().filter(pk=room.pk).exists() is True
+
+
+@pytest.mark.django_db
+def test_folds_reactions_of_stale_rooms():
+    stale = timezone.now() - datetime.timedelta(days=2)
+    room = AnimeRoomFactory()
+    AnimeReaction.objects.create(room_id=room, reaction_type="S")
+    AnimeReaction.objects.create(room_id=room, reaction_type="S")
+    _set_updated_at(room, stale)
+    before = sum(ReactionStat.objects.values_list("count", flat=True))
+
+    call_command("close_active_sessions")
+
+    assert AnimeRoom.objects.alive().filter(pk=room.pk).exists() is False
+    assert AnimeReaction.objects.filter(room_id=room).exists() is False
+    assert sum(ReactionStat.objects.values_list("count", flat=True)) == before + 2
