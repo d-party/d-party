@@ -1,6 +1,6 @@
 {
   "name": "@d-party/ui",
-  "version": "2.12.0",
+  "version": "2.12.1",
   "description": "d-party の extension と frontend で共有する shadcn/ui プリミティブ",
   "private": true,
   "type": "module",
