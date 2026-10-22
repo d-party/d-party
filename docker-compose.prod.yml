@@ -4,6 +4,7 @@
 #   - nginx    : TLS 終端（nginx.prod.conf + templates-prod）
 #   - certbot  : Let's Encrypt 証明書の自動更新
 #   - 環境固有値は .env.prod を後勝ちで注入（DEBUG=0 / MY_DOMAIN / wss など）
+#   - 秘密値（SECRET_KEY / POSTGRES_PASSWORD）は git 管理外の .env.secret から注入
 #
 #   # 初回（証明書のブートストラップ）— staging 既定 / 本番は --production
 #   ./init-letsencrypt.sh --staging
@@ -19,6 +20,13 @@ services:
   django:
     env_file:
       - ./.env.prod
+      # 本番の秘密値（git 管理外）。無ければ compose が起動を拒否する。
+      - ./.env.secret
+    restart: unless-stopped
+
+  postgres:
+    env_file:
+      - ./.env.secret
     restart: unless-stopped
 
   frontend:
