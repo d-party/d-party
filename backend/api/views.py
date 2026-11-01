@@ -24,10 +24,10 @@ from streamer.models import (
 # A strict ``major.minor.patch`` triple.
 _STRICT_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
-# 統計の集計期間（``?days=N``）。未指定は 1 年、上限も 1 年。
+# 統計 API は公開（認証不要）。``?days=N`` の既定と上限は 1 年。
 DEFAULT_STATS_DAYS = 365
 MAX_STATS_DAYS = 365
-# 統計レスポンスをキャッシュする秒数。毎リクエストの DB 集計を避けるための TTL。
+# 統計レスポンスのキャッシュ秒数。
 STATS_CACHE_SECONDS = int(os.getenv("STATS_CACHE_SECONDS", "300"))
 
 
@@ -58,9 +58,7 @@ def _bad_days() -> Response:
 def _since(days: int) -> datetime.date:
     """Inclusive start date of a ``days``-long window ending today.
 
-    ``timezone.localdate()`` を使い、集計側の ``TruncDate``（settings の TIME_ZONE で
-    日付を切る）と同じ基準に揃える。``date.today()`` はプロセスのローカル時刻を見るため、
-    TZ 環境変数が設定されていない実行環境では 1 日ずれる。
+    ``TruncDate`` と同じく settings の TIME_ZONE で日付を切る（``date.today()`` は使わない）。
     """
     return timezone.localdate() - datetime.timedelta(days=days - 1)
 
@@ -75,10 +73,8 @@ def _reaction_counts_by_type(since: datetime.date | None = None) -> dict[str, in
 
     ``since=None`` counts every reaction ever recorded.
 
-    Historical reactions live in ``ReactionStat`` (folded on room end); reactions
-    of still-alive rooms remain in ``AnimeReaction`` and are added on top so the
-    total reflects in-progress rooms too. Keyed by the stored ``reaction_type``
-    value (e.g. ``"S"``).
+    Ended rooms are in ``ReactionStat``; alive rooms are still in ``AnimeReaction``.
+    Keyed by the stored ``reaction_type`` value (e.g. ``"S"``).
     """
     merged: dict[str, int] = defaultdict(int)
     folded_qs = ReactionStat.objects.all()
@@ -124,14 +120,8 @@ def _resample_per_day(
 ) -> list[dict]:
     """Fill gaps so every calendar day has a count.
 
-    Returns ``[{"day": date, "count": int}, ...]`` for every calendar day in the
-    window, in ascending order, padding missing days with ``0``. The series
-    always extends to today; when ``since`` is given it also starts exactly at
-    ``since`` so the window has a fixed length regardless of when the first
-    event happened.
-
+    The series runs up to today, and starts at ``since`` when given.
     """
-    # 集計側の TruncDate と同じく settings の TIME_ZONE で「今日」を決める。
     today = timezone.localdate()
     counts = {row["day"]: int(row["count"]) for row in rows}
     if since is not None:
@@ -140,7 +130,6 @@ def _resample_per_day(
         start = rows[0]["day"]
     else:
         start = today
-    # 終端は常に今日まで伸ばす（最後のイベント日が今日より前でも 0 埋めで今日まで含める）。
     end = max(today, start)
     result: list[dict] = []
     day = start
@@ -197,7 +186,6 @@ class ChromeExtensionVersionCheckAPI(APIView):
 class AnimeActiveUserPerDayAPI(APIView):
     """Daily count of users that have ever been in a room."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -215,7 +203,6 @@ class AnimeActiveUserPerDayAPI(APIView):
 class AnimeActiveRoomPerDayAPI(APIView):
     """Daily count of rooms created by users."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -233,7 +220,6 @@ class AnimeActiveRoomPerDayAPI(APIView):
 class AnimeRoomReactionCountAPI(APIView):
     """Per-type reaction counts."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -255,7 +241,6 @@ class AnimeRoomReactionCountAPI(APIView):
 class AnimeRoomReactionAllCountAPI(APIView):
     """Total reaction count."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -274,7 +259,6 @@ class AnimeRoomReactionAllCountAPI(APIView):
 class AnimeUserAllCountAPI(APIView):
     """User count within the requested period (by creation date)."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -293,7 +277,6 @@ class AnimeUserAllCountAPI(APIView):
 class AnimeRoomAllCountAPI(APIView):
     """Room count within the requested period (by creation date)."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -312,7 +295,6 @@ class AnimeRoomAllCountAPI(APIView):
 class AnimeUserAliveCountAPI(APIView):
     """Currently connected user count."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -322,7 +304,6 @@ class AnimeUserAliveCountAPI(APIView):
 class AnimeRoomAliveCountAPI(APIView):
     """Currently active room count."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -377,7 +358,6 @@ class UserCountParDayShieldsAPI(_ShieldsView):
 
 class ReactionCountShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
-        # 終了したルームのリアクションは ReactionStat へ畳み込まれ、元の行は消える。
         total = sum(_reaction_counts_by_type().values())
         return {"label": "TotalReaction", "message": str(total)}
 
@@ -385,9 +365,7 @@ class ReactionCountShieldsAPI(_ShieldsView):
 class AnimeStoreLobbyResolveAPI(APIView):
     """Resolve a room id to the dアニメストア redirect URL.
 
-    The frontend's room-transition page (``/anime-store/lobby/<room_id>``) calls
-    this to learn where to redirect the user once the extension has confirmed it
-    is installed and compatible.
+    Called by the frontend's lobby page (``/anime-store/lobby/<room_id>``).
     """
 
     permission_classes = [AllowAny]

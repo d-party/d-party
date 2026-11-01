@@ -5,21 +5,10 @@ import {
 } from "@/domain/personalStats";
 import type { ReactionType } from "@/domain/reactions";
 
-/** `chrome.storage.sync` key holding the serialized {@link PersonalStats}. */
 const STORAGE_KEY = "personal_stats";
 
-/**
- * Reads/writes {@link PersonalStats} from `chrome.storage.sync` as a single
- * JSON object. Stored under the signed-in Chrome profile, so the figures are
- * per-account and roam across the user's devices.
- *
- * Updates are read-modify-write. A single user driving one player tab at a
- * time makes contention a non-issue in practice; writes are serialized through
- * an in-process promise chain so rapid successive increments don't clobber one
- * another within the same context.
- */
+/** Read-modify-write, serialized through a promise chain so quick increments do not clobber each other. */
 export class ChromePersonalStatsRepository {
-  /** Serializes mutations so back-to-back increments don't race each other. */
   private queue: Promise<void> = Promise.resolve();
 
   async getAll(): Promise<PersonalStats> {
@@ -27,7 +16,6 @@ export class ChromePersonalStatsRepository {
     return normalizeStats(stored[STORAGE_KEY]);
   }
 
-  /** Apply a mutation to the current stats and persist the result. */
   private mutate(fn: (stats: PersonalStats) => void): Promise<void> {
     this.queue = this.queue.then(async () => {
       const stats = await this.getAll();
@@ -56,7 +44,6 @@ export class ChromePersonalStatsRepository {
     return this.mutate((s) => (s.connectionMs += Math.round(ms)));
   }
 
-  /** Clear all accumulated statistics back to zero. */
   async reset(): Promise<void> {
     this.queue = this.queue.then(() =>
       chrome.storage.sync.set({ [STORAGE_KEY]: emptyStats() }),
@@ -64,7 +51,6 @@ export class ChromePersonalStatsRepository {
     return this.queue.catch(() => undefined);
   }
 
-  /** Subscribe to changes; returns an unsubscribe function. */
   onChange(listener: (stats: PersonalStats) => void): () => void {
     const handler = () => {
       void this.getAll().then(listener);

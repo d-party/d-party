@@ -6,9 +6,6 @@ metadata:
     {{- include "d-party.labels" . | nindent 4 }}
     app.kubernetes.io/component: django
 spec:
-  # replicas は >1 にできる（close_active_sessions が 1 日以上前の alive 行のみ
-  # 回収するため複数レプリカでも稼働中セッション統計を消さない）。既定は RPi 想定の 1。
-  # 詳細は values.django.replicaCount のコメント参照。
   replicas: {{ .Values.django.replicaCount }}
   strategy:
     type: RollingUpdate
@@ -61,8 +58,6 @@ spec:
           imagePullPolicy: {{ .Values.django.image.pullPolicy }}
           securityContext:
             {{- toYaml .Values.django.securityContext | nindent 12 }}
-          # 既定 CMD(sh entrypoint.sh) をそのまま使う（close_active_sessions で
-          # >1日経過の ghost のみ回収 → gunicorn）。backend は改変しない。
           ports:
             - name: http
               containerPort: 8000
@@ -73,9 +68,7 @@ spec:
                 name: {{ include "d-party.secretName" . }}
           env:
             {{- include "d-party.connectionEnv" . | nindent 12 }}
-            # gunicorn.conf.py を改変せず graceful-timeout / timeout / workers を上書きする。
             - name: GUNICORN_CMD_ARGS
-              # 制御ソケット（gunicornc 用）は使わない。既定の $HOME 配下は非 root では書けない。
               value: >-
                 --no-control-socket
                 --graceful-timeout {{ .Values.django.gunicornGracefulTimeout }}
@@ -89,8 +82,8 @@ spec:
                 # readiness 失効を nginx/endpoints へ伝播させてから gunicorn に
                 # SIGTERM が届くまでの猶予。新規 WS を旧 Pod へ流さない。
                 command: ["sh", "-c", "sleep {{ .Values.django.preStopSleepSeconds }}"]
-          # ALLOWED_HOSTS を避けるため HTTP ではなく TCP で生死判定する
-          # （compose の healthcheck と同方針）。
+          # HTTP だと ALLOWED_HOSTS に弾かれるので TCP で見る。
+
           readinessProbe:
             tcpSocket:
               port: 8000

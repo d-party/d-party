@@ -1,14 +1,7 @@
 /**
- * Background service worker (MV3).
- *
- * Opens the usage page exactly once — on the very first install. A persisted
- * flag in chrome.storage.local makes this idempotent so the page is never
- * reopened, even though onInstalled can fire more than once (reloading an
- * unpacked extension during development, browser/extension updates, etc.).
- *
- * Also proxies the sidebar health check: the content script cannot fetch
- * localhost directly under Chrome's Local Network Access, so it delegates the
- * probe here (see `src/infrastructure/messages.ts`).
+ * Opens the usage page once on first install (onInstalled also fires on reload
+ * and update, hence the stored flag), and runs the sidebar's health check,
+ * which content scripts cannot fetch under Local Network Access.
  */
 import { HEALTH_CHECK_ENDPOINT } from "@/infrastructure/env";
 import type {
@@ -38,7 +31,6 @@ chrome.runtime.onMessage.addListener(
     sendResponse: (response: HealthCheckResponse) => void,
   ) => {
     if (message?.type !== "healthCheck") return undefined;
-    // background は host_permissions を持つため LNA に阻まれず localhost を叩ける。
     fetch(HEALTH_CHECK_ENDPOINT, { method: "GET" })
       .then((res) => sendResponse({ ok: res.ok }))
       .catch(() => sendResponse({ ok: false }));

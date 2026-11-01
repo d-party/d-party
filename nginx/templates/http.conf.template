@@ -1,6 +1,4 @@
-# アップストリームのホスト:ポートは環境変数（.env.global）から差し込む。Docker では
-# サービス名（django/frontend）で解決し、k3s 等へ移行する際は Service の DNS 名へ変更する。
-# 値は nginx 公式イメージの envsubst（/etc/nginx/templates/*.template）で展開される。
+# upstream の host:port は envsubst で .env.global から埋める。
 upstream app_server {
     server ${DJANGO_UPSTREAM} fail_timeout=0;
 }
@@ -25,11 +23,8 @@ server {
 
     # ── Django (ASGI): REST API・管理画面 ──
     location /api/ {
-        # REST API は公開エンドポイント（統計・shields バッジ・ロビー解決・
-        # 拡張機能バージョン確認）のみ。ローカル開発で Next の `pnpm dev`
-        # (http://localhost:3000) や Chrome 拡張から cross-origin で叩けるよう
-        # CORS を許可する。`add_header` は内部リダイレクト先の named location
-        # では引き継がれないため、ここで直接 proxy_pass する。
+        # 公開 API だけなので、pnpm dev（:3000）や拡張機能から叩けるよう CORS を許す。
+        # add_header は named location へ引き継がれないので、ここで直接 proxy_pass する。
         add_header Access-Control-Allow-Origin "*" always;
         add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
         add_header Access-Control-Allow-Headers "Content-Type, Accept" always;
@@ -50,8 +45,8 @@ server {
         proxy_redirect off;
         proxy_pass http://app_server;
     }
-    # /admin（末尾スラッシュなし）はこの prefix にマッチせず location / へ落ちて
-    # フロントの 404 になるため、Django admin の /admin/ へ明示的にリダイレクトする。
+    # /admin は上の prefix に合わずフロントの 404 になるので、/admin/ へ飛ばす。
+
     location = /admin {
         return 301 /admin/;
     }

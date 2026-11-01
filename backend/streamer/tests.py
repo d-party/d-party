@@ -22,7 +22,6 @@ class TestAnimePartyConsumer(TransactionTestCase):
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_anime_party_consumer_create_ok(self):
-        """AnimeConsumerのcreate actionが正しく動作することを確認するテスト"""
         communicator = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -44,13 +43,9 @@ class TestAnimePartyConsumer(TransactionTestCase):
         response = await communicator.receive_json_from()
         assert response["action"] == "create"
         assert response["user"]["user_name"] == user_name1
-        # 送信した user_icon が往復することを確認
         assert response["user"]["user_icon"] == user_icon1
-        # userがデータベースに作られていることを確認
         assert await self.anime_user_exist(response["user"]["user_id"])
-        # roomがデータベースに作られていることを確認
         assert await self.anime_room_exist(response["room_id"])
-        # ルーム作成時に送られたタイトルが保存されていることを確認
         room = await self.get_anime_room(response["room_id"])
         assert room.title == title1
         await communicator.disconnect()
@@ -58,7 +53,6 @@ class TestAnimePartyConsumer(TransactionTestCase):
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_anime_party_consumer_join_ok(self):
-        """AnimeConsumerのjoin actionが正しく動作することを確認するテスト"""
         communicator = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -77,16 +71,14 @@ class TestAnimePartyConsumer(TransactionTestCase):
         )
         response = await communicator.receive_json_from()
         assert response["action"] == "join"
-        # userがデータベースに作られていることを確認
         assert await self.anime_user_exist(response["user"]["user_id"])
-        # user_icon を送らない旧拡張は既定アイコンにフォールバックする（後方互換）
+        # user_icon を省くと既定のアイコンになる。
         assert response["user"]["user_icon"] == "FaRegUser"
         await communicator.disconnect()
 
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_anime_party_consumer_join_ng(self):
-        """AnimeConsumerのjoin actionが正しく動作することを確認するテスト"""
         communicator = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -110,7 +102,6 @@ class TestAnimePartyConsumer(TransactionTestCase):
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_anime_party_consumer_video_action(self):
-        """AnimeConsumerのcreate actionが正しく動作することを確認するテスト"""
         communicator1 = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -127,7 +118,6 @@ class TestAnimePartyConsumer(TransactionTestCase):
         response = await communicator1.receive_json_from()
         join_room_id = response["room_id"]
         create_user = response["user"]
-        """AnimeConsumerのcreate actionが正しく動作することを確認するテスト"""
         communicator2 = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -142,18 +132,15 @@ class TestAnimePartyConsumer(TransactionTestCase):
                 "request_id": 100,
             }
         )
-        # create 由来の user_list(1名)/room_setting を挟んで user_add が届く。順序非依存に待つ。
+        # user_list / room_setting を挟んで届くので、順序に依存せず待つ。
         user_add = await self._recv_until(communicator1, "user_add")
         assert user_add["user"]["user_name"] == user_name2
-        # 2 名になった user_list を待つ（1 名時点の user_list を読み飛ばす）。
         user_list = await self._recv_until(communicator1, "user_list")
         while len(user_list["user_list"]) < 2:
             user_list = await self._recv_until(communicator1, "user_list")
-        # user_list はホスト（オーナー）判定のため is_host を含む。
         hosts = {u["user_name"]: u["is_host"] for u in user_list["user_list"]}
         assert hosts[user_name1] is True
         assert hosts[user_name2] is False
-        # user_list は表示アイコンのため user_icon も含む（未指定なら既定キー）。
         icons = {u["user_name"]: u["user_icon"] for u in user_list["user_list"]}
         assert icons[user_name1] == "FaRegUser"
         assert icons[user_name2] == "FaRegUser"
@@ -179,8 +166,7 @@ class TestAnimePartyConsumer(TransactionTestCase):
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_anime_party_consumer_delete_room_ok(self):
-        """ホストが delete_room を送ると、ルームが論理削除され、ルーム内の
-        全員（ホスト自身を含む）へ room_deleted が通知されるテスト"""
+        """delete_room で論理削除し、ホストを含む全員へ room_deleted を送る。"""
         host = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -195,7 +181,6 @@ class TestAnimePartyConsumer(TransactionTestCase):
         )
         create_response = await host.receive_json_from()
         room_id = create_response["room_id"]
-        # create 直後の user_list を読み飛ばす。
         await host.receive_json_from()
 
         guest = WebsocketCommunicator(
@@ -210,16 +195,13 @@ class TestAnimePartyConsumer(TransactionTestCase):
                 "request_id": 100,
             }
         )
-        # guest: join 応答 + user_list、host: user_add + user_list を読み飛ばす。
         await guest.receive_json_from()
         await guest.receive_json_from()
         await host.receive_json_from()
         await host.receive_json_from()
 
-        # ホストがルーム削除を要求する。
         await host.send_json_to({"action": "delete_room", "request_id": 100})
 
-        # create/join 由来の room_setting 等を挟みうるので room_deleted まで読み進める。
         host_msg = await self._recv_until(host, "server_message")
         assert host_msg["message_type"] == "room_deleted"
 
@@ -229,14 +211,13 @@ class TestAnimePartyConsumer(TransactionTestCase):
         assert await self.room_alive(room_id) is False
         assert await self.alive_user_count(room_id) == 0
 
-        # 片方のみ切断する。ルームは既に削除済みで、残った接続を切ると leave_party が
-        # 猶予削除タスクを起こしてテスト終了後に DB を触りに行くため。
+        # 両方切ると猶予削除タスクがテスト終了後に DB を触るので、片方だけ切る。
         await host.disconnect()
 
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_anime_party_consumer_delete_room_non_host_ignored(self):
-        """ホスト以外が delete_room を送っても無視され、ルームは残るテスト"""
+        """ホスト以外の delete_room は無視する。"""
         host = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -270,24 +251,20 @@ class TestAnimePartyConsumer(TransactionTestCase):
         await host.receive_json_from()
         await host.receive_json_from()
 
-        # join 由来の room_setting/user_list を含め、溜まったメッセージを一旦捌く。
         await self._drain(guest)
-        # 非ホスト（ゲスト）が削除を要求しても無視される。
         await guest.send_json_to({"action": "delete_room", "request_id": 100})
 
         assert await guest.receive_nothing() is True
         assert await self.room_alive(room_id) is True
         assert await self.alive_user_count(room_id) == 2
 
-        # 片方のみ切断する（両方切ると空室になり、猶予削除タスクがテスト終了後に
-        # DB を触りに行くため）。
+        # 両方切ると猶予削除タスクがテスト終了後に DB を触るので、片方だけ切る。
         await host.disconnect()
 
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_delete_room_folds_reactions_into_stats(self):
-        """ホストの delete_room 時に、ルームのリアクションが ReactionStat へ
-        畳み込まれ、生の AnimeReaction が物理削除されるテスト。"""
+        """delete_room でリアクションを ReactionStat へ畳み込み、元の行を消す。"""
         host = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -304,10 +281,9 @@ class TestAnimePartyConsumer(TransactionTestCase):
         room_id = create_response["room_id"]
         await host.receive_json_from()  # create 直後の user_list を読み飛ばす。
 
-        # MIRROR な test DB は他テストの ReactionStat 行が残りうるため差分で検証する。
+        # 他テストの ReactionStat が残りうるので差分で見る。
         baseline = await self.smile_stat_total()
 
-        # ホストがリアクションを送る（自分の group_send は届かないため受信しない）。
         await host.send_json_to(
             {"action": "reaction", "reaction_type": "smile", "request_id": 100}
         )
@@ -315,7 +291,7 @@ class TestAnimePartyConsumer(TransactionTestCase):
             {"action": "reaction", "reaction_type": "smile", "request_id": 100}
         )
 
-        # ルーム削除を要求し、room_deleted を待って畳み込み完了を保証する。
+        # room_deleted を待てば畳み込みは終わっている。
         await host.send_json_to({"action": "delete_room", "request_id": 100})
         host_msg = await self._recv_until(host, "server_message")
         assert host_msg["message_type"] == "room_deleted"
@@ -328,8 +304,7 @@ class TestAnimePartyConsumer(TransactionTestCase):
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_extra_reaction_broadcasts_but_is_not_persisted(self):
-        """エクストラリアクション（Noto コードポイント id）は他参加者へブロード
-        キャストされるが、統計用に永続化はされない（AnimeReaction を作らない）。"""
+        """エクストラリアクションは配信するが保存しない。"""
         host = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -359,33 +334,26 @@ class TestAnimePartyConsumer(TransactionTestCase):
                 "request_id": 100,
             }
         )
-        # ゲストがエクストラリアクション（カタログ id = 絵文字コードポイント）を送る。
         extra_id = "1f600"
         await guest.send_json_to(
             {"action": "reaction", "reaction_type": extra_id, "request_id": 100}
         )
 
-        # ホストはブロードキャストを受信する（配信は従来どおり行われる）。参加に伴う
-        # user_add / user_list 等が先に届きうるので reaction が来るまで読み進める。
         msg = await host.receive_json_from()
         while msg["action"] != "reaction":
             msg = await host.receive_json_from()
         assert msg["reaction_type"] == extra_id
-        # 送信者を同梱する（バッジ表示の「ユーザー名 : リアクション」用）。
         assert msg["user"]["user_name"] == "guest_user"
 
-        # ただし統計用の永続化はされない。
         assert await self.reaction_rows(room_id) == 0
 
         await guest.disconnect()
         await host.disconnect()
 
-    # ── 観覧専用（spectator / タイマー）関連のテスト ─────────────────────────────
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_spectate_receives_video_operation_with_title(self):
-        """spectate で観覧参加すると video_operation を受信でき、title が追従する。
-        観覧者は AnimeUser を作らないため人数・参加者一覧に出ない。"""
+        """spectate は video_operation を受け取れるが、人数・一覧には出ない。"""
         host = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -414,7 +382,6 @@ class TestAnimePartyConsumer(TransactionTestCase):
         assert ack["part_id"] == "123456"
         assert ack["title"] == "第1話"
 
-        # ホストがエピソードを進めながら再生状態を配信する。
         await host.send_json_to(
             {
                 "action": "video_operation",
@@ -432,11 +399,9 @@ class TestAnimePartyConsumer(TransactionTestCase):
         )
         vop = await self._recv_until(spectator, "video_operation")
         assert vop["operation"] == "playing"
-        # タイマーがエピソード切替に追従できるよう title が載る。
         assert vop["title"] == "第2話"
         assert vop["option"]["time"] == 12
 
-        # 観覧者は参加者としてカウントされない（host のみ）。
         assert await self.alive_user_count(room_id) == 1
 
         await spectator.disconnect()
@@ -512,7 +477,6 @@ class TestAnimePartyConsumer(TransactionTestCase):
         await spectator.disconnect()
         await host.disconnect()
 
-    # ── 詳細設定（Setting）関連のテスト ─────────────────────────────────────────
     async def _recv_until(self, communicator, action):
         """指定 action のメッセージが来るまで読み進めて返す（順序に依存しない検証用）。
 
@@ -525,7 +489,6 @@ class TestAnimePartyConsumer(TransactionTestCase):
         return msg
 
     async def _drain(self, communicator):
-        """キューに溜まったメッセージをすべて読み捨てる。"""
         while await communicator.receive_nothing() is False:
             await communicator.receive_json_from()
 
@@ -544,8 +507,7 @@ class TestAnimePartyConsumer(TransactionTestCase):
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_create_auto_creates_and_pushes_default_setting(self):
-        """create 時に Setting が既定値(すべて False)で自動生成され、作成者へ
-        room_setting が push されるテスト（後方互換: 既定は現行挙動）。"""
+        """create で Setting を既定値で作り、作成者へ room_setting を送る。"""
         host = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -555,14 +517,13 @@ class TestAnimePartyConsumer(TransactionTestCase):
         assert setting_msg["one_way"] is False
         assert setting_msg["owner_leave_delete"] is False
         assert setting_msg["disable_reaction"] is False
-        # Setting 行がルームと 1:1（PK=room）で作成されている。
         assert await self.setting_exists(room_id) is True
         await host.disconnect()
 
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_update_setting_owner_updates_and_broadcasts(self):
-        """オーナーが update_setting を送ると DB が更新され、room_setting が配信される。"""
+        """ホストの update_setting で DB を更新し、room_setting を配信する。"""
         host = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -591,7 +552,7 @@ class TestAnimePartyConsumer(TransactionTestCase):
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_update_setting_non_host_ignored(self):
-        """ホスト以外の update_setting は無視され、DB は変わらないテスト。"""
+        """ホスト以外の update_setting は無視する。"""
         host = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -612,10 +573,8 @@ class TestAnimePartyConsumer(TransactionTestCase):
             }
         )
         await self._recv_until(guest, "room_setting")
-        # join 由来の user_list 等の残りも読み捨ててから沈黙を検証する。
         await self._drain(guest)
 
-        # 非ホストが一方通行を有効化しようとしても無視される。
         await guest.send_json_to(
             {"action": "update_setting", "one_way": True, "request_id": 100}
         )
@@ -628,8 +587,7 @@ class TestAnimePartyConsumer(TransactionTestCase):
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_one_way_blocks_non_host_video_operation(self):
-        """一方通行モードで、非ホストの video_operation はブロックされ、ホストの
-        操作は通常どおり配信されるテスト。"""
+        """one_way ではホスト以外の video_operation を捨てる。"""
         host = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -654,11 +612,9 @@ class TestAnimePartyConsumer(TransactionTestCase):
             }
         )
         await self._recv_until(guest, "room_setting")
-        # ゲスト join に伴う host 側の通知（user_add / user_list）を捌く。
         while await host.receive_nothing() is False:
             await host.receive_json_from()
 
-        # 非ホスト（ゲスト）の動画操作はブロックされ、ホストへ届かない。
         await guest.send_json_to(
             {
                 "action": "video_operation",
@@ -675,7 +631,6 @@ class TestAnimePartyConsumer(TransactionTestCase):
         )
         assert await host.receive_nothing() is True
 
-        # ホストの動画操作は通常どおりゲストへ配信される。
         await host.send_json_to(
             {
                 "action": "video_operation",
@@ -698,8 +653,7 @@ class TestAnimePartyConsumer(TransactionTestCase):
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_one_way_alone_does_not_delete_room_on_host_leave(self):
-        """一方通行モード単体（owner_leave_delete は無効）では、ホスト退室でも
-        ルームは削除されず、room_deleted も配信されないテスト。"""
+        """one_way だけではホストが抜けてもルームを消さない。"""
         host = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -725,14 +679,11 @@ class TestAnimePartyConsumer(TransactionTestCase):
         )
         await self._recv_until(guest, "room_setting")
 
-        # ホストが退室しても、一方通行単体ではルームは自動削除されない。
         await host.disconnect()
 
-        # ゲストに届く残りのメッセージに room_deleted が含まれないことを確認する。
         while await guest.receive_nothing() is False:
             msg = await guest.receive_json_from()
             assert msg.get("message_type") != "room_deleted"
-        # ルームと参加者（ゲスト）は生存したまま。
         assert await self.room_alive(room_id) is True
         assert await self.alive_user_count(room_id) == 1
 
@@ -752,7 +703,6 @@ class TestAnimePartyConsumer(TransactionTestCase):
         await host.connect()
         room_id = await self._create_room(host)
         await self._recv_until(host, "room_setting")
-        # ルーム作成直後はホストの 1 人だけ（作成者も AnimeUser として数える）。
         assert await self.room_people_counts(room_id) == (1, 1)
 
         guests = []
@@ -774,7 +724,6 @@ class TestAnimePartyConsumer(TransactionTestCase):
 
         assert await self.room_people_counts(room_id) == (3, 3)
 
-        # 1 人退室すると在室だけが減り、累計は 3 のまま。
         await guests[0].disconnect()
         assert await self.room_people_counts(room_id) == (2, 3)
 
@@ -784,7 +733,7 @@ class TestAnimePartyConsumer(TransactionTestCase):
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_disable_reaction_not_broadcast_or_persisted(self):
-        """リアクション禁止設定では、他参加者へ配信されず統計にも記録されないテスト。"""
+        """disable_reaction では配信も保存もしない。"""
         host = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -812,12 +761,10 @@ class TestAnimePartyConsumer(TransactionTestCase):
         while await host.receive_nothing() is False:
             await host.receive_json_from()
 
-        # ゲストがリアクションを送っても、ホストには届かない。
         await guest.send_json_to(
             {"action": "reaction", "reaction_type": "smile", "request_id": 100}
         )
         assert await host.receive_nothing() is True
-        # 永続化もされない。
         assert await self.reaction_rows(room_id) == 0
 
         await host.disconnect()
@@ -825,8 +772,7 @@ class TestAnimePartyConsumer(TransactionTestCase):
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.asyncio
     async def test_owner_leave_delete_deletes_room_on_host_leave(self):
-        """オーナー退室時自動削除が有効なら、ホスト退室でルームが論理削除され、
-        残った参加者へ room_deleted が届くテスト。"""
+        """owner_leave_delete ならホストが抜けるとルームを消し、残りへ room_deleted を送る。"""
         host = WebsocketCommunicator(
             AnimePartyConsumer.as_asgi(), "/anime-store/party/"
         )
@@ -856,7 +802,6 @@ class TestAnimePartyConsumer(TransactionTestCase):
         )
         await self._recv_until(guest, "room_setting")
 
-        # ホストが退室するとルームが自動削除される。
         await host.disconnect()
 
         deleted = await self._recv_until(guest, "server_message")

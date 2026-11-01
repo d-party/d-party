@@ -1,12 +1,7 @@
 import { defineConfig } from "orval";
 
-/**
- * Generates a type-safe REST client for the d-party backend from its OpenAPI
- * schema (kept in lock-step with the Chrome extension's schema, plus the lobby
- * room-resolution endpoint consumed by the room-transition page).
- *
- * Regenerate with: `pnpm api:generate`
- */
+/** REST client from `openapi/openapi.json`. Run `pnpm api:generate`. */
+
 export default defineConfig({
   dParty: {
     input: {

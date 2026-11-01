@@ -13,7 +13,6 @@ interface InfoLink {
   accent?: boolean;
 }
 
-/** External destinations shown in the popup's「情報」tab. */
 const LINKS: InfoLink[] = [
   {
     href: SITE_URL,

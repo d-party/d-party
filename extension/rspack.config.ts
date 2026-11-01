@@ -15,11 +15,7 @@ interface Manifest {
   content_scripts?: { matches: string[] }[];
 }
 
-/**
- * Drop the local-backend entries (`http://localhost/*`) from the copied
- * manifest in production builds, so the store package does not ask for a
- * localhost host permission or inject into local pages.
- */
+/** Production builds drop the `http://localhost/*` permissions and matches. */
 class StripLocalhostFromManifestPlugin {
   apply(compiler: Compiler): void {
     const name = "StripLocalhostFromManifestPlugin";
@@ -58,16 +54,12 @@ const config: Configuration = {
   devtool: false,
   context: __dirname,
   entry: {
-    // Background service worker (MV3).
     background: src("presentation/background/index.ts"),
-    // Content scripts — one self-contained bundle per injection target.
     "content-store": src("presentation/content/store/index.ts"),
     "content-party": src("presentation/content/party/index.ts"),
     "content-version": src("presentation/content/version/index.ts"),
-    // Popup (React + shadcn/ui).
     popup: src("presentation/popup/index.tsx"),
-    // Sidebar styles, emitted as a standalone CSS file and injected into the
-    // sidebar's Shadow DOM at runtime (content-party).
+    // Injected into the sidebar's Shadow DOM at runtime.
     "sidebar-style": src("styles/sidebar.css"),
   },
   output: {
@@ -101,18 +93,13 @@ const config: Configuration = {
     ],
   },
   experiments: { css: true },
-  // Content scripts legitimately bundle React; the asset-size hint is noise here.
   performance: { hints: false },
   optimization: {
-    // Content scripts and the service worker must each be a single, self-contained
-    // file — disable code splitting and a shared runtime chunk.
+    // Content scripts and the service worker must each be one file.
     splitChunks: false,
     runtimeChunk: false,
   },
   plugins: [
-    // Inline the build-time backend target so `src/infrastructure/env.ts` can
-    // branch on it. Default is the local dev backend; release builds pass
-    // `D_PARTY_ENV=production` to target d-party.net (see .github release.yml).
     new rspack.DefinePlugin({
       "process.env.D_PARTY_ENV": JSON.stringify(
         process.env.D_PARTY_ENV ?? "development",

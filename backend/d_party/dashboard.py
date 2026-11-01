@@ -1,9 +1,4 @@
-"""django-unfold の管理画面ダッシュボード用コールバック。
-
-``settings.UNFOLD`` の ``DASHBOARD_CALLBACK`` / ``ENVIRONMENT`` から参照される。
-同時視聴サービスの状態を一目で把握できる KPI カードとリアクション内訳を、
-トップページ（``admin:index``）へ差し込む。
-"""
+"""管理画面トップのコールバック（``settings.UNFOLD`` から参照）。"""
 
 from __future__ import annotations
 

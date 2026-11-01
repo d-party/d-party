@@ -1,15 +1,7 @@
 import { DEFAULT_USER_ICON, USER_ICONS } from "./userIcons";
 
-/**
- * Renders a participant's avatar from a stored react-icons (FA6) key, falling
- * back to the default user icon for missing/unknown keys. Defined at module
- * scope so call sites can render `<UserAvatar .../>` without resolving an icon
- * component during their own render (which the lint rules disallow).
- *
- * The icon is selected by direct map lookup (a stable reference) rather than via
- * a function call, mirroring the `HISTORY_ICONS[...]` pattern, so it is not
- * treated as "creating a component during render".
- */
+/** A map lookup, not a function call, so lint does not see it as creating a component during render. */
+
 export function UserAvatar({
   iconKey,
   className,

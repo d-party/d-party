@@ -7,7 +7,6 @@ from django.templatetags.static import static
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ["SECRET_KEY"]
@@ -16,26 +15,22 @@ DEBUG = os.environ["DEBUG"] == "1"
 
 ALLOWED_HOSTS = [os.environ["MY_DOMAIN"], "www." + os.environ["MY_DOMAIN"], "django"]
 if DEBUG:
-    # 開発・テスト用の明示的な許可ホスト。``["*"]`` だと誤って DEBUG=1 のまま本番に
-    # 出たとき Host ヘッダインジェクションを許してしまうため、ワイルドカードは使わない。
+    # ``["*"]`` にしない。DEBUG=1 のまま本番に出ても Host ヘッダを偽装させないため。
     ALLOWED_HOSTS += ["localhost", "127.0.0.1", "[::1]", "testserver"]
-# 公開ドメインは TLS 終端（nginx / Cloudflare）の後ろにあり、Django から見た scheme は
-# http になりうるため、https の Origin を明示的に信頼する。`*.` は apex も含む。
+# TLS は nginx / Cloudflare が終端し Django からは http に見えるので、https の Origin を
+# 明示的に信頼する。
 CSRF_TRUSTED_ORIGINS = ["https://*." + os.environ["MY_DOMAIN"]]
 
 if not DEBUG:
-    # 管理画面のセッション / CSRF Cookie を https 以外で送らない。
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     # nginx がクライアントの値を上書きして付ける X-Forwarded-Proto を信頼する。
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
-# Application definition
-
 INSTALLED_APPS = [
     "daphne",
-    # django-unfold: 管理画面テーマ。django.contrib.admin より前に置く必要がある。
+    # django.contrib.admin より前に置く。
     "unfold",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
@@ -74,8 +69,7 @@ ROOT_URLCONF = "d_party.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        # プロジェクト直下の templates/ を最優先（filesystem loader は app loader より
-        # 先に評価される）。unfold の admin/index.html をダッシュボードで上書きする。
+        # unfold の admin/index.html をダッシュボードで上書きする。
         "DIRS": [os.path.join(BASE_DIR, "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
@@ -99,8 +93,7 @@ CHANNEL_LAYERS = {
     }
 }
 
-# 統計 API のレスポンスキャッシュ。channel layer の DB 0 と分けて DB 1 を使う。
-# 毎リクエストでの DB 集計を避け、TTL（STATS_CACHE_SECONDS）失効で自然反映する。
+# 統計 API のキャッシュ。channel layer（DB 0）と分けて DB 1 を使う。
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
@@ -154,12 +147,10 @@ USE_I18N = True
 
 USE_TZ = True
 
-# django-unfold（管理画面テーマ）。ブランディング・サイドバー・ダッシュボードを設定する。
 UNFOLD = {
     "SITE_TITLE": "d-party",
     "SITE_HEADER": "d-party",
     "SITE_SUBHEADER": _("同時視聴 管理コンソール"),
-    # ロゴ未表示時のフォールバックに使う Material Symbols アイコン名。
     "SITE_SYMBOL": "smart_display",
     "SITE_LOGO": {
         "light": lambda request: static("branding/dp-mini.png"),
@@ -168,12 +159,9 @@ UNFOLD = {
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "SHOW_BACK_BUTTON": False,
-    # 環境バッジ（DEBUG に応じて Development/Production を表示）。
     "ENVIRONMENT": "d_party.dashboard.environment_callback",
-    # トップページのダッシュボード（KPI カード）を差し込むコールバック。
     "DASHBOARD_CALLBACK": "d_party.dashboard.dashboard_callback",
     "COLORS": {
-        # d-party のブランドに合わせた紫系のプライマリカラー。
         "primary": {
             "50": "oklch(97.7% .014 308.299)",
             "100": "oklch(94.6% .033 307.174)",
@@ -268,9 +256,7 @@ UNFOLD = {
 
 STATIC_URL = "static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "static/")
-# 公開ページ（LP・使い方・統計など）は frontend が担当するため、Django 側は
-# アプリ static を持たない。管理画面（Unfold）のロゴ等のブランディング素材だけを
-# ここから配信する。
+# 公開ページは frontend が持つので、static は管理画面の素材だけ。
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "assets")]
 
 # Default primary key field type
@@ -283,8 +269,7 @@ ASGI_APPLICATION = "d_party.asgi.application"
 # axes
 AXES_FAILURE_LIMIT = 10
 AXES_COOLOFF_TIME = 6
-# Preserve the previous "lock by username only" behaviour
-# (replaces the deprecated AXES_ONLY_USER_FAILURES).
+# ユーザー名だけでロックする。
 AXES_LOCKOUT_PARAMETERS = ["username"]
 AXES_RESET_ON_SUCCESS = True
 

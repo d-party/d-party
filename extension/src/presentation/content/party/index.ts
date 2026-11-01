@@ -17,33 +17,24 @@ import { mountPlayerControls } from "./react/PlayerControls";
 import type { SidebarTab } from "./react/sidebarStore";
 import { ReactionViewReact } from "./ReactionViewReact";
 
-/**
- * Content script for the dアニメストア player page (sc_d_pc). Wires the
- * dアニメストア player and the sidebar to a {@link RoomSession}.
- */
+/** Player page (sc_d_pc): wires the player and the sidebar to a {@link RoomSession}. */
 
 const video = () => document.getElementById("video") as HTMLVideoElement;
 const byClass = (cls: string) =>
   document.getElementsByClassName(cls)[0] as HTMLElement | undefined;
 
-// --- settings (kept live) ---------------------------------------------------
 const settingsRepo = new ChromeStorageSettingsRepository();
 let currentSettings: Settings = DEFAULT_SETTINGS;
 const settings: SettingsProvider = { current: () => currentSettings };
 void settingsRepo.getAll().then((s) => (currentSettings = s));
 settingsRepo.onChange((s) => (currentSettings = s));
 
-/**
- * Subscribe a mounted component to settings: deliver the stored value right
- * away (the initial load is async and may not have resolved by mount time),
- * then keep it live on changes.
- */
+/** Delivers the current value right away (the initial load may still be pending), then changes. */
 const subscribeSettings = (cb: (s: Settings) => void): (() => void) => {
   void settingsRepo.getAll().then(cb);
   return settingsRepo.onChange(cb);
 };
 
-// --- personal stats (client-only, independent of the backend) ---------------
 const statsRepo = new ChromePersonalStatsRepository();
 const stats: StatsRecorder = {
   roomCreated: () => void statsRepo.incrementRoomsCreated(),
@@ -53,7 +44,6 @@ const stats: StatsRecorder = {
     void statsRepo.addConnectionMs(durationMs),
 };
 
-// --- composition root -------------------------------------------------------
 const guard = new ActionGuard();
 const reactions = new ReactionViewReact();
 const player = new PlayerControllerDom(guard);
@@ -68,14 +58,11 @@ const mode: "create" | "join" | "normal" =
       ? "join"
       : "normal";
 
-// Mount the React sidebar (Shadow DOM) and bridge it to RoomSession.
 const { store: sidebarStore, controller: sidebarController } = mountSidebar({
   onCreateRoom: () => {
     addControlButtons();
     bindPlayerEvents();
-    // 視聴中アニメのタイトルをページ DOM から取得してルーム作成時に一度だけ送る
-    // （OGP 表示用）。取得できない場合は空文字で、バックエンドは未指定でも受理する。
-    // 「詳細設定」で組み立てた初期設定も渡す（create 確定後に update_setting で適用）。
+    // タイトルは OGP 用。取れなければ空文字。
     session.createRoom(
       getParam("partId") ?? "",
       shareTitle(),
@@ -88,13 +75,10 @@ const { store: sidebarStore, controller: sidebarController } = mountSidebar({
     sidebarStore.hide();
   },
   onDeleteRoom: () => {
-    // ホスト（オーナー）のみ表示されるボタンからの要求。サーバ側でも
-    // 非ホストは無視されるが、念のため inRoom を確認してから送る。
     if (!session.inRoom) return;
     session.deleteRoom();
   },
   onUpdateRoomSettings: (roomSettings) => {
-    // 操作タブからの詳細設定変更。オーナー以外はサーバ側で無視される。
     if (!session.inRoom) return;
     session.updateSetting(roomSettings);
   },
@@ -103,8 +87,7 @@ const { store: sidebarStore, controller: sidebarController } = mountSidebar({
   },
 });
 
-// Toast viewport offsets itself against the sidebar so notifications land on
-// the player area to the left of the sidebar (not on top of it).
+// Keep toasts over the player, not under the sidebar.
 const notifier = new ReactNotifier(sidebarStore);
 
 const session = new RoomSession({
@@ -123,23 +106,14 @@ if (mode === "join") sidebarStore.setJoined(true);
 
 let playerEventsBound = false;
 
-// --- page lifecycle ---------------------------------------------------------
 window.addEventListener("load", () => {
-  // create では入室前から「停止＋中央 ▶」状態を見せる。autoplay 属性を外すだけだと
-  // ネイティブプレイヤーが初期(initing)状態のままで pause オーバーレイ(#pauseInfo)を
-  // 描画しないため、primePausedOverlay で再生→ネイティブ一時停止を一度通す。
-  // join は loadeddata 後に同期と合わせてプライミングする（下の loadeddata ハンドラ）。
+  // join は loadeddata の後でプライミングする。
   if (mode === "create") primePausedOverlay();
   nextPageAnotherTab();
 });
 
-// The PiP button is room-independent: mount it on every player page as soon as
-// dアニメストア builds its control bar (the native player JS injects it after
-// the video initializes, so we wait for the fullscreen button to appear).
 mountPipControl();
 
-// Hide the sidebar in fullscreen. The React toast viewport mounts to its own
-// Shadow DOM host and doesn't need repositioning.
 document.addEventListener("fullscreenchange", () => {
   if (document.fullscreenElement) {
     sidebarStore.hide();
@@ -148,24 +122,19 @@ document.addEventListener("fullscreenchange", () => {
   }
 });
 
-// Update the page title and share title once the video has loaded.
 video().addEventListener("loadeddata", () => {
   const title = document.querySelector("title");
   if (title) title.textContent = player.getTitle();
   sidebarStore.setShareTitle(shareTitle());
 });
 
-// --- join flow --------------------------------------------------------------
 video().addEventListener(
   "loadeddata",
   () => {
     if (mode !== "join") return;
     addControlButtons();
     bindPlayerEvents();
-    // 停止状態で ▶ を見せてから join する。プライミング中はまだ inRoom=false
-    // なので、再生→一時停止で発火する playing/pause が active() を満たさず、
-    // 自分の操作としてルームへブロードキャストされない（host を巻き込まない）。
-    // join 後はホストの状態に応じて sync_response → onSync が再生/停止を上書きする。
+    // inRoom が false のうちにプライミングし、その再生・停止をルームへ流さない。
     primePausedOverlay(() => session.joinRoom(getParam("room_id") ?? ""));
   },
   { once: true },
@@ -177,15 +146,12 @@ function shareTitle(): string {
   return `${text("backInfoTxt1")} - ${text("backInfoTxt2")} - ${text("backInfoTxt3")}`;
 }
 
-// --- general player event wiring -------------------------------------------
 function bindPlayerEvents(): void {
   if (playerEventsBound) return;
   playerEventsBound = true;
   const v = video();
 
   const active = () => guard.available && session.inRoom;
-  // ルームへ操作を通知し、自己通知が有効でなければ履歴／トーストへ送信エントリを残す。
-  // ラベル・アイコンは operation キーから一元的に解決する（domain/history）。
   const announce = (operation: string) => {
     session.sendActionNotification(operation);
     if (!currentSettings.selfNotification)
@@ -237,7 +203,6 @@ function bindPlayerEvents(): void {
   bindClick("prevThumbinner", () => {
     if (active()) session.sendVideoOperation("prev_thumbnail");
   });
-  // sync_button / *_button (reactions) は React コンポーネント側で onClick を結線済み。
 
   bindClass("backArea", () => {
     if (session.inRoom && guard.available) {
@@ -310,26 +275,15 @@ function bindPlayerEvents(): void {
   });
 }
 
-// --- helpers ----------------------------------------------------------------
-
 /**
- * 同期前の動画を「停止＋中央 ▶ オーバーレイ」状態で見せる。
+ * 同期前の動画を「停止＋中央 ▶」で見せる。
  *
- * ネイティブプレイヤーの ▶ オーバーレイ(#pauseInfo)は「再生中 → 一時停止」の
- * 状態遷移でしか描画されない。autoplay を抑止して最初から止めると initing 状態の
- * ままで ▶ が出ないため、いったんミュートで再生してから .backArea のネイティブ
- * 一時停止を通し、プレイヤー自身を正規の paused 状態へ遷移させる。
+ * ▶ オーバーレイ（#pauseInfo）は「再生中 → 一時停止」の遷移でしか出ないので、
+ * ミュートで再生してから .backArea のネイティブ一時停止を通す。
  *
- * 重要（ルーム入室時の安全性）: `.backArea` クリックで発火する pause イベントは
- * 非同期に届く。`done`（= join 等で inRoom を true にする処理）をクリック直後に
- * 同期実行すると、この「プライミングの一時停止」が自分の操作としてルームへ
- * ブロードキャストされ、ホストを巻き込んで停止させてしまう。これを避けるため、
- * pause イベントを実際に観測してから（＝ inRoom が false のうちにプライミングの
- * メディアイベントを消化してから）`done` を呼ぶ。
- *
- * 音漏れを避けるためプライミング中だけミュートし、終了時に元の状態へ戻す。
- * 再生できない（自動再生ブロック等）場合は初期状態のまま `done` を呼ぶ。
- * @param done 一時停止が確定した後（または再生不能時）に一度だけ呼ばれる。
+ * pause イベントは非同期に届く。先に `done`（inRoom を true にする）を呼ぶと、
+ * この一時停止が自分の操作としてルームへ流れ、ホストまで止まる。だから pause を
+ * 観測してから `done` を呼ぶ。再生できないときはそのまま `done` を呼ぶ。
  */
 function primePausedOverlay(done?: () => void): void {
   const v = video();
@@ -347,19 +301,16 @@ function primePausedOverlay(done?: () => void): void {
       finish();
       return;
     }
-    // pause イベントを観測してから finish（= done）する。これで done 実行時には
-    // プライミング由来の pause が既に消化済みになり、ルームへ漏れない。
     const onPaused = () => {
       v.removeEventListener("pause", onPaused);
       finish();
     };
     v.addEventListener("pause", onPaused);
     byClass("backArea")?.click(); // ネイティブ一時停止 → ▶ を描画
-    // フォールバック: 何らかの理由で pause イベントが来なくても join は必ず行う。
+    // pause が来なくても join はする。
     window.setTimeout(finish, 800);
   };
   if (!v.paused) {
-    // autoplay が先行して既に再生中なら、待たずにそのまま一時停止へ進む。
     pauseNow();
     return;
   }
@@ -404,10 +355,7 @@ function addControlButtons(): void {
   });
 }
 
-/**
- * Toggle native Picture-in-Picture for the player video. Local-only: PiP is a
- * per-viewer preference and is not propagated over the room WebSocket.
- */
+/** Local only; not sent to the room. */
 async function togglePictureInPicture(): Promise<void> {
   const v = video();
   if (!document.pictureInPictureEnabled || v.disablePictureInPicture) {
@@ -428,10 +376,8 @@ async function togglePictureInPicture(): Promise<void> {
 }
 
 /**
- * Mount the PiP button into the dアニメストア control bar, immediately left of
- * the native fullscreen (最大化) button. The control bar is injected by the
- * page's player JS after the video initializes, so we wait for the fullscreen
- * button to appear before mounting.
+ * Left of the native fullscreen button. The control bar is built after the video
+ * initializes, so wait for that button.
  */
 function mountPipControl(): void {
   const mount = (fullscreenButton: Element): void => {
@@ -443,8 +389,7 @@ function mountPipControl(): void {
     });
   };
 
-  // `.fullscreen` alone is also toggled on containers while in fullscreen mode,
-  // so match the control-bar button precisely as `.fullscreen.mainButton`.
+  // `.fullscreen` is also set on containers in fullscreen mode.
   const findButton = () => document.querySelector(".fullscreen.mainButton");
 
   const existing = findButton();
@@ -478,9 +423,8 @@ function nextPageAnotherTab(): void {
     // onclick を直接差し替える。
     document.querySelectorAll<HTMLElement>(".recommend").forEach((item) => {
       item.onclick = () => {
-        // 遷移先はページ自身の DOM から読む。content script からの
-        // location.href 代入はページのコンテキストで実行されるため、
-        // javascript: のようなスキームを踏まないよう http(s) に限定する。
+        // javascript: などを踏まないよう http(s) に限る。
+
         const raw = item.querySelector("input")?.getAttribute("value");
         const next = raw ? toHttpUrl(raw) : null;
         if (next) window.location.href = next;
