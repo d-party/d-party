@@ -7,23 +7,23 @@
 | api/\_\_init\_\_.py                                     |        0 |        0 |    100% |           |
 | api/apps.py                                             |        4 |        0 |    100% |           |
 | api/urls.py                                             |        3 |        0 |    100% |           |
-| api/views.py                                            |      201 |       34 |     83% |139-142, 155, 222-230, 242, 264, 283, 300-309, 319, 329, 338, 346, 351-353, 363, 368-370, 407 |
+| api/views.py                                            |      201 |       34 |     83% |129-132, 144, 209-217, 228, 249, 267, 283-292, 301, 310, 319, 327, 332-334, 344, 349-351, 385 |
 | d\_party/\_\_init\_\_.py                                |        0 |        0 |    100% |           |
-| d\_party/settings.py                                    |       43 |        3 |     93% |     28-31 |
+| d\_party/settings.py                                    |       43 |        3 |     93% |     25-28 |
 | d\_party/urls.py                                        |        7 |        2 |     71% |     13-16 |
 | streamer/\_\_init\_\_.py                                |        0 |        0 |    100% |           |
-| streamer/admin.py                                       |       54 |        6 |     89% |15, 20, 33, 51, 56, 61 |
+| streamer/admin.py                                       |       54 |        6 |     89% |15, 20, 32, 49, 54, 59 |
 | streamer/apps.py                                        |        4 |        0 |    100% |           |
-| streamer/consumers.py                                   |      312 |       40 |     87% |46-54, 61, 71, 236-237, 285, 318, 339-348, 360-371, 389, 412-416, 426, 459, 532-537, 692, 719 |
+| streamer/consumers.py                                   |      312 |       40 |     87% |44-51, 58, 68, 192-193, 229, 258, 273-282, 289-300, 312, 332-336, 342, 369, 417-422, 530, 543 |
 | streamer/cron.py                                        |       10 |        0 |    100% |           |
 | streamer/factories.py                                   |       25 |        0 |    100% |           |
-| streamer/fields.py                                      |       23 |        3 |     87% |35, 40, 45 |
-| streamer/format.py                                      |       55 |        1 |     98% |        79 |
+| streamer/fields.py                                      |       23 |        3 |     87% |33, 38, 43 |
+| streamer/format.py                                      |       55 |        1 |     98% |        78 |
 | streamer/management/\_\_init\_\_.py                     |        0 |        0 |    100% |           |
 | streamer/management/commands/\_\_init\_\_.py            |        0 |        0 |    100% |           |
 | streamer/management/commands/close\_active\_sessions.py |       16 |        0 |    100% |           |
-| streamer/mixins.py                                      |       38 |        7 |     82% |31, 34, 65, 71-72, 75, 78 |
-| streamer/models.py                                      |       62 |        1 |     98% |       117 |
+| streamer/mixins.py                                      |       38 |        7 |     82% |31, 34, 64, 70-71, 74, 77 |
+| streamer/models.py                                      |       62 |        1 |     98% |        96 |
 | streamer/util.py                                        |        9 |        0 |    100% |           |
 | **TOTAL**                                               |  **866** |   **97** | **89%** |           |
 
