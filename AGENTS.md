@@ -571,6 +571,14 @@ cd backend && uv run ruff check . && uv run mypy . && uv run pytest   # Backend/
 pnpm run typecheck && pnpm run lint && pnpm run build                 # Frontend/CI · Extension/CI
 ```
 
+> **Python の仮想環境は `backend/.venv` の 1 つだけ。** Dev Container の
+> `postCreateCommand` が `uv sync` で作る。リポジトリ直下などに別の `.venv` を
+> 作らないこと。特に WSL ホスト側で作った venv はホストの Python を指す symlink を
+> 持つので、bind mount 越しにコンテナから見ると壊れていて、VS Code が起動時に
+> 「Invalid Python interpreter is selected for workspace ...」を出す原因になる。
+> 依存が要る作業はコンテナ内で行い、backend 以外で Python ツールが要るなら
+> `uv run --with <pkg>` / `uvx` で使い捨てにする。
+
 > **ruff はグローバルに入れない。** `backend/uv.lock` にピン留めされたものを
 > `uv run ruff` で使う。`uvx ruff` や devcontainer feature で入れると常に最新が
 > 取れてしまい、整形結果が CI とズレる。
