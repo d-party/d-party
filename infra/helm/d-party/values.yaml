@@ -47,10 +47,9 @@ django:
     tag: "v0.0.0"          # 初期値。image-updater が semver で書き換える
     # 不変タグなので毎回 pull は不要。
     pullPolicy: IfNotPresent
-  # WebSocket セッション状態はプロセス内に保持され、close_active_sessions が
   # close_active_sessions は起動時に「updated_at が 1 日以上前の alive 行」だけを
-  # 回収する（稼働中セッションは updated_at が新しいので消さない）ため、複数レプリカでも
-  # 安全。よって 2 以上に増やせる（別ノードへ分散して可用性を確保する場合など）。既定は
+  # 回収する（セッションは 1 日以上続かない前提）ため、別レプリカの稼働中セッションは
+  # 巻き込まない。よって 2 以上に増やせる（別ノードへ分散して可用性を確保する場合など）。既定は
   # RPi 想定で 1。水平スケール時の残課題は consumers.py の _pending_room_deletes
   # （プロセスローカル。DB ガードで誤動作はしない既知の軽微事項。なお gunicornWorkers>1 の
   # 時点で 1 Pod 内でも該当するため、レプリカ数固有の問題ではない）。
