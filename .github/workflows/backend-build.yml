@@ -1,8 +1,4 @@
-# backend の成果物（コンテナイメージ）が実際に作れて、実際に起動するかを見る。
-#
-# Backend/CI は lint とテストだけを見るので、Dockerfile が壊れていても気づけない。
-# ここではイメージを組み、静的チェック（hadolint / dockle）にかけ、
-# **本物の PostgreSQL / Redis につないで起動させ、API が応答するところまで**確認する。
+# イメージを組み、PostgreSQL / Redis につないで起動し、API が応答するまでを見る。
 name: Backend/Build
 
 on:
@@ -35,8 +31,6 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      # apt を使わなくなったので DL3008 / DL3009 等の ignore は不要。dockerlint は
-      # hadolint と検査内容が重なり、メンテもされていないため使わない。
       - uses: hadolint/hadolint-action@v3.5.0
         with:
           dockerfile: backend/Dockerfile
@@ -48,8 +42,7 @@ jobs:
     permissions:
       contents: read
 
-    # イメージを「起動する」ところまで見たいので、compose と同じ依存を用意する。
-    # ポートはホストへ公開されるため、コンテナは --network host で 127.0.0.1 を見る。
+    # コンテナは --network host で 127.0.0.1 のサービスを見る。
     services:
       postgres:
         image: postgres:16
@@ -79,10 +72,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # 実行時 env はすべてイメージの外から渡す（Dockerfile は設定を焼き込まない）。
-      # --env-file にすることで、シェル上で展開せずに済ませる。
-      # DEBUG=0 にして、本番と同じ gunicorn + uvicorn-worker の経路で起動させる
-      # （DEBUG=1 だと entrypoint.sh は runserver を選ぶ）。
+      # DEBUG=0 で本番と同じ gunicorn を通す（DEBUG=1 だと runserver になる）。
       - name: Write the runtime env
         run: |
           cat > ci.env <<'EOF'
@@ -104,7 +94,6 @@ jobs:
           GUNICORN_CMD_ARGS=--workers 2
           EOF
 
-      # イメージ名は dockle とローカルの compose に合わせて固定する。
       - name: Build the runtime image
         run: docker build -t backend-django backend
 
@@ -115,8 +104,6 @@ jobs:
           exit-code: 1
           failure-threshold: fatal
 
-      # migration はイメージに含まれるものをそのまま当てる。ここが通らないと
-      # 本番のリリース時に migrate ジョブが落ちる。
       - name: Migrate with the image
         run: |
           docker run --rm --network host --env-file ci.env backend-django \
@@ -138,19 +125,15 @@ jobs:
           echo "server did not become ready in time"
           exit 1
 
-      # ビルドが通り起動もしたのに、settings の読み込みや URL 解決で 500 になる
-      # 壊れ方があるので、実際に引いて確認する。
       - name: Check the API responds
         run: |
           code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/v1/health)
           echo "/api/v1/health -> $code"
           [ "$code" = "200" ] || exit 1
-          # 存在しない API が 404 を返すこと（500 との取り違えを拾う）。
           code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/api/v1/__does_not_exist__)
           echo "/api/v1/__does_not_exist__ -> $code"
           [ "$code" = "404" ] || exit 1
 
-      # 本番経路で起動していること（runserver ではなく gunicorn）を確かめる。
       - name: Check the server is gunicorn
         run: docker logs backend-ci 2>&1 | grep -q "Booting worker"
 

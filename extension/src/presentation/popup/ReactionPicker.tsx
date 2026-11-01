@@ -6,12 +6,6 @@ import { Input } from "@d-party/ui";
 import { EXTRA_REACTIONS } from "@/domain/extraReactions";
 import { cn } from "@d-party/ui";
 
-/**
- * Grid of selectable extra reactions (the curated Noto×react-icons catalog).
- * Mirrors {@link IconPicker}: selected entries are highlighted, clicking one
- * toggles it via {@link onToggle}. A search box filters by label. The parent
- * persists the choice to settings (`extraReactions`).
- */
 export function ReactionPicker({
   selected,
   onToggle,

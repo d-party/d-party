@@ -19,8 +19,7 @@ services:
     env_file: *env_file
   django:
     container_name: django
-    # Pin the built image name so it does not depend on the compose project
-    # (checkout-directory) name; dockle/trivy in CI scan `backend-django`.
+    # Fixed name; CI scans `backend-django`.
     image: backend-django
     build:
       context: ./backend
@@ -47,9 +46,8 @@ services:
       retries: 12
       start_period: 60s
   frontend:
-    # frontend の実体は環境ごとにオーバーレイで与える:
-    #   dev  (docker-compose.override.yml): node イメージで `pnpm dev`（HMR）
-    #   prod (docker-compose.prod.yml)    : Dockerfile で standalone ビルドを配信
+    # 中身は override.yml（dev）と prod.yml が与える。
+
     container_name: frontend
     expose:
       - "3000"

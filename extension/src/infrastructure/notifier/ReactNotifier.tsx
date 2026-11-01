@@ -19,7 +19,7 @@ import type { SidebarStore } from "@/presentation/content/party/react/sidebarSto
 interface ToastItemData {
   id: number;
   variant: ToastVariant;
-  /** プレーンテキスト。他の参加者の表示名を含むため HTML として解釈しない。 */
+  /** 他人の表示名を含むので、HTML として解釈しない。 */
   message: string;
 }
 
@@ -95,8 +95,6 @@ function Toaster({
   sidebarStore?: SidebarStore;
 }): React.JSX.Element {
   const toasts = useSyncExternalStore(store.subscribe, store.getSnapshot);
-  // Offset the viewport right edge to align with the sidebar's left edge so
-  // toasts appear over the player area, not on top of the sidebar.
   const sbState = useSyncExternalStore(
     sidebarStore?.subscribe ?? (() => () => {}),
     sidebarStore?.getSnapshot ?? (() => null),
@@ -111,11 +109,8 @@ function Toaster({
   );
 }
 
-/** Notifier backed by a shadcn-style React toast viewport mounted in its own
- * Shadow DOM. Messages are rendered as plain text.
- *
- * Pass `sidebarStore` so the viewport offsets itself by the current sidebar
- * width and the toasts land on the player area to the left of the sidebar. */
+/** Toasts in their own Shadow DOM. With `sidebarStore`, they stay left of the sidebar. */
+
 export class ReactNotifier implements Notifier {
   private readonly store = new ToastStore();
 

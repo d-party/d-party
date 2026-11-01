@@ -46,44 +46,29 @@ export class RoomSession {
   private _inRoom = false;
   private joined = false;
   private resetDelayMs = 100;
-  // ルーム削除など、意図的にソケットを閉じるときに true にして、onClose の
-  // 「サーバーとの通信が終了」誤アラートと UI 上書きを抑止する。
+  // 自分からソケットを閉じたとき、onClose の切断アラートを出さない。
   private intentionalTeardown = false;
-  // ホスト以外は video_operation をブロードキャストしない。create成功または
-  // host_change でホストになったときに true になる。
   private isHost = false;
-  // ホストが定期的に現在の再生状態をブロードキャストし、ゲストの drift を
-  // 補正するハートビートタイマーのハンドル。
+  // ホストが再生状態を定期配信してゲストのずれを直す。
   private heartbeatTimer: number | null = null;
   static HEARTBEAT_MS = 5000;
-  // 手動 sync ボタン押下に対する sync_response のときだけトーストを出すためのフラグ。
-  // join 直後の自動 sync 時はトーストを抑制したいので必要。
+  // 手動の sync のときだけトーストを出す（join 直後の自動 sync では出さない）。
   private pendingManualSyncToast = false;
-  // ルームに接続（create/join 確定）してから、まだ統計へ加算していない区間の
-  // 開始時刻。切断時・チェックポイント時に「now - connectedAt」を加算する。
+  // 接続時間のうち、まだ統計へ足していない区間の開始時刻。
   private connectedAt: number | null = null;
-  // 接続中、経過時間を定期的に統計へ書き出すタイマー。タブを閉じる/落ちると
-  // 切断ハンドラが走らないことがあるため、最大でも CHECKPOINT_MS 分しか取りこぼさない。
+  // タブを閉じると切断ハンドラが走らないことがあるので、定期的に書き出す。
   private connectionCheckpointTimer: number | null = null;
   static CONNECTION_CHECKPOINT_MS = 60000;
 
-  // サーバから通知された現在のルーム詳細設定。一方通行モードの動画操作抑止や
-  // リアクション禁止の判定に使う。room_setting イベントで更新される。
   private roomSettings: RoomSettings = DEFAULT_ROOM_SETTINGS;
-  // create/join 直後にサーバが配る最初の room_setting は「現在値の初期同期」であり
-  // 設定変更ではない。これを有効化/無効化の通知と区別するため、最初の 1 通を受信済みか
-  // を持つ。以降の room_setting（オーナーが操作タブで変更したとき）だけ通知する。
+  // 入室直後の room_setting は初期値なので、変更として通知しない。
   private roomSettingsInitialized = false;
-  // ルーム作成時に指定された初期設定。create 確定後に update_setting で適用する。
+  // 作成時に選んだ設定。create の応答後に update_setting で送る。
   private pendingSettings: RoomSettings | null = null;
-  // 一方通行モードで非オーナーが操作を試みたときの「操作できません」通知を、
-  // seek/ratechange 等の多発イベントで連射しないようスロットルするための時刻。
   private lastOneWayNoticeAt = 0;
   static ONE_WAY_NOTICE_THROTTLE_MS = 3000;
-  // 受信した動画操作/シンクをプレイヤーへ適用した時刻。適用は複数の DOM メディア
-  // イベント（seek→playing 等）を誘発し、最初のイベントで guard が再開すると後続が
-  // 送信経路へ漏れる。この時刻から直後の「エコー」を見分け、一方通行の非オーナーでも
-  // オーナー操作の受信を自分の操作と誤認して通知しないようにする。
+  // 受信した操作を適用すると seek → playing のように複数のメディアイベントが続き、
+  // 後続は guard の再開後に届く。この時刻の直後のイベントは自分の操作として扱わない。
   private lastRemoteApplyAt = 0;
   static REMOTE_APPLY_ECHO_MS = 500;
 
@@ -98,14 +83,7 @@ export class RoomSession {
     return this._inRoom;
   }
 
-  // -- connection lifecycle --------------------------------------------------
-
-  /**
-   * Host a new room for the given part.
-   *
-   * `settings` は「詳細設定」の初期値。create メッセージ自体は変更せず（後方互換）、
-   * create 確定後に `update_setting` で適用する。既定値のときは送信を省く。
-   */
+  /** `settings` は create の応答後に `update_setting` で送る（既定値なら送らない）。 */
   createRoom(partId: string, title = "", settings?: RoomSettings): void {
     this._inRoom = true;
     this.joined = false;
@@ -125,10 +103,7 @@ export class RoomSession {
     });
   }
 
-  /**
-   * ルーム詳細設定を更新する（オーナー限定。ホスト以外が呼んでもサーバ側で無視される）。
-   * 入室後の操作タブからの変更で使う。
-   */
+  /** ホスト以外が送ってもサーバが無視する。 */
   updateSetting(settings: RoomSettings): void {
     this.roomSettings = settings;
     this.send({
@@ -157,21 +132,15 @@ export class RoomSession {
         request_id: now(),
       });
       this.deps.guard.allow();
-      // sync_request は join のレスポンス受信後（dispatch の case "join"）に送る。
-      // open 直後に同梱して送ると、ルーム未参加状態で sync_request がサーバ側で
-      // 評価され AttributeError を引き起こすことがある。
     });
   }
 
-  // ソケットが OPEN になる前に send() を呼ぶと InvalidStateError が出て
-  // 「サーバーとの通信が終了」トーストが誤表示されるため、必ず onopen で送る。
+  // OPEN 前に send() すると InvalidStateError になるので、最初の送信は onOpen で行う。
   private openSocket(onOpen?: () => void): void {
     this.deps.client.connect({
       onOpen: () => onOpen?.(),
       onMessage: (message) => this.handleMessage(message),
       onClose: () => {
-        // room_deleted などで自分から閉じた場合は専用ハンドラ側で UI を
-        // 処理済みなので、ここでの誤アラート・状態上書きを行わない。
         if (this.intentionalTeardown) {
           this.intentionalTeardown = false;
           return;
@@ -199,7 +168,6 @@ export class RoomSession {
     });
   }
 
-  // create/join 確定時に接続時間の計測を開始する。
   private startConnectionTracking(): void {
     this.connectedAt = now();
     if (this.connectionCheckpointTimer !== null) return;
@@ -208,7 +176,6 @@ export class RoomSession {
     }, RoomSession.CONNECTION_CHECKPOINT_MS);
   }
 
-  // 未加算区間を統計へ書き出し、計測の起点を現在時刻へ進める（接続は継続）。
   private checkpointConnection(): void {
     if (this.connectedAt === null) return;
     const at = now();
@@ -216,8 +183,7 @@ export class RoomSession {
     this.connectedAt = at;
   }
 
-  // 切断時に残りの経過時間を加算し、計測を完全に停止する。connectedAt が null
-  // （未接続/加算済み）のときは何もしないので、leave()→onClose の二重計上を防ぐ。
+  // connectedAt を null にするので、leave() → onClose で二重に数えない。
   private endConnectionTracking(): void {
     this.checkpointConnection();
     this.connectedAt = null;
@@ -227,21 +193,11 @@ export class RoomSession {
     }
   }
 
-  // -- outgoing intents (called by DOM event handlers) -----------------------
-
-  // 仕様: ホスト/ゲストいずれも自分のプレイヤー操作（再生・停止・シーク等）を
-  // ルームへブロードキャストできる（相互にコントロール可）。フィードバックループは
-  // ActionGuard（suppress/allow）で抑止する。
-  /** 一方通行(アクセラレーター)モードで、非オーナーは動画を操作できない。 */
   private get operationBlocked(): boolean {
     return this.roomSettings.oneWay && !this.isHost;
   }
 
-  /**
-   * 一方通行モードで非オーナーが操作を試みたとき、送信者にだけ「操作できません」を
-   * 表示する。オーナーや他の参加者には何も送らない（operation_notification を出さない）。
-   * seek/ratechange 等でイベントが多発するためスロットルする。
-   */
+  // seek / ratechange は連続して発火するので間引く。
   private noticeOneWayBlocked(): void {
     const t = now();
     if (t - this.lastOneWayNoticeAt < RoomSession.ONE_WAY_NOTICE_THROTTLE_MS)
@@ -251,17 +207,8 @@ export class RoomSession {
   }
 
   sendVideoOperation(operation: string): void {
-    // 一方通行(アクセラレーター)モードでは、オーナー以外は動画を操作できない。
-    // サーバへ送らない（サーバ側でも非オーナーの操作はブロックされる）だけだと、
-    // ローカルのプレイヤーは操作されたままルームからズレてしまう。そこでホストへ
-    // sync_request を投げて現在の再生状態を取り戻し、操作を取り消す。sync_response の
-    // 適用は guard.suppress() 下で行われるため送信ループにはならない（join 時の
-    // 自動シンクと同じ経路）。送信者にだけ「操作できません」を表示する。
+    // 送らないだけだと手元のプレイヤーがルームからずれるので、ホストへ sync して戻す。
     if (this.operationBlocked) {
-      // ただし、直前に受信した動画操作/シンクを適用した「エコー」イベント
-      // （複数 DOM イベントの後続が guard 再開後に漏れたもの）は、オーナー操作の
-      // 受信であって自分の操作ではない。プレイヤーは既にホスト状態なので、通知も
-      // 巻き戻しもせず黙って無視する。
       if (now() - this.lastRemoteApplyAt < RoomSession.REMOTE_APPLY_ECHO_MS) {
         return;
       }
@@ -274,7 +221,6 @@ export class RoomSession {
       user_id: this.userId,
       operation,
       option: this.deps.player.getOption(),
-      // タイマー画面がエピソード切替に追従できるよう、現在のタイトルを毎回同梱する。
       title: this.deps.player.getTitle(),
       request_id: now(),
     });
@@ -282,9 +228,6 @@ export class RoomSession {
   }
 
   requestSync(opts: { manual?: boolean } = {}): void {
-    // 初回参加時の自動シンクと、ユーザーが手動で sync ボタンを押した
-    // ときを区別して、手動のときだけ sync_response 受信でトーストを出す。
-    // 初回参加のシンクは「ルームに参加」通知と同時に出てしまうため。
     if (opts.manual ?? true) this.pendingManualSyncToast = true;
     this.send({ action: "sync_request", request_id: now() });
     this.deps.guard.allow();
@@ -301,8 +244,6 @@ export class RoomSession {
   }
 
   sendActionNotification(operation: string): void {
-    // 一方通行モードで非オーナーは操作できないため、他の参加者へ操作通知を配信しない。
-    // 送信者にだけ「操作できません」を表示する。
     if (this.operationBlocked) {
       this.noticeOneWayBlocked();
       return;
@@ -319,19 +260,13 @@ export class RoomSession {
     this.send({ action: "user_list", request_id: now() });
   }
 
-  /**
-   * ホスト（オーナー）専用: ルームの削除を要求する。サーバはルーム内全員へ
-   * `room_deleted` をブロードキャストする（自分自身も受信して UI をリセットする）。
-   * ホスト以外が呼んでもサーバ側で無視される。
-   */
+  /** 自分にも `room_deleted` が届き、そこで UI を戻す。 */
   deleteRoom(): void {
     this.send({ action: "delete_room", request_id: now() });
   }
 
   sendReaction(reactionId: string): void {
-    // リアクション禁止設定では、サーバへ送らない（＝他者へ配信されず記録もされない）。
-    // 自分の画面への表示は呼び出し側（onReaction）が全モード共通でローカル再生して
-    // いるため、ここで再生すると二重表示になる。送信を止めるだけにする。
+    // 自分の画面には呼び出し側が表示済み。
     if (this.roomSettings.disableReaction) {
       return;
     }
@@ -340,8 +275,6 @@ export class RoomSession {
       reaction_type: reactionId,
       request_id: now(),
     });
-    // 統計はデフォルトリアクションのみ対象。エクストラ（Noto コードポイント id）は
-    // 集計しない。
     if (isDefaultReaction(reactionId)) {
       this.deps.stats.reactionSent(reactionId);
     }
@@ -358,8 +291,6 @@ export class RoomSession {
     this.pendingSettings = null;
   }
 
-  // ホスト専用: 5 秒ごとに現在の再生状態を video_operation("sync") として
-  // ブロードキャストし、ゲストの drift を継続的に補正する。
   private startHeartbeat(): void {
     if (this.heartbeatTimer !== null) return;
     this.heartbeatTimer = window.setInterval(() => {
@@ -369,8 +300,6 @@ export class RoomSession {
         user_id: this.userId,
         operation: "sync",
         option: this.deps.player.getOption(),
-        // ハートビートにもタイトルを載せ、タイマー画面のドリフト補正と同時に
-        // 現在のエピソードタイトルも 5 秒ごとに追従させる。
         title: this.deps.player.getTitle(),
         request_id: now(),
       });
@@ -397,8 +326,6 @@ export class RoomSession {
       this._inRoom = false;
     }
   }
-
-  // -- incoming messages -----------------------------------------------------
 
   private handleMessage(message: IncomingMessage): void {
     this.dispatch(message);
@@ -434,8 +361,6 @@ export class RoomSession {
           icon: "party",
           label: "ルームを作成しました",
         });
-        // 「詳細設定」で指定した初期設定を、create 確定後に適用する。既定値なら送らない
-        // （create メッセージ自体は不変に保ち、旧バックエンド互換を維持するため）。
         if (
           this.pendingSettings &&
           !isDefaultRoomSettings(this.pendingSettings)
@@ -455,10 +380,7 @@ export class RoomSession {
         sidebar.setJoined(true);
         sidebar.setConnectionStatus("connected");
         notifier.success("ルームに参加");
-        // join 確定後にホストの再生状態を要求する。openSocket の onopen 直後に
-        // 投げると、サーバ側で anime_user が未生成のまま sync_request が走り
-        // AttributeError → close code 1011 を踏むため、ここまで遅延させる。
-        // 初回シンクは「ルームに参加」と同時にトーストが出るのを避けるため manual:false。
+        // join の応答より前に送ると、サーバでユーザーが未作成のまま処理されて落ちる。
         this.requestSync({ manual: false });
         break;
       case "server_message":
@@ -474,8 +396,6 @@ export class RoomSession {
         } else if (message.message_type === "room_deleted") {
           this.handleRoomDeleted();
         } else if (message.message_type === "failed_join") {
-          // ルームが既に存在しない/終了済み。サーバはこの直後に close するので、
-          // onClose 側の誤った SERVER_DISCONNECTED ではなく明確なメッセージを出す。
           this.joined = false;
           notifier.alert("ルームに参加できませんでした");
           sidebar.addHistory({
@@ -516,8 +436,6 @@ export class RoomSession {
         this.deps.guard.suppress();
         this.lastRemoteApplyAt = now();
         player.onAction("sync", message.option);
-        // 手動 sync リクエストに対する返信のときだけトーストを出す。
-        // join 直後の自動シンクをも黙って適用したいため。
         if (this.pendingManualSyncToast) {
           this.pendingManualSyncToast = false;
           this.deps.notifier.info("再生状況をホストにシンク");
@@ -537,7 +455,6 @@ export class RoomSession {
         break;
       case "reaction":
         if (!settings.current().hideReaction) {
-          // id はデフォルト名/エクストラ id の両対応（未知 id は ReactionLayer で無視）。
           reactions.play(message.reaction_type, {
             userName: message.user?.user_name,
             mode: settings.current().reactionDisplay,
@@ -545,15 +462,10 @@ export class RoomSession {
         }
         break;
       case "room_setting": {
-        // サーバから配布される現在のルーム詳細設定を反映する。一方通行モードの
-        // 動画操作抑止やリアクション禁止の判定に使う。旧バックエンドは送らないため
-        // 未受信なら既定値（すべて false）のままで現行挙動になる。
         const previousSettings = this.roomSettings;
         this.roomSettings = fromWire(message);
         sidebar.setRoomSettings(this.roomSettings);
-        // 最初の 1 通は入室時の現在値同期なので通知しない。以降のオーナーによる変更
-        // だけを通知する。変更したオーナー本人（ホスト）は操作タブのトグルで把握できる
-        // ため、通知対象は非オーナーの参加者に限る。
+        // 変えた本人（ホスト）には通知しない。
         if (this.roomSettingsInitialized && !this.isHost) {
           this.notifyRoomSettingChanges(previousSettings, this.roomSettings);
         }
@@ -563,11 +475,6 @@ export class RoomSession {
     }
   }
 
-  /**
-   * ホストがルームを削除したときの処理（削除実行者自身もこの経路を通る）。
-   * 通知を出し、セッションを片付けてソケットを閉じ、サイドバーを
-   * 「ルーム作成」段階へ戻す。
-   */
   private handleRoomDeleted(): void {
     this.intentionalTeardown = true;
     this.joined = false;
@@ -582,8 +489,6 @@ export class RoomSession {
     this.deps.sidebar.resetToCreate();
   }
 
-  // 他の参加者の操作通知 (operation_notification) を受信したとき、トーストと
-  // 履歴に「受信」エントリとして表示する。
   private notifyOperation(
     operation: string,
     userName: string,
@@ -601,9 +506,6 @@ export class RoomSession {
     });
   }
 
-  // オーナーが操作タブで詳細設定を変更した（room_setting の差分がある）とき、
-  // 変化した設定ごとに「『◯◯』を有効化しました／無効化しました」をトースト＋履歴で
-  // ルーム内の参加者へ知らせる。
   private notifyRoomSettingChanges(
     previous: RoomSettings,
     next: RoomSettings,
@@ -621,15 +523,7 @@ export class RoomSession {
     }
   }
 
-  // -- notifications ---------------------------------------------------------
-
-  /**
-   * 自分のプレイヤー操作をルームへ通知した直後（selfNotification が無効なとき）に
-   * トーストと履歴へ「送信」エントリを残す。`operation` は
-   * {@link sendActionNotification} に渡したものと同じワイヤ表現。
-   */
   notifySentOperation(operation: string): void {
-    // 一方通行モードで非オーナーは操作できないため、送信履歴も残さない。
     if (this.operationBlocked) return;
     const meta = describeOperation(operation);
     if (!meta) return;

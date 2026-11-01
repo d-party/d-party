@@ -34,8 +34,7 @@ class LogicalDeletionQuerySet(models.QuerySet):
         return self.update(**{DELETE_FLAG_FIELD: None})
 
 
-# mypy は Manager.from_queryset(...) の動的基底クラスを解決できない（django-stubs でも
-# 既知の制限）。実行時は正しく動作するため、この行のみ型検査を無視する。
+# mypy は from_queryset() の動的基底クラスを解決できない。
 class LogicalDeletionManager(models.Manager.from_queryset(LogicalDeletionQuerySet)):  # type: ignore[misc]
     """Manager exposing the logical-deletion queryset helpers."""
 

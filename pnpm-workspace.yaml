@@ -1,28 +1,14 @@
-# pnpm workspace の定義。
-#
-# ロックファイルはリポジトリのルートに 1 本だけ置く。extension と frontend は
-# react / tailwind / storybook など多くの依存を共有しており、解決結果を揃えて
-# おくと重複バージョンが発生しない。
 packages:
   - "extension"
   - "frontend"
   - "packages/*"
 
-# pnpm 10.28 以降、package.json の "pnpm" フィールドは読まれない。
-# 設定はこのファイルへ置く（https://pnpm.io/settings）。
-#
-# ビルドスクリプトの実行を許可する依存。pnpm 11 で onlyBuiltDependencies /
-# neverBuiltDependencies / ignoredBuiltDependencies は廃止され、`allowBuilds`
-# （パッケージ名 → 真偽値のマップ）に一本化された。既定ではどの依存も
-# postinstall を実行できず、宣言の無いものがスクリプトを持つと
-# strictDepBuilds（v11 から既定で true）が install を落とす。
+# ビルドスクリプトを実行してよい依存。宣言の無いものがスクリプトを持つと install が落ちる。
 allowBuilds:
   esbuild: true
 
-# 脆弱性のある推移的依存を、親パッケージのレンジに縛られずに修正版へ引き上げる。
-# 左辺のレンジ（= 脆弱なバージョン）に該当する解決結果だけを書き換えるため、
-# 別メジャーを要求する親には影響しない。ロックファイルが 1 本なので、ここの指定は
-# 全パッケージに一律で効く。
+# 脆弱な推移的依存を修正版へ上げる。左辺のレンジに当たる解決結果だけを書き換える。
+
 overrides:
   "brace-expansion@>=3.0.0 <5.0.9": ">=5.0.9"
   "esbuild@>=0.27.3 <0.28.1": ">=0.28.1"

@@ -18,7 +18,6 @@ export interface SidebarHandlers {
   onCreateRoom: () => void;
   onLeave: () => void;
   onDeleteRoom: () => void;
-  /** 詳細設定の更新（オーナーのみ有効。update_setting を送る）。 */
   onUpdateRoomSettings: (settings: RoomSettings) => void;
   onTabChange?: (tab: SidebarTab) => void;
 }
@@ -31,14 +30,11 @@ export interface MountedSidebar {
 const EXPANDED_WIDTH = 320;
 const COLLAPSED_WIDTH = 44;
 
-/** Public read-only sidebar widths so other UI surfaces (e.g. the toast
- * viewport) can offset themselves against the sidebar. */
 export const SIDEBAR_WIDTHS = {
   expanded: EXPANDED_WIDTH,
   collapsed: COLLAPSED_WIDTH,
 } as const;
 
-/** Compute the current sidebar width (px) from a snapshot. */
 export function sidebarWidth(state: {
   visible: boolean;
   collapsed: boolean;
@@ -49,15 +45,9 @@ export function sidebarWidth(state: {
 }
 
 /**
- * Mounts the React sidebar into a Shadow DOM host. The host is laid out
- * *beside* the video (it pushes the player
- * aside) rather than overlaying it: the video wrapper is moved into a flex row
- * and the host becomes its sibling. The host width is driven by the store so
- * collapsing/expanding reflows the player. Falls back to a fixed overlay if the
- * video wrapper can't be found.
- *
- * The Shadow DOM + injected Tailwind CSS keeps the sidebar styles isolated from
- * the page (and vice versa).
+ * Mounts the sidebar into a Shadow DOM host placed beside the video (the video
+ * wrapper moves into a flex row), so it pushes the player aside instead of
+ * covering it. Falls back to a fixed overlay when the wrapper is missing.
  */
 export function mountSidebar(handlers: SidebarHandlers): MountedSidebar {
   const store = new SidebarStore();
@@ -85,9 +75,6 @@ export function mountSidebar(handlers: SidebarHandlers): MountedSidebar {
     document.body.appendChild(host);
   }
 
-  // Drive the host width from the store: 0 when hidden ("normal"/fullscreen),
-  // narrow when collapsed, full when expanded. The CSS width transition is what
-  // animates the player being pushed aside / pulled back.
   const applyWidth = () => {
     const state = store.getSnapshot();
     host.style.width = `${sidebarWidth(state)}px`;
@@ -128,16 +115,12 @@ export function mountSidebar(handlers: SidebarHandlers): MountedSidebar {
 }
 
 /**
- * サイドバーが初めて表示されたとき一度だけヘルスチェックを実行する。
- * 失敗（ネットワークエラーまたは非 2xx）した場合はステータスを `"maintenance"` に
- * 変更してメンテナンス中の黄色バッジを表示する。接続が成功すれば WS 側が
- * `setConnectionStatus("connected")` を呼ぶため自動的に上書きされる。
+ * 初回表示時に 1 度だけヘルスチェックし、失敗したら `"maintenance"` にする。
  *
- * fetch は content script から直接行わず background service worker に委譲する。
- * Chrome の Local Network Access により、パブリックなページ（dアニメストア）から
- * localhost への直接 fetch はユーザー許可が無いと弾かれるため（host_permissions を
- * 持つ background 経由なら LNA のページ許可ゲート対象外）。
+ * fetch は background に任せる。公開ページから localhost への fetch は Chrome の
+ * Local Network Access で止められるが、host_permissions を持つ background は通る。
  */
+
 function scheduleHealthCheck(store: SidebarStore): void {
   let done = false;
   const unsubscribe = store.subscribe(() => {

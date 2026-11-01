@@ -2,15 +2,7 @@ import type { Metadata } from "next";
 
 import { resolveRoom } from "@/infrastructure/lobby";
 
-/**
- * Per-room metadata for the lobby link (title, description, Open Graph and
- * Twitter card). The `opengraph-image.tsx` / `twitter-image.tsx` files in this
- * segment are picked up automatically by Next and injected as the og/twitter
- * images, so only the textual meta is set here.
- *
- * The lobby page itself is a client component, so this server layout is what
- * carries the metadata for the route.
- */
+/** Text metadata for the room. The page is a client component, so it lives here. */
 export async function generateMetadata({
   params,
 }: {
@@ -29,7 +21,8 @@ export async function generateMetadata({
   return {
     title: pageTitle,
     description,
-    // ルーム URL は短命・共有限定なので検索エンジンには載せない。
+    // ルーム URL は短命なので検索に載せない。
+
     robots: { index: false, follow: false },
     openGraph: {
       title: pageTitle,

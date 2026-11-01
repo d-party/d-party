@@ -1,9 +1,4 @@
-# リポジトリ横断の検査をまとめたワークフロー。
-#
-#   1. lint      … ワークフロー・シェルスクリプト・YAML はパッケージを問わず
-#                   散らばるので、パッケージ個別の CI ではなくここで見る。
-#   2. CodeQL    … python（backend）と javascript-typescript（extension /
-#                   frontend / packages）を matrix でまとめて解析する。
+# パッケージを問わない lint（ワークフロー・シェル・YAML）と CodeQL。
 name: Repo/CI
 
 on:
@@ -101,9 +96,7 @@ jobs:
       - name: Autobuild
         uses: github/codeql-action/autobuild@v4
 
-      # category を明示する。指定しないと codeql-action は SARIF の
-      # runAutomationDetails.id をワークフロー名から組み立てるため、名前に "/" が
-      # 入っていると id が壊れて結果のアップロードに失敗する。
+      # 省くとワークフロー名の "/" で id が壊れ、アップロードに失敗する。
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:

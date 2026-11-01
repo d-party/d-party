@@ -29,7 +29,6 @@ class TestHealthCheckAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_health_check_ok_200(self):
-        """ヘルスチェックエンドポイントが 200 を返し、ボディが空であることを確認"""
         response = self.client.get(self.endpoint)
         assert response.status_code == status.HTTP_200_OK
         assert response.content == b""
@@ -42,10 +41,6 @@ class TestVersionCheckAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_version_check_possible_ok_200(self):
-        """version checkが成功する場合のテストケース
-        求められる最小のバージョンを超えている場合、status_code:200が返ることを確認
-        is_possibleがtrueであることを確認
-        """
         get_params = {"extension-version": "1000.0.0"}
         response = self.client.get(self.endpoint, get_params)
         assert response.status_code == status.HTTP_200_OK
@@ -54,10 +49,7 @@ class TestVersionCheckAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_version_check_possible_edgecase_ok_200(self):
-        """version checkが成功する場合のテストケース
-        求められる最小のバージョンとイコールの場合、status_code:200が返ることを確認
-        is_possibleがtrueであることを確認
-        """
+        """最小バージョンと同じなら可。"""
         get_params = {
             "extension-version": str(os.getenv("CHROME_EXTENSION_REQUIRED_VERSION"))
         }
@@ -68,10 +60,6 @@ class TestVersionCheckAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_version_check_impossible_ok_200(self):
-        """version checkが失敗する場合のテストケース
-        求められる最小のバージョンを超えていない場合、status_code:200が返ることを確認
-        is_possibleがfalseであることを確認
-        """
         get_params = {"extension-version": "0.0.0"}
         response = self.client.get(self.endpoint, get_params)
         assert response.status_code == status.HTTP_200_OK
@@ -80,9 +68,6 @@ class TestVersionCheckAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_version_check_ng_406(self):
-        """version checkが失敗する場合のテストケース
-        フォーマット通りではない場合に、406が返ってくることを確認
-        """
         get_params = {"extension-version": "string"}
         response = self.client.get(self.endpoint, get_params)
         assert response.status_code == status.HTTP_406_NOT_ACCEPTABLE
@@ -95,9 +80,6 @@ class TestVersionCheckAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_version_check_ng_400(self):
-        """version checkが失敗する場合のテストケース
-        extension-versionが存在しない場合、400が返ってくることを確認
-        """
         response = self.client.get(self.endpoint)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         get_params = {"version": "1000.0.0"}
@@ -114,7 +96,6 @@ class TestAnimeStoreLobbyResolveAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_lobby_resolve_ok_200(self):
-        """ルームが存在する場合、redirect_url と保存済みタイトルを返すことを確認"""
         room = AnimeRoomFactory(part_id="654321", title="鬼滅の刃 - 第1話 - 残酷")
         response = self.client.get(self.endpoint(room.room_id))
         assert response.status_code == status.HTTP_200_OK
@@ -125,7 +106,6 @@ class TestAnimeStoreLobbyResolveAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_lobby_resolve_not_found_404(self):
-        """存在しないルーム ID では 404 が返ることを確認"""
         import uuid
 
         response = self.client.get(self.endpoint(uuid.uuid4()))
@@ -229,7 +209,6 @@ class TestStatsCache(APITestCase):
         first = self.client.get(self.endpoint, {"days": "30"})
         assert first.data["data"]["count"] == 3
 
-        # キャッシュ後に DB を増やしても、同一キーは TTL 内でキャッシュ値を返す。
         ReactionStat.objects.filter(date=today, reaction_type="S").update(count=99)
         second = self.client.get(self.endpoint, {"days": "30"})
         assert second.data["data"]["count"] == 3  # キャッシュヒット

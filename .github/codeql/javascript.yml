@@ -1,8 +1,4 @@
-# CodeQL（javascript-typescript）の解析範囲。
-#
-# 自前の TypeScript を持つパッケージのソースだけに絞る。ビルド成果物（dist/ ·
-# .next/ · storybook-static/）や orval の生成物を解析しても誤検知が増えるだけなので
-# 対象外にする。
+# 自前のソースだけを解析する（ビルド成果物と orval の生成物は除く）。
 name: "CodeQL config (javascript-typescript)"
 paths:
   - extension/src

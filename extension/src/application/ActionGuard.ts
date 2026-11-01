@@ -1,8 +1,5 @@
-/**
- * Guards against feedback loops: when a remote video operation is applied to
- * the local player it triggers DOM media events (seeking, ratechange, …). While
- * the guard is "closed" those events are not echoed back to the server.
- */
+/** Applying a remote operation fires media events; while suppressed they are not sent back. */
+
 export class ActionGuard {
   private _available = true;
 

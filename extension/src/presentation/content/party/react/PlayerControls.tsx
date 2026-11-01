@@ -11,11 +11,10 @@ type SettingsSubscribe = (cb: (s: Settings) => void) => () => void;
 
 export interface PlayerControlsHandlers {
   onSync: () => void;
-  /** `id` はデフォルト名（`fav` 等）または エクストラ id（Noto コードポイント）。 */
   onReaction: (id: string) => void;
 }
 
-/** デフォルトリアクションごとの既存 CSS クラス（player.css の hover 配色用）。 */
+/** player.css の hover 配色が参照するクラス。 */
 const DEFAULT_BUTTON_CLASS: Record<string, string> = {
   thumbs_up: "thumbs_button",
   fav: "fav_button",
@@ -24,12 +23,6 @@ const DEFAULT_BUTTON_CLASS: Record<string, string> = {
   middle_finger: "middle_finger_button",
 };
 
-/**
- * Mounts the player control buttons (sync + reactions) before the given anchor
- * element. Handlers are wired via React props so they take effect regardless of
- * when React commits (the legacy `getElementsByClassName` approach raced with
- * React's async render).
- */
 export function mountPlayerControls(opts: {
   anchor: Element;
   initialSettings: Settings;
@@ -52,14 +45,7 @@ export function mountPlayerControls(opts: {
   );
 }
 
-/**
- * React replacement for the legacy `addControlButtons` jQuery+FontAwesome
- * injection. Renders sync + the default reactions + the user's added extra
- * reactions as `react-icons` SVGs. The static icon (react-icons) shown here is
- * the same one offered in the popup picker; the on-screen animation is the
- * bundled Lottie keyed by reaction id. Class names (`sync_button`, `fav_button`,
- * ...) are kept for CSS parity with the original player.css.
- */
+/** Sync, the default reactions and the user's extra reactions. */
 export function PlayerControls({
   subscribe,
   initialSettings,
@@ -81,7 +67,6 @@ export function PlayerControls({
   }, [subscribe]);
 
   const reactionStyle = hidden ? { display: "none" as const } : undefined;
-  // 未知 id（カタログ外）は描画しない。
   const extraDefs = extraIds
     .map((id) => EXTRA_REACTION_BY_ID[id])
     .filter((r) => r !== undefined);
