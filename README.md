@@ -211,10 +211,10 @@ UI コンポーネントのカタログを GitHub Pages へ公開しています
 | `.env.global` | dev / prod 共有 | `POSTGRES_*` · `*_UPSTREAM` · `TZ` · `D_ANIME_STORE_DOMAIN` |
 | `.env.dev` | 開発のみ | `DEBUG=1` · `MY_DOMAIN=localhost` · `NEXT_PUBLIC_*`（http / ws） |
 | `.env.prod` | 本番のみ | `DEBUG=0` · `MY_DOMAIN=d-party.net` · `CERTBOT_EMAIL` · `NEXT_PUBLIC_*`（https / wss） |
+| `.env.secret` | 本番のみ・**git 管理外** | `SECRET_KEY` · `POSTGRES_PASSWORD`（`.env.secret.example` をコピーして作る） |
 
 > 環境固有値（`DEBUG` / `MY_DOMAIN` など）は **`.env.global` に置かないでください。**
-> backend の `manage.py` が `/env_files/.env.global` を `override=True` で読むため、
-> ここに残すと本番起動時に dev の値で上書きされます。
+> `.env.global` は dev と prod の両方で読まれます。
 
 ## 本番デプロイ
 
@@ -223,7 +223,8 @@ UI コンポーネントのカタログを GitHub Pages へ公開しています
 nginx が TLS を終端し、certbot（webroot / http-01）が証明書を自動取得・自動更新します。
 
 ```bash
-# .env.prod の MY_DOMAIN と CERTBOT_EMAIL を実値にしてから
+# .env.prod の MY_DOMAIN と CERTBOT_EMAIL を実値にし、秘密値を用意してから
+cp .env.secret.example .env.secret && chmod 600 .env.secret   # 値を書き換える
 ./init-letsencrypt.sh --staging      # まずテスト証明書で疎通確認
 ./init-letsencrypt.sh --production
 

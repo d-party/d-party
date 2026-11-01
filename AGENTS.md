@@ -69,9 +69,11 @@ d-party/                  ← このリポジトリ（ルート）
   pnpm workspace のロックファイルがルートにあり、`frontend/` 単体では
   `--frozen-lockfile` を満たせないため。dev の frontend コンテナも同じ理由で
   リポジトリ全体をマウントする。
-- 環境固有値（`DEBUG` / `MY_DOMAIN` など）は **`.env.global` に置かないこと**。
-  backend の `manage.py` が `/env_files/.env.global` を `override=True` で読むため、
-  ここに残すと本番起動時に dev の値で上書きされる。
+- 環境固有値（`DEBUG` / `MY_DOMAIN` など）は **`.env.global` に置かないこと**
+  （dev と prod の両方で読まれる）。
+- 本番の秘密値（`SECRET_KEY` / `POSTGRES_PASSWORD`）は git 管理外の `.env.secret` に置き、
+  `docker-compose.prod.yml` が django と postgres へ注入する。リポジトリにある値は開発用。
+- backend の `manage.py` は `/env_files/*.env` を**既存の環境変数を上書きせずに**読む。
 
 ## pnpm workspace と Turborepo
 
