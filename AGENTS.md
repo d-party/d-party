@@ -12,7 +12,7 @@
 
 | パス         | 中身                       | スタック                                                                     |
 | ------------ | -------------------------- | ---------------------------------------------------------------------------- |
-| `backend/`   | Django バックエンド        | Python 3.14 · Django 6 · Channels · DRF · PostgreSQL 16 · Redis 7 · Nginx    |
+| `backend/`   | Django バックエンド        | Python 3.15 · Django 6 · Channels · DRF · PostgreSQL 16 · Redis 7 · Nginx    |
 | `extension/` | ブラウザ拡張機能           | Manifest V3 · TypeScript · React 19 · rspack · Tailwind CSS v4 · shadcn/ui   |
 | `frontend/`  | ユーザー向けフロントエンド | Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 · shadcn/ui             |
 | `packages/ui/` | 共有 shadcn/ui プリミティブ | TypeScript · Radix · Tailwind CSS v4                                       |
@@ -261,7 +261,7 @@ backend/                  ← このディレクトリ直下が django プロジ
   templates/admin/        管理画面トップ（Unfold ダッシュボード）の上書き
   pyproject.toml          uv 依存定義
   uv.lock
-  Dockerfile              python:3.14-slim + uv（build context は ./backend）
+  Dockerfile              python:3.15-slim + uv（build context は ./backend）
 ```
 
 - 依存管理は **uv**（`backend/pyproject.toml`）。インフラ設定は backend には無く、ルートが持つ。

@@ -20,7 +20,7 @@ WebSocket（`/anime-store/party/`）を Django へ振り分けます。
 
 | 項目 | 採用 |
 |---|---|
-| 言語 | Python 3.14 |
+| 言語 | Python 3.15 |
 | フレームワーク | Django 6.0 · Channels 4 · DRF · djangochannelsrestframework |
 | ASGI | gunicorn + `uvicorn-worker`（本番） / `runserver`（dev, DEBUG=1） |
 | DB | **PostgreSQL 16** |
@@ -59,7 +59,7 @@ WebSocket（`/anime-store/party/`）を Django へ振り分けます。
 backend/   ← このディレクトリ直下が django プロジェクト
   pyproject.toml          uv（依存・ruff・pytest 設定）
   uv.lock
-  Dockerfile              python:3.14-slim + uv（venv は /opt/venv）
+  Dockerfile              python:3.15-slim + uv（venv は /opt/venv）
   .dockerignore           イメージから dev/CI 用ファイルを除外
   entrypoint.sh           close_active_sessions（>1日経過の ghost のみ回収）→ runserver / gunicorn
   gunicorn.conf.py        uvicorn-worker

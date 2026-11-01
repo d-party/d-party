@@ -5,7 +5,7 @@
   "postCreateCommand": "(cd backend && uv sync) && pre-commit install --install-hooks && pnpm install --frozen-lockfile",
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
-      "version": "3.14"
+      "version": "3.15"
     },
     "ghcr.io/va-h/devcontainers-features/uv:1": {},
     "ghcr.io/devcontainers/features/git:1": {},
