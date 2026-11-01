@@ -114,6 +114,15 @@ class AnimePartyConsumer(GenericAsyncAPIConsumer):
     async def connect(self):
         await self.accept()
 
+    # 1 接続は 1 ルームにだけ入る。入室済みの接続から再度これらを受けると、先の
+    # AnimeUser が退室処理されないまま残り、旧グループにも所属し続けてしまう。
+    ROOM_ENTRY_ACTIONS = frozenset({"create", "join", "spectate"})
+
+    async def handle_action(self, action: str, request_id: str, **kwargs):
+        if action in self.ROOM_ENTRY_ACTIONS and self.anime_room is not None:
+            return
+        await super().handle_action(action, request_id, **kwargs)
+
     async def disconnect(self, close_code):
         """websocketを閉じた場合の処理
         self.close()でも呼び出される
