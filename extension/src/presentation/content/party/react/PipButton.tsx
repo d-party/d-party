@@ -6,17 +6,8 @@ import type { Settings } from "@/domain/settings";
 
 type SettingsSubscribe = (cb: (s: Settings) => void) => () => void;
 
-/**
- * Mounts the Picture-in-Picture toggle into the dアニメストア control bar, just
- * before the native fullscreen (最大化) button — the rightmost `.mainButton`.
- *
- * Unlike the sync/reaction buttons this is room-independent: it is shown on
- * every player page whenever the user has the feature enabled, regardless of
- * whether (or how many) rooms they are in. PiP is a local viewing preference
- * and is intentionally not synced over the room WebSocket.
- */
+/** Picture-in-Picture toggle. Shown without a room and not synced to the room. */
 export function mountPipButton(opts: {
-  /** The native `.fullscreen.mainButton`; the PiP button is inserted before it. */
   fullscreenButton: Element;
   initialSettings: Settings;
   subscribe: SettingsSubscribe;
@@ -71,10 +62,6 @@ export function PipButton({
   );
 }
 
-/**
- * Tracks whether the player `<video>` is currently in Picture-in-Picture so the
- * button can swap its icon/label.
- */
 function usePipState(): boolean {
   const [inPip, setInPip] = useState(false);
   useEffect(() => {

@@ -1,231 +1,79 @@
-# AGENTS.md — d-party Backend
+# AGENTS.md — backend
 
-monorepo の `backend/` パッケージで作業する AI エージェント・開発者向けのガイドです。
-ルートの [`../AGENTS.md`](../AGENTS.md) も併せて参照してください。
-
-## What this is
-
-dアニメストアの「同時視聴」を支える **Django バックエンド**です。中心は
-**WebSocket（Django Channels）** によるルーム内の動画プレイヤー同期で、
-REST API（統計・バッジ・拡張機能バージョン確認・ロビー解決）と管理画面を提供します。
-ユーザー向け公開ページ（LP・使い方・Q&A・統計・ルーム遷移ロビー）は **React フロント
-エンド（`../frontend`）** へ移行済みで、nginx が公開ページをフロントへ、`/api`・`/admin`・
-WebSocket（`/anime-store/party/`）を Django へ振り分けます。
-
-> **最重要:** WebSocket のメッセージプロトコル（`streamer/format.py` の `action` と
-> ペイロード形状）、DB モデルの意味、REST API の契約は **外部（Chrome 拡張・フロント）との
-> 公開インターフェース**です。リファクタ時もこれらの挙動を変えないでください。
-
-## Stack（モダナイズ後）
+Django バックエンド。中心は WebSocket（Channels）によるルーム内の再生同期で、ほかに
+REST API（統計・バッジ・拡張機能のバージョン確認・ロビー解決）と管理画面を持つ。
+公開ページは `../frontend` が持ち、nginx が `/api`・`/admin`・`/anime-store/party/` だけを
+Django へ振り分ける。
 
 | 項目 | 採用 |
-|---|---|
-| 言語 | Python 3.15 |
-| フレームワーク | Django 6.0 · Channels 4 · DRF · djangochannelsrestframework |
-| ASGI | gunicorn + `uvicorn-worker`（本番） / `runserver`（dev, DEBUG=1） |
-| DB | **PostgreSQL 16** |
-| キャッシュ/レイヤ | Redis 7（`channels-redis`） |
-| パッケージ管理 | **uv**（`pyproject.toml` / `uv.lock`、PEP 621 + dependency-groups） |
-| Lint/Format | **ruff**（`uv run ruff format` / `uv run ruff check`。isort 相当は `select` の `I`。black / isort / flake8 は全廃） |
-| テスト | pytest（`pytest-django` · `pytest-asyncio` · `factory-boy` · `pytest-cov`） |
-| 暗号化 | `streamer/fields.py` の Fernet ベース `EncryptedCharField`（`cryptography`） |
-| 論理削除 | `streamer/mixins.py` の `LogicalDeletionMixin`（自前実装） |
-| 監視 | 持たない（Prometheus / Grafana 一式は使っていなかったため削除済み） |
-| リバースプロキシ | Nginx |
-| DB / Redis の閲覧 | VSCode の SQLTools / Redis for VS Code 拡張（Dev Container 同梱） |
-
-### モダナイズで置き換えた / 削除した依存（挙動は維持）
-
-| Before（unmaintained 等） | After |
-|---|---|
-| Poetry | uv |
-| mysqlclient / MySQL | psycopg / PostgreSQL |
-| pydantic v1 | pydantic v2（`response` 直列化は `SerializeAsAny` で v1 互換を維持） |
-| django-boost（`LogicalDeletionMixin` / admin） | 自前 `streamer/mixins.py`・`streamer/admin.py` |
-| django-cryptography（`encrypt`） | 自前 `streamer/fields.py`（Fernet） |
-| django-dynamic-shields | 自前のプレーンな shields.io エンドポイント（`api/views.py`） |
-| django-crontab | 撤去（保持期間クリーンアップ自体を廃止。リアクションはルーム終了時に `ReactionStat` へ畳み込み） |
-| distutils `StrictVersion` | `api/views.py` の strict `x.y.z` パーサ |
-| `.extra(select={"day": "date(...)"})`（MySQL 依存） | ORM `TruncDate`（DB 非依存） |
-| black / isort / flake8 | ruff（`format` + `check`。`select` に `I` を含むため import 整列も ruff） |
-| django-request / django-debreach | 削除（CSRF は Django 標準） |
-
-## レイアウト
-
-`backend/` は django サーバ単体。nginx / postgres / redis のオーケストレーション
-（docker-compose）はモノレポのルートにあり、`backend/` は build context として参照される。
+| --- | --- |
+| 言語 / 依存管理 | Python 3.15 / uv（`pyproject.toml` · `uv.lock`） |
+| フレームワーク | Django 6 · Channels 4 · DRF · djangochannelsrestframework |
+| ASGI | 本番 gunicorn + uvicorn-worker / dev（`DEBUG=1`）runserver |
+| DB / レイヤ | PostgreSQL 16 / Redis 7（`channels-redis`） |
+| Lint・型 | ruff（format · lint · import 順序 · SAST · 複雑度）/ mypy（django-stubs · drf-stubs） |
+| テスト | pytest（pytest-django · pytest-asyncio · factory-boy · pytest-cov） |
 
 ```
-backend/   ← このディレクトリ直下が django プロジェクト
-  pyproject.toml          uv（依存・ruff・pytest 設定）
-  uv.lock
-  Dockerfile              python:3.15-slim + uv（venv は /opt/venv）
-  .dockerignore           イメージから dev/CI 用ファイルを除外
-  entrypoint.sh           close_active_sessions（>1日経過の ghost のみ回収）→ runserver / gunicorn
-  gunicorn.conf.py        uvicorn-worker
-  conftest.py             テスト時は InMemoryChannelLayer に差し替え
-  manage.py               /env_files/*.env があれば読み込み（無ければ環境変数）
-  .env.django             Django 用 env（DB/Redis ホスト・統計キャッシュ TTL 等）
-  d_party/                settings.py · asgi.py（ProtocolTypeRouter）· urls.py
-  streamer/               ★同時視聴のコア
-    consumers.py          AnimePartyConsumer（create/join/leave/video_operation/sync/reaction…）
-    format.py             pydantic v2 メッセージ定義（公開プロトコル）
-    models.py             AnimeRoom / AnimeUser / AnimeReaction / AnimeRoomHistory / Setting（ルーム詳細設定, 1:1）
-    mixins.py             LogicalDeletionMixin（alive/dead/delete(hard=)）
-    fields.py             EncryptedCharField（保存時暗号化）
-    routing.py            ws: anime-store/party/
-    cron.py               fold_room_reactions（ルーム終了時にリアクションを ReactionStat へ畳み込む）
-    management/commands/close_active_sessions.py  起動時に >1日経過の ghost セッションを回収
-  api/                    DRF（統計 / shields バッジ / 拡張機能バージョン確認 / ロビー解決）
-  templates/admin/        管理画面トップ（Unfold のダッシュボード）の上書き
-  assets/                 管理画面のブランディング素材（STATICFILES_DIRS）
+d_party/        settings.py · asgi.py（ProtocolTypeRouter / OriginValidator）· urls.py
+streamer/       同時視聴のコア
+  consumers.py    AnimePartyConsumer（create / join / leave / video_operation / reaction …）
+  format.py       pydantic のメッセージ定義（公開プロトコル）
+  models.py       AnimeRoom / AnimeUser / AnimeReaction / AnimeRoomHistory / Setting
+  mixins.py       LogicalDeletionMixin（論理削除）
+  fields.py       EncryptedCharField（Fernet）
+  cron.py         fold_room_reactions（ルーム終了時にリアクションを ReactionStat へ畳み込む）
+  management/commands/close_active_sessions.py
+api/            DRF（統計 · shields バッジ · バージョン確認 · ロビー解決）
+templates/admin/ 管理画面トップ（Unfold ダッシュボード）
+entrypoint.sh   close_active_sessions → runserver / gunicorn
+conftest.py     テストでは InMemoryChannelLayer を使う
+manage.py       /env_files/*.env があれば読む
 ```
 
-### Request / data flow
+compose・nginx・env はルートが持ち、`backend/` は build context として参照される。
+ホストの解決先は env（`DATABASE_HOST` · `REDIS_HOST` など）で差し替える。
 
-```
-Chrome 拡張 (content script) ──wss──▶ Nginx ──▶ Django(ASGI/Channels)
-                                              ├─ REST API (DRF)     : /api/*
-                                              ├─ WebSocket          : /anime-store/party/
-                                              └─ 管理画面 (Unfold)  : /admin/*
-Django ──▶ PostgreSQL（永続化） / Redis（Channels レイヤ）
-```
+## 壊してはいけないもの
 
-## 設定の外部化（k3s 移行を見据えて）
+- **WebSocket プロトコル**: `format.py` の `action` 値・フィールド名・ネストは
+  `extension/src/domain/protocol.ts` と一致させる。基底型のフィールド（`response`）は
+  `SerializeAsAny` を付けないとサブクラスのフィールドが直列化で落ちる。
+- **論理削除**: `objects.alive()` / `delete()`（論理）/ `delete(hard=True)`（物理）の意味を変えない。
+- **暗号化**: `AnimeUser.user_name` の鍵は `SECRET_KEY` から作る。`SECRET_KEY` を変えると既存行は復号できない。
+- **REST API**: `api/urls.py` のパスとレスポンスの形は外部から参照される（shields は `{"schemaVersion": 1, ...}`）。
+- **観覧専用（`spectate`）**: `AnimeUser` を作らずにグループへ読み取り参加する（人数・一覧・
+  ホスト委譲・自動削除に影響しない）。フロントのタイマー画面が使う。`host_send` / `user_send` は
+  `anime_user is None` を必ずガードする。フロントのオリジンから張るので `asgi.py` で `MY_DOMAIN` を許可している。
+- **ルーム設定（`Setting`）**: create 時にすべて `False` で作る。変更はオーナー限定の
+  `update_setting` で、`room_setting` をサーバから push する（クライアントからの read は無い）。
+  - `one_way`：非オーナーの `video_operation` を捨てる
+  - `owner_leave_delete`：オーナー退室でルームを消す
+  - `disable_reaction`：配信も保存もしない
+- **ghost の回収**: graceful でない停止で alive のまま残った行は、起動時の
+  `close_active_sessions` が `updated_at` が 1 日以上前のものだけ論理削除する（別 Pod の稼働中セッションを巻き込まない）。
 
-サービス間のホスト解決は **すべて環境変数（.env ファイル）に外出し** している。Docker では
-Compose のサービス名で解決し、k3s 等へ移行する際は env（ConfigMap）を差し替えるだけでよい。
-
-| 変数 | 既定（Docker） | 用途 | 置き場所 |
-|---|---|---|---|
-| `DATABASE_HOST` / `DATABASE_PORT` | `postgres` / `5432` | Django → PostgreSQL | `.env.django` |
-| `REDIS_HOST` / `REDIS_PORT` | `redis` / `6379` | Channels レイヤ | `.env.django` |
-| `DJANGO_UPSTREAM` | `django:8000` | nginx → Django | ルート `.env.global` |
-| `FRONTEND_UPSTREAM` | `frontend:3000` | nginx → フロント | ルート `.env.global` |
-
-- nginx / `.env.global` 等のインフラ設定は **d-party モノレポのルート**にある。アプリ側の
-  nginx 設定やコードを触らず、env だけで解決先を変更できる。
-- k3s では各 Service の DNS（例: `django.<ns>.svc.cluster.local:8000`）を上記変数へ設定する。
-
-## Common commands
-
-### 起動（Docker, 推奨）
-
-docker-compose は **モノレポのルート**にある（このリポジトリは django 単体）。
-全サービスを起動する場合はルートで:
+## コマンド
 
 ```bash
-# d-party モノレポのルートで
-docker compose build
-docker compose up -d
-# 初回のみ（migration ファイルはリポジトリにコミット済みなので migrate のみ。
-# モデルを変更したときだけローカルで makemigrations して生成物をコミットする）
-docker compose exec django python manage.py migrate
-docker compose exec django python manage.py collectstatic --noinput
-```
-
-> `django` は `postgres` の healthcheck 完了を待って起動します（compose の `depends_on`）。
-
-### ローカル（uv, コンテナ無し）
-
-```bash
-uv sync                       # 依存をインストール（.venv 作成）
-uv run python manage.py check
-uv run pytest                 # conftest.py が InMemoryChannelLayer を使うため Redis 不要
-uv run ruff format .          # 整形
-uv run ruff check . --fix     # Lint + import 整列（自動修正）
-uv run mypy .                 # 型検査（ダミー env が必要。下記参照）
-```
-
-> `uvx ruff` ではなく `uv run ruff` を使うこと。CI（`.github/workflows/backend-ci.yml`）は
-> `uv.lock` にピン留めされた ruff を `uv run` で実行するため、`uvx`（常に最新を取得）
-> だとバージョン差で整形結果がズレることがある。
-
-必要な環境変数（コンテナ外で動かす場合）: `SECRET_KEY`, `DEBUG`, `MY_DOMAIN`,
-`POSTGRES_DB`, `POSTGRES_PASSWORD`, `DATABASE_USER`, `DATABASE_HOST`, `DATABASE_PORT`,
-`DATABASE_ENGINE`, `REDIS_HOST`, `REDIS_PORT`, `LANGUAGE_CODE`, `TIME_ZONE`,
-`D_ANIME_STORE_DOMAIN`, `CHROME_EXTENSION_REQUIRED_VERSION`。
-
-### CI
-
-`backend-ci.yml`（`Backend/CI`）のジョブ: `ruff` / `pytest` / `mypy` / `license-check`。
-
-イメージ側は `backend-build.yml`（`Backend/Build`）が見る。hadolint で
-Dockerfile を検査し、イメージを組み、dockle にかけ、**本物の PostgreSQL / Redis に
-つないで migrate し、起動して `/api/v1/health` が 200 を返すところまで**確認する。
-ビルドが通っても起動だけ落ちる壊れ方をここで拾う。
-
-リポジトリ横断の lint（actionlint / shellcheck / yamllint）と CodeQL は
-`repo-ci.yml`（`Repo/CI`）が担当する。
-
-- **フォーマットは検証のみ**。違反は CI 失敗として扱い、自動コミットや force-push はしない
-  （旧 `autoblack.yml` は廃止）。
-- **型検査は mypy**（django-stubs / drf-stubs プラグイン）。settings の import に env を
-  要求するため、ジョブにダミー env を与えている（DB/Redis への実接続はしない）。
-- **カバレッジ**は `py-cov-action/python-coverage-comment-action` が PR へコメントし、
-  バッジを `python-coverage-comment-action-data` ブランチへ保存する（Codecov は廃止）。
-- コンテナイメージの CVE スキャン（trivy）は廃止した。イメージの静的チェックは
-  `hadolint` / `dockle` が担当する。
-- **単体の linter を別プロセスで回さず ruff へ集約している**（<https://docs.astral.sh/ruff/rules/>）。
-  SAST は flake8-bandit 相当の `S`、複雑度は mccabe 相当の `C90`（`max-complexity = 10`）と
-  Pylint の `PLR09xx` が見る。そのため bandit / lizard の専用ジョブは持たない。
-  taint 解析は ruff の守備範囲外なので `repo-ci.yml` の CodeQL（python）が担当する。
-
-### ghost セッションの回収
-
-時間ベースの保持期間クリーンアップ（旧 system cron）は廃止した。リアクションはルーム終了時に
-`fold_room_reactions` が `ReactionStat` へ畳み込むため生データは溜まらない。
-
-ハードクラッシュ（graceful でない停止）で `disconnect` が走らず alive のまま残った
-`AnimeRoom`/`AnimeUser` は、起動時の `close_active_sessions` が回収する。セッションは 1 日以上
-続かない前提で、`updated_at` が 1 日以上前の alive 行だけを論理削除するため、複数レプリカで
-別 Pod の稼働中セッションを巻き込まない（手動実行も可）。
-
-```bash
+uv sync
+uv run ruff format --check . && uv run ruff check .
+uv run mypy .        # settings が env を要求するので CI と同じダミー env を渡す
+uv run pytest        # Redis は不要。PostgreSQL は要る
+uv run pip-licenses
 docker compose exec django python manage.py close_active_sessions
 ```
 
-## 動作確認 URL（ローカル）
+コンテナ外で要る env: `SECRET_KEY` `DEBUG` `MY_DOMAIN` `POSTGRES_DB` `POSTGRES_PASSWORD`
+`DATABASE_USER` `DATABASE_HOST` `DATABASE_PORT` `DATABASE_ENGINE` `REDIS_HOST` `REDIS_PORT`
+`LANGUAGE_CODE` `TIME_ZONE` `D_ANIME_STORE_DOMAIN` `CHROME_EXTENSION_REQUIRED_VERSION`。
 
-| URL | 内容 |
-|-----|------|
-| `http://localhost` | アプリ（Nginx 経由） |
-| `http://localhost:8000` | Django 直接（dev overlay が loopback に公開） |
-| `http://localhost:8000/admin/` | 管理画面（Unfold） |
+migration はコミット済み。モデルを変えたときだけ `makemigrations` して生成物をコミットする。
 
-## コアを壊さないための注意
+## CI
 
-- **WebSocket プロトコル**: `streamer/format.py` の各クラスの `action` 値・フィールド名・
-  ネスト構造は固定。pydantic v2 では基底型フィールド（`response`）の直列化で
-  サブクラス固有フィールドが落ちるため、`SerializeAsAny` を必ず使うこと。
-- **モデル意味論**: `LogicalDeletionMixin` の `objects.alive()` / `delete()`（論理）/
-  `delete(hard=True)`（物理）の挙動は `mixins.py` で再現済み。変更しない。
-- **暗号化**: `AnimeUser.user_name` は `EncryptedCharField` で保存時暗号化（鍵は
-  `SECRET_KEY` 由来）。`SECRET_KEY` を変えると既存データは復号できなくなる。
-- **API 契約**: `api/urls.py` のパスとレスポンス形状（特に shields は
-  `{"schemaVersion":1, ...}`）は外部バッジ・拡張から参照される。
-- **タイマー / 観覧専用（spectator）**: `spectate` アクションは `AnimeUser` を作らずグループへ
-  読み取り専用参加する（人数/一覧/ホスト委譲/自動削除に非影響）。タイマー画面（フロント）が
-  `video_operation` を受信して再生位置を計算するための経路。`video_operation` の任意 `title` は
-  エピソード切替の追従用（旧クライアントは送らないため `None`）。フロント（`MY_DOMAIN`）の
-  オリジンから WS を張るため、`asgi.py` の `OriginValidator` に `MY_DOMAIN` を許可済み。
-  `host_send`/`user_send` は `anime_user is None`（spectator）をガードすること。
-- **ルーム詳細設定（後方互換）**: `Setting` は create 時に既定値（すべて `False`）で自動生成。
-  設定は create メッセージを変えず、オーナー限定の `update_setting` アクションで適用する
-  （旧拡張は送らないため全 `False` = 現行挙動）。一方通行モード（`one_way`）は非オーナーの
-  `video_operation` をブロックする（自動削除は含意しない。オーナー退室時の削除は `owner_leave_delete`）。
-  `disable_reaction` は配信・永続化を行わない（自分の表示はクライアント側担保）。`room_setting`
-  はサーバ push（join/create/更新時）で配布し、クライアント発の read は設けない。
-
-## monorepo の中での位置づけ
-
-変更はリポジトリのルートでブランチを切り、`d-party/d-party` へ PR を
-出してください。frontend や拡張機能にまたがる変更も 1 本の PR で構いません。
-
-- CI は `../.github/workflows/backend-ci.yml`（このディレクトリを
-  `working-directory` にして走る）。
-- pre-commit の設定はルートの `../.pre-commit-config.yaml`（`files: ^backend/`）。
-  `pre-commit install` はリポジトリのルートで実行します。
-- docker compose・nginx・env などのオーケストレーションはルートが持ちます。
-
-詳細は [`../AGENTS.md`](../AGENTS.md) を参照。
+- `Backend/CI`：ruff · pytest（カバレッジは PR にコメントし、`python-coverage-comment-action-data` ブランチへ保存）· mypy · license-check
+- `Backend/Build`：hadolint → build → dockle → 実 PostgreSQL / Redis で migrate → 起動 → `/api/v1/health` が 200
+- linter は ruff に集約する（SAST は `S`、複雑度は `C90`（10）と `PLR09xx`）。taint 解析だけは `Repo/CI` の CodeQL。
+- フォーマットは検査のみで、自動コミットはしない。
+- pre-commit の設定はルートの `.pre-commit-config.yaml`（`files: ^backend/`）。

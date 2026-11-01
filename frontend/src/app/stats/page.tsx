@@ -10,11 +10,11 @@ export const metadata: Metadata = pageMetadata({
     "d-party の利用統計。直近 1 年間のユーザー数・ルーム数・リアクション数の推移を公開しています。",
 });
 
-/** 既定の集計期間（日）。フロントは直近 1 年を固定表示する。 */
 const DEFAULT_DAYS = 365;
 const MAX_DAYS = 365;
 
-/** URL の ``?days=N`` を 1〜365 にクランプする。未指定・不正なら 365（1 年）。 */
+/** `?days=N` を 1〜365 に収める。不正なら 365。 */
+
 function resolveDays(raw: string | string[] | undefined): number {
   const value = Number(Array.isArray(raw) ? raw[0] : raw);
   if (!Number.isFinite(value)) return DEFAULT_DAYS;

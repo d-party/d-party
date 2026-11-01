@@ -19,13 +19,8 @@ import type { RoomSettings as RoomSettingsValue } from "@/domain/roomSettings";
 import type { SidebarState } from "../sidebarStore";
 import { RoomSettings } from "./RoomSettings";
 
-/** ルーム削除を確定するまでの長押し時間（誤操作防止）。 */
 const DELETE_HOLD_MS = 3000;
 
-/**
- * オーナー（ホスト）を示す王冠バッジ。文字は持たず、ホバー（フォーカス）時に
- * tooltip で「オーナー」と表示する。参加者リストとオーナー専用操作の見出しで使う。
- */
 function OwnerBadge(): React.JSX.Element {
   return (
     <Tooltip>
@@ -46,13 +41,11 @@ export function CreatePanel({
   onChangeDraftSettings,
 }: {
   onCreateRoom: () => void;
-  /** 「詳細設定」アコーディオンで組み立てる初期設定の下書き。 */
   draftSettings: RoomSettingsValue;
   onChangeDraftSettings: (next: RoomSettingsValue) => void;
 }): React.JSX.Element {
   return (
-    // 外側はスクロール枠。内側ラッパーを `m-auto` で中央に置くことで、内容が短い
-    // ときは縦中央、詳細設定を開いて縦に伸びたときはそのまま上からスクロールできる。
+    // `m-auto` で、短いときは縦中央、伸びたら上からスクロールする。
     <div className="flex flex-1 flex-col overflow-y-auto p-6">
       <div className="m-auto flex w-full flex-col gap-4">
         <div className="flex flex-col items-center gap-3 text-center">
@@ -147,11 +140,8 @@ export function ControlPanel({
 }: {
   onLeave: () => void;
   onDeleteRoom: () => void;
-  /** ローカルユーザーがルームのオーナー（ホスト）かどうか。 */
   isOwner: boolean;
-  /** サーバから通知された現在のルーム詳細設定。 */
   roomSettings: RoomSettingsValue;
-  /** 詳細設定の変更（オーナーのみ有効。update_setting を送る）。 */
   onChangeRoomSettings: (next: RoomSettingsValue) => void;
 }): React.JSX.Element {
   return (
@@ -211,10 +201,7 @@ export function ControlPanel({
   );
 }
 
-/**
- * 3 秒間の長押しで {@link onConfirm} を発火するボタン。押している間は
- * 背景が左から右へ満ちていくプログレスで残り時間を可視化する。
- */
+/** 長押しで {@link onConfirm} を呼ぶ。押している間、背景が左から満ちる。 */
 function HoldToDeleteButton({
   onConfirm,
 }: {
@@ -238,7 +225,6 @@ function HoldToDeleteButton({
     if (rafRef.current !== null) return;
     firedRef.current = false;
     startRef.current = null;
-    // ローカルな再帰関数で rAF ループを回す（自己参照 useCallback は不可のため）。
     const loop = (timestamp: number): void => {
       if (startRef.current === null) startRef.current = timestamp;
       const ratio = Math.min(
@@ -261,7 +247,6 @@ function HoldToDeleteButton({
     rafRef.current = requestAnimationFrame(loop);
   }, [onConfirm]);
 
-  // アンマウント時に進行中の rAF を確実に止める。
   useEffect(() => {
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);

@@ -11,12 +11,9 @@ import {
 import { WEBSOCKET_ENDPOINT } from "@/infrastructure/env";
 
 /**
- * タイマー画面（拡張機能なし・dアニメストア不要）。
- *
- * ルームへ観覧専用（spectator）で接続し、既存の `video_operation` ブロードキャストを受信して
- * **再生位置を計算で再現**する。受信のたびに「基準点（anchor）」= その時点の再生位置・再生中か・
- * 倍率・受信時刻 を更新し、表示値は `再生中 ? time + 経過 × rate : time` で外挿する。ホストの
- * 5 秒ごとのハートビートでドリフトが補正される。追加の WS 通信は行わない。
+ * タイマー画面。`video_operation` を受けるたびに基準点（位置・再生中か・倍率・時刻）を
+ * 更新し、`再生中 ? time + 経過 × rate : time` で表示する。ずれはホストの 5 秒ごとの
+ * ハートビートで直る。
  */
 
 type Status = "connecting" | "live" | "reconnecting" | "ended" | "not-found";
@@ -50,14 +47,13 @@ export function TimerView({
 }: {
   roomId: string;
   initialTitle: string;
-  /** 小さな別窓（ポップアップ）で開いた場合は全面を占める簡素なレイアウトにする。 */
+  /** 別窓で開いたとき、全面を占める。 */
   popup?: boolean;
 }): React.JSX.Element {
   const [status, setStatus] = useState<Status>("connecting");
   const [title, setTitle] = useState(initialTitle);
   const [playing, setPlaying] = useState(false);
   const [display, setDisplay] = useState(0);
-  // 直近に受信した再生状態を受け取ったか（未受信なら「まだ操作がありません」を出す）。
   const [hasState, setHasState] = useState(false);
 
   const anchorRef = useRef<Anchor | null>(null);
@@ -89,7 +85,8 @@ export function TimerView({
     });
     client.connect();
 
-    // 計算で再生位置を進める（seconds 表示なので 250ms 間隔で十分）。
+    // 秒表示なので 250ms 間隔で足りる。
+
     const tick = window.setInterval(() => {
       if (anchorRef.current) setDisplay(computeCurrent(anchorRef.current));
     }, 250);

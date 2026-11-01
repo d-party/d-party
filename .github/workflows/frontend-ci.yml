@@ -1,16 +1,11 @@
-# frontend/ の静的検査。成果物が組み上がるかは Frontend/Build が見る。
-#
-# 依存は pnpm workspace なのでインストールはルートで 1 回、タスクは turbo に
-# --filter を渡して frontend のぶんだけ回す。
+# frontend の lint・型。成果物は Frontend/Build が見る。
 name: Frontend/CI
 
 on:
   push:
     branches:
       - main
-    # GitHub Actions は YAML のアンカー/エイリアスを解釈しないので、
-    # push と pull_request で同じリストを書き下している。
-    # 共有パッケージと workspace の設定が動くと解決結果が変わりうるので含める。
+    # Actions は YAML アンカーを解釈しないので、push と pull_request に同じリストを書く。
     paths:
       - "frontend/**"
       - "packages/**"
@@ -52,17 +47,12 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
 
-      # setup-node の `cache: pnpm` は pnpm ストアを
-      # **pnpm-lock.yaml のハッシュ**をキーにキャッシュする。
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: 26
           cache: pnpm
 
-      # Turborepo のローカルキャッシュ（.turbo/cache）を実行間で持ち越す。
-      # キーの主軸は pnpm-lock.yaml のハッシュ: ロックファイルが変われば依存が
-      # 変わりタスクのハッシュも総入れ替えになるので、キャッシュもそこで切る。
       - name: Restore the Turborepo cache
         uses: actions/cache@v6
         with:
@@ -78,8 +68,7 @@ jobs:
       - name: Generate the API client
         run: pnpm exec turbo run api:generate --filter=d-party-frontend
 
-      # 生成物はコミットしているので、古い checkout では openapi/openapi.json と
-      # 静かにずれる。上で再生成し、作業ツリーが変わったら落とす。
+      # 再生成して差分が出たら落とす。
       - name: Verify the generated API client is up to date
         run: git diff --exit-code -- frontend/src/infrastructure/api/generated
 
@@ -112,8 +101,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --filter d-party-frontend...
 
-      # 許可リストは frontend/license-whitelist-node.txt（SPDX を 1 行 1 個）。
-      # production 依存に載っていないライセンスがあれば落とし、GPL/AGPL/SSPL の
-      # 混入を防ぐ。拡張の仕方はそのファイルを参照。
+      # 許可リストは frontend/license-whitelist-node.txt。
       - name: Check licenses
         run: pnpm --filter d-party-frontend run license:check

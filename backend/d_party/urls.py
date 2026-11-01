@@ -12,7 +12,7 @@ urlpatterns = [
 if settings.DEBUG:
     from django.conf.urls.static import static
 
-    # static() の戻り値型（django-stubs）と urlpatterns の要素型が食い違うが実行時は問題ない。
+    # django-stubs の static() の戻り値型が urlpatterns と合わない。
     urlpatterns += static(  # type: ignore[arg-type]
         settings.STATIC_URL, document_root=settings.STATIC_ROOT
     )

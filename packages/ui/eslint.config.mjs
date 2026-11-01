@@ -23,9 +23,8 @@ export default tseslint.config(
   {
     files: ["**/*.stories.tsx"],
     rules: {
-      // このパッケージの story は extension（react-vite）と frontend（nextjs-vite）の
-      // 双方の Storybook から読まれる。どちらか一方のフレームワークパッケージに
-      // 依存させられないので、レンダラである @storybook/react から型を取る。
+      // 両アプリの Storybook から読まれるので、型はレンダラの @storybook/react から取る。
+
       "storybook/no-renderer-packages": "off",
     },
   },

@@ -7,13 +7,7 @@ import { REACTION_TYPES, REACTION_META } from "@/domain/reactions";
 
 import { usePersonalStats } from "./usePersonalStats";
 
-/**
- * Format a millisecond duration as a compact Japanese string.
- *
- * Under an hour it reads "X分" (or "1分未満"); once it reaches an hour it shows
- * whole hours only ("X時間"), dropping the trailing minutes. Hours never roll
- * over into days — the count keeps accumulating as hours.
- */
+/** "1分未満" / "X分" under an hour, then whole hours ("X時間"); never days. */
 function formatDuration(ms: number): string {
   const totalMinutes = Math.floor(ms / 60000);
   if (totalMinutes < 1) return "1分未満";
@@ -22,7 +16,6 @@ function formatDuration(ms: number): string {
   return `${hours}時間`;
 }
 
-/** Format the "measuring since" epoch as a YYYY/M/D date. */
 function formatSince(since: number | null): string | null {
   if (since === null) return null;
   const d = new Date(since);
@@ -51,11 +44,6 @@ function StatCard({
   );
 }
 
-/**
- * The "統計" tab: per-account usage figures accumulated entirely on the client
- * (independent of the backend). Mirrors, on a personal scale, the aggregate
- * dashboard the frontend `/stats` page shows for the whole service.
- */
 export function PersonalStatsPanel(): React.JSX.Element {
   const { stats, reset } = usePersonalStats();
   const [confirming, setConfirming] = useState(false);

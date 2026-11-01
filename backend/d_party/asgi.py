@@ -17,9 +17,7 @@ import streamer.routing
 # OriginValidator は scheme を省いた値をホスト名として照合し、既定ポートも同一視する。
 allowed_hosts = [os.environ["D_ANIME_STORE_DOMAIN"]]
 
-# タイマー画面は d-party フロントエンド（MY_DOMAIN）のオリジンから WebSocket を張り、
-# spectate で観覧専用参加する。拡張機能（D_ANIME_STORE_DOMAIN）とは別オリジンのため、
-# MY_DOMAIN 由来のオリジンも WS の OriginValidator に許可する（許可の拡大のみ）。
+# 拡張機能（D_ANIME_STORE_DOMAIN）に加え、タイマー画面のフロント（MY_DOMAIN）も許可する。
 _my_domain = os.environ["MY_DOMAIN"]
 allowed_hosts += [_my_domain, "www." + _my_domain]
 
@@ -30,7 +28,7 @@ if settings.DEBUG:
 application = ProtocolTypeRouter(
     {
         "http": django_asgi_app,
-        # 同時視聴は認証を使わないので AuthMiddlewareStack（セッション参照）は挟まない。
+        # 認証を使わないので AuthMiddlewareStack は挟まない。
         "websocket": OriginValidator(
             URLRouter(streamer.routing.websocket_urlpatterns), allowed_hosts
         ),

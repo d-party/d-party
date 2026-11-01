@@ -9,11 +9,8 @@ type RevealProps = {
   delay?: number;
 };
 
-/**
- * Fades + lifts its children into view the first time they scroll on screen.
- * Honours `prefers-reduced-motion`: when set, content simply appears with no
- * transform — keeping the page comfortable rather than busy.
- */
+/** Fades in on first scroll into view; no motion under `prefers-reduced-motion`. */
+
 export function Reveal({
   children,
   className,

@@ -2,9 +2,7 @@
 
 ``EncryptedCharField`` stores values as Fernet tokens (AES-128-CBC + HMAC, from
 the ``cryptography`` package). The key is derived from ``settings.SECRET_KEY``,
-so rotating ``SECRET_KEY`` makes existing values undecryptable. Plaintext is
-encrypted on write and decrypted on read, so application code keeps reading and
-writing ordinary ``str`` values.
+so rotating ``SECRET_KEY`` makes existing values undecryptable.
 """
 
 from __future__ import annotations

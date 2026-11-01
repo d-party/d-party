@@ -1,15 +1,9 @@
 /**
- * タイマー画面用の最小 WebSocket クライアント（観覧専用 / spectator）。
- *
- * 拡張機能なし・dアニメストア不要のユーザーが、ルームの再生状況だけを見られるようにする。
- * バックエンドの `spectate` アクションで**読み取り専用参加**し、既存の `video_operation`
- * ブロードキャスト（ホストの操作 + 5 秒ごとのハートビート）を受信する。**追加の WS メッセージ
- * 種別は送らない**（spectate を一度送るだけで、あとは受信して計算で再生位置を再現する）。
- *
- * プロトコルはバックエンド `streamer/format.py` と対応（拡張機能 `domain/protocol.ts` のミラー）。
+ * タイマー画面用の WebSocket クライアント。`spectate` を 1 度送り、あとは
+ * `video_operation` を受けるだけ。形は backend の `streamer/format.py` に合わせる。
  */
 
-/** サーバから受信する再生状態（pydantic が paused/rate を文字列化する）。 */
+/** paused / rate は文字列で届く。 */
 export interface TimerSyncOption {
   time: number;
   paused: string; // "True" / "False"
@@ -18,19 +12,13 @@ export interface TimerSyncOption {
 }
 
 export interface TimerClientHandlers {
-  /** spectate 受理応答（初期の part_id / title）。 */
   onAck?: (partId: string, title: string) => void;
-  /** ホストの動画操作（再生/一時停止/シーク/ハートビート）。 */
   onVideoOperation?: (option: TimerSyncOption, title?: string) => void;
-  /** ルーム終了 / 観覧失敗 / 想定外クローズ。 */
   onEnded?: (reason: "room_deleted" | "failed_spectate" | "closed") => void;
   onOpen?: () => void;
 }
 
-/**
- * 観覧専用の WS 接続を張り、spectate を送って受信をハンドラへ流す。
- * 想定外クローズ時は最大 `maxRetries` 回まで再接続する。`close()` で明示終了。
- */
+/** 想定外に切れたら `maxRetries` 回まで再接続する。 */
 export class TimerSpectatorClient {
   private ws: WebSocket | null = null;
   private closedByUs = false;
@@ -107,7 +95,8 @@ export class TimerSpectatorClient {
       }
     });
 
-    // error は close を誘発するため、close 側の再接続に任せる。
+    // error の後には close が来るので、再接続はそちらに任せる。
+
     ws.addEventListener("error", () => {});
   }
 

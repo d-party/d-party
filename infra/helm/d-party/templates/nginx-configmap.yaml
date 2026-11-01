@@ -22,8 +22,8 @@ data:
         access_log /dev/stdout combined;
         sendfile on;
 
-        # Service の ClusterIP は安定なので upstream はサービス名で起動時解決すれば足りる
-        # （Pod 再作成でも ClusterIP は不変）。動的 resolver は不要。
+        # ClusterIP は変わらないので起動時の解決で足りる。
+
         upstream app_server {
             server {{ include "d-party.django.fullname" . }}:{{ .Values.django.service.port }} fail_timeout=0;
         }

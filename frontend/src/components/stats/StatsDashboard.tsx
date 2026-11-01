@@ -43,11 +43,7 @@ type Totals = {
 
 type ReactionRow = { reaction_type: string; count: number };
 
-/**
- * Icon + label per reaction type, keyed by the backend `reaction_type` label
- * (`streamer.models.ReactionType`). Icons mirror the player's reaction buttons
- * (`react-icons/fa`) so the stats match what users tap in the extension.
- */
+/** Keyed by the backend's `reaction_type`. Same icons as the player's buttons. */
 const REACTION_META: Record<string, { Icon: IconType; label: string }> = {
   favorite: { Icon: FaHeart, label: "お気に入り" },
   thumbs_up: { Icon: FaThumbsUp, label: "いいね" },
@@ -60,10 +56,7 @@ type Bar = { label: string; value: number };
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
-/**
- * Resolve a CSS custom property to a concrete color string for the canvas.
- * Chart.js draws on a <canvas>, which cannot resolve `var(--…)` itself.
- */
+/** A <canvas> cannot resolve `var(--…)`, so read the value here. */
 function cssColor(name: string, fallback: string): string {
   if (typeof window === "undefined") return fallback;
   const value = getComputedStyle(document.documentElement)
@@ -72,7 +65,6 @@ function cssColor(name: string, fallback: string): string {
   return value || fallback;
 }
 
-/** Pseudo-random but stable heights so the skeleton bars look chart-like. */
 const SKELETON_BAR_HEIGHTS = [40, 65, 30, 80, 55, 70, 45, 90, 35, 60, 50, 75];
 
 function BarChartSkeleton(): React.JSX.Element {
@@ -96,13 +88,6 @@ function BarChartSkeleton(): React.JSX.Element {
   );
 }
 
-/**
- * Responsive per-day bar chart built on Chart.js.
- *
- * Visually matches the previous hand-rolled bars (thin primary bars with
- * rounded tops, no axes, first/最大/last footer) but adds a proper hover
- * tooltip so the exact day and count are readable on mouse-over.
- */
 function BarChart({
   data,
   loading,
@@ -210,14 +195,7 @@ function StatCard({
 const toBars = (rows: PerDayResultDataItem[]): Bar[] =>
   rows.map((r) => ({ label: String(r.day), value: r.count }));
 
-/**
- * Trim leading/trailing zero days so the chart zooms to the active range.
- *
- * The backend pads the per-day series to a full `days` window (1 year), which in
- * practice is mostly zeros, squeezing the real bars into invisibility. Focusing
- * on the populated span makes each bar readable. Returns `[]` when there is no
- * activity at all (the chart then shows its "no data" message).
- */
+/** The backend pads a full year of mostly zeros; trim both ends so bars are visible. */
 function trimZeroEdges(bars: Bar[]): Bar[] {
   const first = bars.findIndex((b) => b.value > 0);
   if (first === -1) return [];
@@ -235,7 +213,7 @@ type StatsData = {
 
 export function StatsDashboard({ days }: { days: number }): React.JSX.Element {
   const { loading, error, value } = useAsync(async (): Promise<StatsData> => {
-    // 期間スコープ対象は ``{ days }`` を渡す。接続中（alive）は現在値なので渡さない。
+    // alive は現在値なので days を渡さない。
     const [
       userAll,
       roomAll,
@@ -278,7 +256,6 @@ export function StatsDashboard({ days }: { days: number }): React.JSX.Element {
   }
 
   const totals = value?.totals ?? null;
-  // 1 年窓のゼロ埋め端を落とし、データのある範囲へズームして見せる。
   const userSeries = trimZeroEdges(value?.userSeries ?? []);
   const roomSeries = trimZeroEdges(value?.roomSeries ?? []);
   const reactions = value?.reactions ?? [];
