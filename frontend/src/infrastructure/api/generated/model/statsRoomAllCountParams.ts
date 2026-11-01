@@ -7,10 +7,10 @@
  */
 
 export type StatsRoomAllCountParams = {
-/**
- * Aggregation window length in days (1-365, default 365).
- * @minimum 1
- * @maximum 365
- */
-days?: number;
+  /**
+   * Aggregation window length in days (1-365, default 365).
+   * @minimum 1
+   * @maximum 365
+   */
+  days?: number;
 };
