@@ -34,9 +34,10 @@ secret:
   # 既存 Secret 名（SEALEDSECRET 等で別管理する場合に推奨）。
   # 次のキーを含むこと: SECRET_KEY, POSTGRES_PASSWORD
   existingSecret: ""
-  # existingSecret 未指定時に chart が生成する平文（dev 用途のみ）。
-  SECRET_KEY: "change-me-please"
-  POSTGRES_PASSWORD: "change-me-please"
+  # existingSecret 未指定時に chart が Secret を生成するための平文（dev 用途のみ）。
+  # 既定値は持たない。どちらも未指定なら render を失敗させ、弱い値で起動させない。
+  SECRET_KEY: ""
+  POSTGRES_PASSWORD: ""
 
 # ── Django (ASGI / Channels) ────────────────────────────────────────────────
 django:

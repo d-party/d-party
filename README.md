@@ -159,7 +159,7 @@ uv run ruff check .
 actionlint                                   # Repo/CI
 shellcheck $(git ls-files '*.sh')            # Repo/CI
 yamllint .                                   # Repo/CI
-helm lint infra/helm/d-party                 # Infra/CI
+helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret  # Infra/CI
 pre-commit run --all-files
 ```
 

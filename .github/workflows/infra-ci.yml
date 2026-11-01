@@ -35,12 +35,18 @@ jobs:
         with:
           persist-credentials: false
       - uses: azure/setup-helm@v5
+      # 秘密値は既定を持たないので、lint / template には外部 Secret 名か平文を渡す。
       - name: helm lint
-        run: helm lint infra/helm/d-party
-      # values の既定だけでなく、実運用に近い上書き（外部 Secret + 独自ドメイン）でも
-      # マニフェストが組み上がることを確認する。
-      - name: helm template (defaults)
-        run: helm template d-party infra/helm/d-party > /dev/null
+        run: helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret
+      - name: helm template (chart-generated secret)
+        run: |
+          helm template d-party infra/helm/d-party \
+            --set secret.SECRET_KEY=ci --set secret.POSTGRES_PASSWORD=ci > /dev/null
+      - name: helm template (no secret is rejected)
+        run: |
+          if helm template d-party infra/helm/d-party > /dev/null 2>&1; then
+            echo "秘密値なしで render できてしまう"; exit 1
+          fi
       - name: helm template (existingSecret + domain)
         run: |
           helm template d-party infra/helm/d-party \
