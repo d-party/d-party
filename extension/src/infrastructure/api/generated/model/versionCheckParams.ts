@@ -7,8 +7,6 @@
  */
 
 export type VersionCheckParams = {
-/**
- * Extension version in strict x.y.z form.
- */
-'extension-version': string;
+  /** Extension version in strict x.y.z form. */
+  'extension-version': string;
 };
