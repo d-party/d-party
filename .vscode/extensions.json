@@ -3,7 +3,6 @@
     "ms-python.python",
     "ms-python.vscode-pylance",
     "charliermarsh.ruff",
-    "ms-python.mypy-type-checker",
     "dbaeumer.vscode-eslint",
     "esbenp.prettier-vscode",
     "bradlc.vscode-tailwindcss",
@@ -12,5 +11,7 @@
     "ms-kubernetes-tools.vscode-kubernetes-tools",
     "tamasfe.even-better-toml",
     "anthropic.claude-code"
-  ]
+  ],
+  // Python 3.15 で起動に失敗する（同梱の typing_extensions が古い）。
+  "unwantedRecommendations": ["ms-python.autopep8", "ms-python.mypy-type-checker"]
 }
