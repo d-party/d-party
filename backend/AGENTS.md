@@ -7,7 +7,7 @@ Django へ振り分ける。
 
 | 項目 | 採用 |
 | --- | --- |
-| 言語 / 依存管理 | Python 3.14 / uv（`pyproject.toml` · `uv.lock`） |
+| 言語 / 依存管理 | Python 3.15 / uv（`pyproject.toml` · `uv.lock`） |
 | フレームワーク | Django 6 · Channels 4 · DRF · djangochannelsrestframework |
 | ASGI | 本番 gunicorn + uvicorn-worker / dev（`DEBUG=1`）runserver |
 | DB / レイヤ | PostgreSQL 16 / Redis 7（`channels-redis`） |

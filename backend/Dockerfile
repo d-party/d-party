@@ -3,7 +3,7 @@
 # Named stage so COPY --from refers to an alias (hadolint DL3022).
 FROM ghcr.io/astral-sh/uv:0.13 AS uv
 
-FROM python:3.14-slim-bookworm
+FROM python:3.15-slim-bookworm
 
 COPY --from=uv /uv /uvx /bin/
 

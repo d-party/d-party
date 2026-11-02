@@ -5,7 +5,7 @@ dアニメストアでの「同時視聴」サービスの monorepo。各ディ�
 
 | パス | 中身 | スタック |
 | --- | --- | --- |
-| `backend/` | Django バックエンド | Python 3.14 · Django 6 · Channels · DRF · PostgreSQL 16 · Redis 7 |
+| `backend/` | Django バックエンド | Python 3.15 · Django 6 · Channels · DRF · PostgreSQL 16 · Redis 7 |
 | `extension/` | ブラウザ拡張機能 | Manifest V3 · TypeScript · React 19 · rspack · Tailwind CSS v4 |
 | `frontend/` | 公開サイト | Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 |
 | `packages/ui/` | 共有 shadcn/ui プリミティブ | TypeScript · Radix · Tailwind CSS v4 |
