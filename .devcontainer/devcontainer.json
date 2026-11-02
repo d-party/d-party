@@ -45,7 +45,11 @@
         "ms-python.python",
         "ms-python.vscode-pylance",
         "charliermarsh.ruff",
-        "ms-python.mypy-type-checker",
+        // 同梱の typing_extensions 4.12.2 が Python 3.15 で import に失敗し、起動時に落ちる。
+        // autopep8 は python feature が自動で入れるので "-" で除外する（整形は ruff）。
+        // mypy は上流が直るまで外し、`uv run mypy` と Pylance で見る。
+        "-ms-python.autopep8",
+        "-ms-python.mypy-type-checker",
         "ms-azuretools.vscode-docker",
         "redhat.vscode-yaml",
         "ms-kubernetes-tools.vscode-kubernetes-tools",
