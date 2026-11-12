@@ -12,7 +12,7 @@
 | d\_party/settings.py                                    |       43 |        3 |     93% |     25-28 |
 | d\_party/urls.py                                        |        7 |        2 |     71% |     13-16 |
 | streamer/\_\_init\_\_.py                                |        0 |        0 |    100% |           |
-| streamer/admin.py                                       |       54 |        6 |     89% |15, 20, 32, 49, 54, 59 |
+| streamer/admin.py                                       |       54 |        6 |     89% |18, 26, 38, 55, 60, 65 |
 | streamer/apps.py                                        |        4 |        0 |    100% |           |
 | streamer/consumers.py                                   |      312 |       40 |     87% |44-51, 58, 68, 192-193, 229, 258, 273-282, 289-300, 312, 332-336, 342, 369, 417-422, 530, 543 |
 | streamer/cron.py                                        |       10 |        0 |    100% |           |
