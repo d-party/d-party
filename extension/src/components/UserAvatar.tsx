@@ -1,6 +1,11 @@
 import { DEFAULT_USER_ICON, USER_ICONS } from "./userIcons";
 
-/** A map lookup, not a function call, so lint does not see it as creating a component during render. */
+/**
+ * A map lookup, not a function call, so lint does not see it as creating a component during render.
+ * `iconKey` comes from other participants, so only own keys resolve: inherited ones such as
+ * `constructor` or `__proto__` would otherwise be rendered as a component. The check stays in the
+ * ternary's test so both branches remain plain map lookups.
+ */
 
 export function UserAvatar({
   iconKey,
@@ -10,6 +15,8 @@ export function UserAvatar({
   className?: string;
 }): React.JSX.Element {
   const Icon =
-    (iconKey && USER_ICONS[iconKey]) || USER_ICONS[DEFAULT_USER_ICON];
+    iconKey && Object.hasOwn(USER_ICONS, iconKey)
+      ? USER_ICONS[iconKey]
+      : USER_ICONS[DEFAULT_USER_ICON];
   return <Icon className={className} aria-hidden />;
 }
