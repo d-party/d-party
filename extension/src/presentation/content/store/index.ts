@@ -1,4 +1,5 @@
 import { getParam, makeFontFace } from "../dom/utils";
+import { iconButton } from "../dom/iconButton";
 import { ChromeStorageSettingsRepository } from "@/infrastructure/storage/ChromeStorageSettingsRepository";
 import { DEFAULT_SETTINGS, type Settings } from "@/domain/settings";
 
@@ -46,7 +47,8 @@ async function loadSettings(): Promise<void> {
 }
 
 function decorateEpisodes(): void {
-  const itemList = document.querySelectorAll<HTMLAnchorElement>(".itemModule.list a");
+  const itemList =
+    document.querySelectorAll<HTMLAnchorElement>(".itemModule.list a");
 
   for (const item of Array.from(itemList)) {
     const href = item.getAttribute("href");
@@ -96,70 +98,8 @@ function createButton(opts: {
   });
 }
 
-/**
- * A <button>, not an <a>: the page styles `.itemModule .list a` (underline,
- * `position`, click handlers) with rules that outrank ours.
- */
-function iconButton(opts: {
-  icon: string;
-  className: string;
-  tooltip: string;
-  onClick: () => void;
-}): HTMLButtonElement {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = opts.className;
-  button.setAttribute("aria-label", opts.tooltip);
-
-  // Capture phase, so the page's own handlers never see the click.
-  button.addEventListener(
-    "click",
-    (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      hideTooltip();
-      opts.onClick();
-    },
-    true,
-  );
-
-  button.addEventListener("mouseenter", () => showTooltip(button, opts.tooltip));
-  button.addEventListener("mouseleave", hideTooltip);
-  button.addEventListener("focus", () => showTooltip(button, opts.tooltip));
-  button.addEventListener("blur", hideTooltip);
-
-  // Inner span keeps material-icons' font sizing off the button box.
-  const glyph = document.createElement("span");
-  glyph.className = "material-icons";
-  glyph.setAttribute("aria-hidden", "true");
-  glyph.textContent = opts.icon;
-  button.appendChild(glyph);
-
-  return button;
-}
-
-/**
- * One tooltip on document.body for every button. Inside the carousel it would be
- * clipped by overflow:hidden, and the wrapper's transform traps position:fixed.
- */
-let tooltipEl: HTMLDivElement | null = null;
-
-function showTooltip(target: HTMLElement, text: string): void {
-  if (!tooltipEl) {
-    tooltipEl = document.createElement("div");
-    tooltipEl.className = "dparty-tooltip";
-    document.body.appendChild(tooltipEl);
-  }
-  tooltipEl.textContent = text;
-  const rect = target.getBoundingClientRect();
-  tooltipEl.style.left = `${rect.left + rect.width / 2}px`;
-  tooltipEl.style.top = `${rect.top}px`;
-  tooltipEl.classList.add("dparty-tooltip--visible");
-}
-
-function hideTooltip(): void {
-  tooltipEl?.classList.remove("dparty-tooltip--visible");
-}
+// iconButton / showTooltip / hideTooltip は dアニメ一覧・DMM 詳細で共有するため
+// `../dom/iconButton` へ切り出した（このファイルの createButton はそれを利用する）。
 
 /**
  * The detail modal's 視聴する button. With autoAnotherTab on it opens a new tab;
@@ -223,7 +163,8 @@ function decoratePlaylinks(): void {
         if (!partId) return;
         event.preventDefault();
         event.stopPropagation();
-        const url = new URL("sc_d_pc?partId=" + partId, window.location.href).href;
+        const url = new URL("sc_d_pc?partId=" + partId, window.location.href)
+          .href;
         window.open(url, "_blank", "noopener");
       },
       true,

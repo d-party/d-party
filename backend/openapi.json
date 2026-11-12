@@ -225,6 +225,51 @@
                 }
             }
         },
+        "/api/v1/dmm-tv/lobby/{room_id}": {
+            "get": {
+                "operationId": "dmmLobbyResolve",
+                "description": "Resolve a room id to the DMM TV redirect URL.\n\n``AnimeStoreLobbyResolveAPI`` の DMM TV 版。フロントのルーム遷移ページ\n（``/dmm-tv/lobby/<room_id>``）が、拡張機能のインストール確認後にユーザーを\nどこへリダイレクトするか（＝再生ページ + party=join マーカー）を得るために呼ぶ。\n\nDMM の再生ページ URL は ``?season=..&content=..`` の両方で再生対象が決まるため、\n拡張機能は create 時に ``part_id`` へ ``season/content`` をまとめて格納する。ここでは\nそれを分解して再生ページ（``/vod/playback/on-demand/``）の URL を復元する。スラッシュを\n含まない古い/最小データは content のみとして扱う。レスポンス契約（redirect_url /\npart_id / room_id / title）は anime 版と共通。",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "room_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LobbyRedirect"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1/health": {
             "get": {
                 "operationId": "health",
@@ -614,7 +659,7 @@
                     "redirect_url": {
                         "type": "string",
                         "format": "uri",
-                        "description": "dアニメストアの再生ページの URL。"
+                        "description": "配信サービス（dアニメストア / DMM TV）の再生ページの URL。"
                     },
                     "part_id": {
                         "type": "string"

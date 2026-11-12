@@ -2,7 +2,7 @@
 
 Django バックエンド。中心は WebSocket（Channels）によるルーム内の再生同期で、ほかに
 REST API（統計・バッジ・拡張機能のバージョン確認・ロビー解決）と管理画面を持つ。
-公開ページは `../frontend` が持ち、nginx が `/api`・`/admin`・`/anime-store/party/` だけを
+公開ページは `../frontend` が持ち、nginx が `/api`・`/admin`・`/anime-store/party/`・`/dmm-tv/party/` だけを
 Django へ振り分ける。
 
 | 項目 | 採用 |

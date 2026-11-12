@@ -10,7 +10,7 @@
 
 ```
 src/
-  app/                          ページ（/ · usage · stats · qa · anime-store/lobby/[roomId] · not-found）
+  app/                          ページ（/ · usage · stats · qa · anime-store/lobby/[roomId] · dmm-tv/lobby/[roomId] · not-found）
                                 + opengraph-image / twitter-image
   components/
     landing/ layout/ motion/ qa/ stats/
@@ -37,6 +37,10 @@ pnpm storybook
 2. `room_id` から dアニメストアの URL への解決は backend の `GET /api/v1/anime-store/lobby/{room_id}`。
 3. `"true"` なら dアニメストアへ移動する。`"false"` か 30 秒無応答なら、「タイマーを見る」と
    「インストール / アップデート」の選択肢を出す。
+
+DMM TV も同じ DOM 契約で `/dmm-tv/lobby/[roomId]` を持ち、`GET /api/v1/dmm-tv/lobby/{room_id}` で
+再生ページ（`/vod/playback/on-demand/?season=..&content=..&party=join`）へ解決する。DMM のタイマー
+画面はまだ無い。
 
 拡張機能との結合は `d-party.net` か、dev ビルドの拡張機能（`http://localhost/anime-store/lobby/*`）で確かめる。
 

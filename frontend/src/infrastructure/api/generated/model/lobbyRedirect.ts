@@ -6,7 +6,7 @@
  */
 
 export interface LobbyRedirect {
-  /** dアニメストアの再生ページの URL。 */
+  /** 配信サービス（dアニメストア / DMM TV）の再生ページの URL。 */
   redirect_url: string;
   part_id: string;
   room_id: string;

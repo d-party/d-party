@@ -104,6 +104,47 @@
     box-shadow: 0 0 0 2px var(--dp-ring);
 }
 
+/* DMM TV variant — used on the title detail page, where the button sits inline
+   with DMM's native round action buttons (お気に入り / シェア) over a dark hero.
+   Override the light frosted square (used on the dアニメストア list) with a
+   circular, dark translucent button + white glyph so it matches DMM's controls.
+   Self-contained (no dependency on DMM's own design-token classes), so it does
+   not break if DMM re-themes. Sizes are tuned to DMM's ~48px action buttons. */
+.dparty-btn.dparty-btn--dmm {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 9999px;
+    border: none;
+    background-color: rgba(255, 255, 255, 0.12);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+    color: #fff;
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease;
+}
+
+/* アイコン色はボタンの color を継承するので、ホバーで背景と一緒に反転する。 */
+.dparty-btn.dparty-btn--dmm .material-icons {
+    font-size: 24px;
+    color: inherit;
+}
+
+/* マウスオーバーで白黒反転（暗い半透明の円+白アイコン → 白い円+黒アイコン）。
+   DMM ネイティブのアクションボタンのホバー挙動に合わせる。 */
+.dparty-btn.dparty-btn--dmm:hover {
+    transform: none;
+    box-shadow: none;
+    background-color: #fff;
+    color: #1a1a1a;
+}
+
+.dparty-btn.dparty-btn--dmm:active {
+    transform: none;
+    box-shadow: none;
+}
+
 /* "別タブで視聴する" in the detail modal: placed just outside 視聴する's right edge. */
 #streamingQuality {
     position: relative;

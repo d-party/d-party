@@ -302,6 +302,59 @@ export const versionCheck = async (params: VersionCheckParams, options?: Paramet
 
 
 
+export type dmmLobbyResolveResponse200 = {
+  data: LobbyRedirect
+  status: 200
+}
+
+export type dmmLobbyResolveResponse404 = {
+  data: ApiMessage
+  status: 404
+}
+
+export type dmmLobbyResolveResponseSuccess = (dmmLobbyResolveResponse200) & {
+  headers: Headers;
+};
+export type dmmLobbyResolveResponseError = (dmmLobbyResolveResponse404) & {
+  headers: Headers;
+};
+
+export type dmmLobbyResolveResponse = (dmmLobbyResolveResponseSuccess | dmmLobbyResolveResponseError)
+
+export const getDmmLobbyResolveUrl = (roomId: string,) => {
+
+
+
+
+  return `/api/v1/dmm-tv/lobby/${roomId}`
+}
+
+/**
+ * Resolve a room id to the DMM TV redirect URL.
+ *
+ * ``AnimeStoreLobbyResolveAPI`` の DMM TV 版。フロントのルーム遷移ページ
+ * （``/dmm-tv/lobby/<room_id>``）が、拡張機能のインストール確認後にユーザーを
+ * どこへリダイレクトするか（＝再生ページ + party=join マーカー）を得るために呼ぶ。
+ *
+ * DMM の再生ページ URL は ``?season=..&content=..`` の両方で再生対象が決まるため、
+ * 拡張機能は create 時に ``part_id`` へ ``season/content`` をまとめて格納する。ここでは
+ * それを分解して再生ページ（``/vod/playback/on-demand/``）の URL を復元する。スラッシュを
+ * 含まない古い/最小データは content のみとして扱う。レスポンス契約（redirect_url /
+ * part_id / room_id / title）は anime 版と共通。
+ */
+export const dmmLobbyResolve = async (roomId: string, options?: Parameters<typeof customFetch>[1]): Promise<dmmLobbyResolveResponse> => {
+
+  return customFetch<dmmLobbyResolveResponse>(getDmmLobbyResolveUrl(roomId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
 export type healthResponse200 = {
   data: void
   status: 200

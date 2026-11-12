@@ -7,7 +7,16 @@ from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
-from .models import AnimeReaction, AnimeRoom, AnimeUser, Setting
+from .models import (
+    AnimeReaction,
+    AnimeRoom,
+    AnimeUser,
+    DmmReaction,
+    DmmRoom,
+    DmmSetting,
+    DmmUser,
+    Setting,
+)
 
 
 @admin.action(
@@ -38,8 +47,12 @@ class LogicalDeletionModelAdmin(ModelAdmin):
         return self.model.objects.get_queryset()
 
 
-@admin.register(AnimeRoom)
-class AnimeRoomAdmin(LogicalDeletionModelAdmin):
+class RoomModelAdmin(LogicalDeletionModelAdmin):
+    """ルーム一覧の共通 Admin。dアニメ（``AnimeRoom``）と DMM（``DmmRoom``）で共用する。
+
+    人数はルームのカラムではなく参加ユーザーから導出する（``BaseRoomQuerySet``）。
+    """
+
     list_display = (
         "room_id",
         "title",
@@ -65,6 +78,11 @@ class AnimeRoomAdmin(LogicalDeletionModelAdmin):
         return obj.sum_people
 
 
+@admin.register(AnimeRoom)
+class AnimeRoomAdmin(RoomModelAdmin):
+    pass
+
+
 @admin.register(AnimeUser)
 class AnimeUserAdmin(LogicalDeletionModelAdmin):
     # user_name は暗号化列なので、表示はできるが DB での並べ替え・検索はできない。
@@ -78,6 +96,38 @@ class AnimeReactionAdmin(LogicalDeletionModelAdmin):
 
 @admin.register(Setting)
 class SettingAdmin(ModelAdmin):
+    list_display = (
+        "room",
+        "one_way",
+        "owner_leave_delete",
+        "disable_reaction",
+        "updated_at",
+    )
+    ordering = ("-created_at",)
+
+
+# ---------------------------------------------------------------------------
+# DMM TV
+# ---------------------------------------------------------------------------
+
+
+@admin.register(DmmRoom)
+class DmmRoomAdmin(RoomModelAdmin):
+    pass
+
+
+@admin.register(DmmUser)
+class DmmUserAdmin(LogicalDeletionModelAdmin):
+    list_display = ("user_name", "user_id", "is_host", "created_at", "deleted_at")
+
+
+@admin.register(DmmReaction)
+class DmmReactionAdmin(LogicalDeletionModelAdmin):
+    list_display = ("reaction_id", "reaction_type", "created_at", "deleted_at")
+
+
+@admin.register(DmmSetting)
+class DmmSettingAdmin(ModelAdmin):
     list_display = (
         "room",
         "one_way",

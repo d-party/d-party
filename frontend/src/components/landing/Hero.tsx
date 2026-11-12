@@ -71,7 +71,7 @@ export function Hero(): React.JSX.Element {
           variants={item}
           className="mt-4 max-w-2xl text-lg text-muted-foreground sm:text-xl"
         >
-          dアニメストアでも、離れた友達とウォッチパーティー。
+          dアニメストア・DMM TV で、離れた友達とウォッチパーティー。
           <br className="hidden sm:block" />
           再生も一時停止も自動でシンクする、完全無料のブラウザ拡張機能。
         </motion.p>

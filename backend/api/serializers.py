@@ -22,7 +22,9 @@ class VersionCheckResultSerializer(serializers.Serializer):
 
 
 class LobbyRedirectSerializer(serializers.Serializer):
-    redirect_url = serializers.URLField(help_text="dアニメストアの再生ページの URL。")
+    redirect_url = serializers.URLField(
+        help_text="配信サービス（dアニメストア / DMM TV）の再生ページの URL。"
+    )
     part_id = serializers.CharField()
     room_id = serializers.UUIDField()
     title = serializers.CharField(

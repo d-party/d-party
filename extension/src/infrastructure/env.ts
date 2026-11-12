@@ -21,6 +21,12 @@ export const ANIMESTORE_HOST = `${BACKEND_HOST}anime-store/`;
 export const WEBSOCKET_ENDPOINT = `${WEBSOCKET_PROTOCOL}${ANIMESTORE_HOST}party/`;
 export const ANIMESTORE_REDIRECT_ENDPOINT = `${BACKEND_PROTOCOL}${ANIMESTORE_HOST}lobby/`;
 
+// DMM TV 用エンドポイント（バックエンドの dmm-tv/* ルートに対応）。WS 同期プロトコルは
+// dアニメと共通で、接続先だけがサービスごとに分かれる。プレイヤー同期の結線は PR2。
+export const DMM_HOST = `${BACKEND_HOST}dmm-tv/`;
+export const DMM_WEBSOCKET_ENDPOINT = `${WEBSOCKET_PROTOCOL}${DMM_HOST}party/`;
+export const DMM_REDIRECT_ENDPOINT = `${BACKEND_PROTOCOL}${DMM_HOST}lobby/`;
+
 /** No trailing slash. */
 export const API_BASE_URL = `${BACKEND_PROTOCOL}${BACKEND_HOST}`.replace(/\/$/, "");
 

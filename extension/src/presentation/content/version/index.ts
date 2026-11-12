@@ -3,10 +3,6 @@ import { versionCheck } from "@/infrastructure/api/generated/d-party";
 /** Lobby pages: writes whether this version is supported into `.chrome_extension_field`. */
 
 async function run(): Promise<void> {
-  const field = document.getElementsByClassName(
-    "chrome_extension_field",
-  )[0] as HTMLElement | undefined;
-
   const version = chrome.runtime.getManifest().version;
   let isPossible = false;
   try {
@@ -18,7 +14,35 @@ async function run(): Promise<void> {
     isPossible = false;
   }
 
-  if (field) field.innerText = String(isPossible);
+  writeVerdict(String(isPossible));
+}
+
+/**
+ * Write the verdict into `.chrome_extension_field`. The lobby page (React) may
+ * render that element client-side (after hydration), so it can be absent when
+ * this script runs. Write immediately if present; otherwise observe the DOM and
+ * write as soon as it appears (with a safety timeout so we don't observe forever).
+ */
+function writeVerdict(value: string): void {
+  const tryWrite = (): boolean => {
+    const field = document.getElementsByClassName(
+      "chrome_extension_field",
+    )[0] as HTMLElement | undefined;
+    if (!field) return false;
+    field.innerText = value;
+    return true;
+  };
+
+  if (tryWrite()) return;
+
+  const observer = new MutationObserver(() => {
+    if (tryWrite()) observer.disconnect();
+  });
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+  window.setTimeout(() => observer.disconnect(), 15000);
 }
 
 void run();

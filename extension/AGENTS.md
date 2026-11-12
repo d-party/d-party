@@ -56,7 +56,9 @@ pnpm storybook      # :6006
 対象ページ:
 
 - `https://animestore.docomo.ne.jp/animestore/*`（`anime.dmkt-sp.jp` も同じ。プレイヤーは `sc_d_pc`）
-- `https://d-party.net/anime-store/lobby/*`（dev は `http://localhost/anime-store/lobby/*`）
+- `https://tv.dmm.com/*`（作品詳細へのアイコン注入）と `https://tv.dmm.com/vod/playback/on-demand/*`
+  （再生ページのプレイヤー同期）
+- `https://d-party.net/{anime-store,dmm-tv}/lobby/*`（dev は `http://localhost/...`）
 
 content script の DOM 操作は、有料の dアニメストア実ページでしか最終確認できない。
 実ページから localhost の backend へつなぐには `chrome://flags/#block-insecure-private-network-requests`

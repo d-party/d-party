@@ -1,6 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import {
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import Image from "next/image";
 import { useParams, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -47,6 +53,10 @@ function LobbyFallback(): React.JSX.Element {
   );
 }
 
+// useSyncExternalStore で「クライアントかどうか」を得る（サーバー=false / クライアント=true）。
+// effect 内 setState を避けつつ hydration 後にのみ true になる。
+const subscribeNoop = () => () => { };
+
 function LobbyContent(): React.JSX.Element {
   const { roomId } = useParams<{ roomId: string }>();
   const searchParams = useSearchParams();
@@ -56,6 +66,14 @@ function LobbyContent(): React.JSX.Element {
   const [phase, setPhase] = useState<Phase>("checking");
   const [loaderText, setLoaderText] = useState("ルームに接続しています");
   const [title, setTitle] = useState("");
+  // 拡張機能は hydration 前に `.chrome_extension_field` を書き換えるため、SSR で出すと
+  // hydration mismatch になる。マウント後にクライアント限定で描画して SSR HTML に含めない
+  //（拡張機能は 1 秒間隔ポーリングなのでマウント直後に現れれば検出される）。
+  const mounted = useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  );
 
   const redirectUrlRef = useRef<string | null>(null);
   const redirectPendingRef = useRef(false);
@@ -150,9 +168,13 @@ function LobbyContent(): React.JSX.Element {
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 text-center">
-      {/* 拡張機能との契約。クラス名を変えない。display:none だと innerText が使えない。 */}
-
-      <div className="chrome_extension_field sr-only" aria-hidden />
+      {/*
+        拡張機能との契約。クラス名を変えない。display:none だと innerText が使えない。
+        拡張機能が hydration 前に書き込んでも mismatch にならないよう、マウント後にだけ描画する。
+      */}
+      {mounted && (
+        <div className="chrome_extension_field sr-only" aria-hidden />
+      )}
 
       <AnimatePresence mode="wait">
         {phase === "checking" ? (
