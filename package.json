@@ -1,6 +1,6 @@
 {
   "name": "d-party",
-  "version": "2.12.4",
+  "version": "2.12.5",
   "description": "dアニメストアで『同時視聴』を実現する d-party",
   "private": true,
   "type": "module",
