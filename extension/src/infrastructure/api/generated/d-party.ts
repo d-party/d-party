@@ -307,12 +307,19 @@ export type healthResponse200 = {
   status: 200
 }
 
+export type healthResponse503 = {
+  data: void
+  status: 503
+}
+
 export type healthResponseSuccess = (healthResponse200) & {
   headers: Headers;
 };
-;
+export type healthResponseError = (healthResponse503) & {
+  headers: Headers;
+};
 
-export type healthResponse = (healthResponseSuccess)
+export type healthResponse = (healthResponseSuccess | healthResponseError)
 
 export const getHealthUrl = () => {
 
@@ -323,7 +330,13 @@ export const getHealthUrl = () => {
 }
 
 /**
- * Lightweight liveness probe. Returns 200 when the application is running.
+ * Readiness of the whole service: Django, PostgreSQL and Redis.
+ *
+ * Returns 200 when rooms can be created, 503 otherwise. The extension disables
+ * the "create room" button on anything but 200. The body stays empty; which
+ * dependency failed is only logged.
+ *
+ * Not for container liveness probes: those must not depend on the database.
  */
 export const health = async ( options?: Parameters<typeof customFetch>[1]): Promise<healthResponse> => {
 

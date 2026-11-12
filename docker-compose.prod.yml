@@ -31,6 +31,8 @@ services:
     volumes:
       - ./certbot/conf:/etc/letsencrypt:ro
       - ./certbot/www:/var/www/certbot:ro
+      # メンテナンス／エラー時の静的ページ。helm chart と同じファイルを使う。
+      - ./infra/helm/d-party/files/maintenance.html:/usr/share/nginx/maintenance/maintenance.html:ro
     # 6 時間ごとに reload して新しい証明書を読む。CMD が "nginx" で始まらないと
     # entrypoint が envsubst しないので、ここで自分で展開する。
     command:

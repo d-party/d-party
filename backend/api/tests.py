@@ -1,12 +1,15 @@
 import datetime
 import os
+from unittest import mock
 
 import pytest
+import redis
+from django.db import OperationalError
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from api import serializers
+from api import serializers, views
 from streamer.factories import AnimeRoomFactory, AnimeUserFactory
 from streamer.models import AnimeReaction, ReactionStat
 
@@ -30,9 +33,35 @@ class TestHealthCheckAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_health_check_ok_200(self):
-        response = self.client.get(self.endpoint)
+        # pytest は Redis なしで走らせるので、Redis の確認だけ差し替える。
+        with mock.patch("api.views._redis_ok", return_value=True):
+            response = self.client.get(self.endpoint)
         assert response.status_code == status.HTTP_200_OK
         assert response.content == b""
+
+    @pytest.mark.django_db
+    def test_health_check_database_down_503(self):
+        with mock.patch("api.views._database_ok", return_value=False):
+            response = self.client.get(self.endpoint)
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+        assert response.content == b""
+
+    @pytest.mark.django_db
+    def test_health_check_redis_down_503(self):
+        with mock.patch("api.views._redis_ok", return_value=False):
+            response = self.client.get(self.endpoint)
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+        assert response.content == b""
+
+    def test_database_ok_false_when_query_fails(self):
+        with mock.patch("api.views.connection.cursor", side_effect=OperationalError):
+            assert views._database_ok() is False
+
+    def test_redis_ok_false_when_ping_fails(self):
+        with mock.patch(
+            "api.views.redis.Redis.ping", side_effect=redis.ConnectionError
+        ):
+            assert views._redis_ok() is False
 
 
 class TestVersionCheckAPI(APITestCase):

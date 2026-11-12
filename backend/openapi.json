@@ -228,7 +228,7 @@
         "/api/v1/health": {
             "get": {
                 "operationId": "health",
-                "description": "Lightweight liveness probe. Returns 200 when the application is running.",
+                "description": "Readiness of the whole service: Django, PostgreSQL and Redis.\n\nReturns 200 when rooms can be created, 503 otherwise. The extension disables\nthe \"create room\" button on anything but 200. The body stays empty; which\ndependency failed is only logged.\n\nNot for container liveness probes: those must not depend on the database.",
                 "tags": [
                     "v1"
                 ],
@@ -237,6 +237,9 @@
                 ],
                 "responses": {
                     "200": {
+                        "description": "No response body"
+                    },
+                    "503": {
                         "description": "No response body"
                     }
                 }

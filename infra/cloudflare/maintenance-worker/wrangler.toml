@@ -1,0 +1,21 @@
+# オリジン到達不能時にメンテナンスページを返す Worker（Free プランで動く）。
+#   pnpm dlx wrangler deploy --env stg         # stg.d-party.net
+#   pnpm dlx wrangler deploy --env production  # d-party.net
+name = "d-party-maintenance"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+workers_dev = false
+
+# ページ本体は helm chart・本番 compose と同じファイルを文字列として取り込む。
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
+[env.stg]
+name = "d-party-maintenance-stg"
+routes = [{ pattern = "stg.d-party.net/*", zone_name = "d-party.net" }]
+
+[env.production]
+name = "d-party-maintenance"
+routes = [{ pattern = "d-party.net/*", zone_name = "d-party.net" }]

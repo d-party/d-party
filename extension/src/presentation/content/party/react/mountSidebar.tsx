@@ -114,8 +114,12 @@ export function mountSidebar(handlers: SidebarHandlers): MountedSidebar {
   return { store, controller };
 }
 
+/** メンテナンス中に復旧を確かめ直す間隔。 */
+const HEALTH_RECHECK_MS = 30_000;
+
 /**
- * 初回表示時に 1 度だけヘルスチェックし、失敗したら `"maintenance"` にする。
+ * 初回表示時にヘルスチェックし、失敗したら `"maintenance"` にする。メンテナンス中は
+ * 一定間隔で確かめ直し、通ったら `"idle"` に戻す（ルーム作成ボタンが再び押せる）。
  *
  * fetch は background に任せる。公開ページから localhost への fetch は Chrome の
  * Local Network Access で止められるが、host_permissions を持つ background は通る。
@@ -129,11 +133,31 @@ function scheduleHealthCheck(store: SidebarStore): void {
     if (!visible) return;
     done = true;
     unsubscribe();
-    const request: HealthCheckRequest = { type: "healthCheck" };
-    chrome.runtime.sendMessage(request, (response?: HealthCheckResponse) => {
-      if (chrome.runtime.lastError || !response?.ok) {
-        store.setConnectionStatus("maintenance");
-      }
-    });
+    checkHealth(store);
   });
+}
+
+function checkHealth(store: SidebarStore): void {
+  const request: HealthCheckRequest = { type: "healthCheck" };
+  const onResult = (ok: boolean): void => {
+    const { connectionStatus } = store.getSnapshot();
+    if (ok) {
+      if (connectionStatus === "maintenance") store.setConnectionStatus("idle");
+      return;
+    }
+    // 入室できているなら WebSocket は生きているので、表示を変えない。
+    if (connectionStatus === "connected") return;
+    if (connectionStatus !== "maintenance") {
+      store.setConnectionStatus("maintenance");
+    }
+    setTimeout(() => checkHealth(store), HEALTH_RECHECK_MS);
+  };
+  try {
+    chrome.runtime.sendMessage(request, (response?: HealthCheckResponse) => {
+      onResult(!chrome.runtime.lastError && response?.ok === true);
+    });
+  } catch {
+    // 拡張機能が更新されてコンテキストが無効になった場合。再試行しても戻らない。
+    store.setConnectionStatus("maintenance");
+  }
 }

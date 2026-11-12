@@ -38,3 +38,9 @@ storybook-static/
 
 # ── Let's Encrypt（証明書・秘密鍵・webroot は実行時生成。コミットしない）──
 /certbot/
+
+# ── 本番 compose の計画メンテナンス用フラグ（touch / rm で切り替える）──
+/nginx/maintenance.on
+
+# ── wrangler（infra/cloudflare）のローカルキャッシュ ──
+.wrangler/

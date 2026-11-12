@@ -38,6 +38,9 @@ rspack のエントリは `background` · `content-store` · `content-party` · 
 - ルーム設定は create メッセージに含めず、create の後にオーナーが `update_setting` で送る。
   現在値はサーバの `room_setting` で受け取る。一方通行では非オーナーは `video_operation` を送らず、
   リアクション禁止では送信せず自分にだけ表示する（`RoomSession`）。
+- サイドバーは初回表示時に background 経由で `/api/v1/health` を確かめる。200 以外なら
+  `connectionStatus` を `maintenance` にし、「ルームを作成」ボタンを無効化して「メンテナンス中です」
+  のツールチップを出す。メンテナンス中は 30 秒ごとに確かめ直し、通れば `idle` に戻す。
 - 共有パネルの「タイマーのみの URL」はロビー URL に `?timer=true` を付けたもの。
 
 ## ビルドと読み込み

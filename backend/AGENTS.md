@@ -44,6 +44,10 @@ compose・nginx・env はルートが持ち、`backend/` は build context と�
 - **REST API**: `api/urls.py` のパスとレスポンスの形は外部から参照される（shields は `{"schemaVersion": 1, ...}`）。
   レスポンスの形は `api/serializers.py` に宣言し、`@extend_schema` の `operation_id` が
   TypeScript の関数名になる。変えたら `openapi.json` を再生成する（手順はルートの `AGENTS.md`）。
+- **ヘルスチェック（`/api/v1/health`）**: PostgreSQL と Redis まで確かめ、どれかが落ちていれば 503
+  （本文は空）。拡張機能は 200 以外で「ルームを作成」ボタンを無効にする。コンテナの
+  liveness / readiness には使わない（DB の障害で django が再起動を繰り返すため。probe は TCP）。
+  pytest は Redis なしで走るので、200 を期待するテストでは `_redis_ok` を差し替える。
 - **観覧専用（`spectate`）**: `AnimeUser` を作らずにグループへ読み取り参加する（人数・一覧・
   ホスト委譲・自動削除に影響しない）。フロントのタイマー画面が使う。`host_send` / `user_send` は
   `anime_user is None` を必ずガードする。フロントのオリジンから張るので `asgi.py` で `MY_DOMAIN` を許可している。

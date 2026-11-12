@@ -7,6 +7,7 @@ Raspberry Pi (arm64) の k3s クラスタへ Helm でデプロイし、Argo CD �
 helm/d-party/   d-party の Helm chart（nginx · django · frontend · postgres · redis · migrate hook
                 · networkpolicy · priorityclass · ingress（任意））
 platform/       クラスタ共有の基盤（ローカルレジストリと各ノードの registries.yaml）
+cloudflare/     オリジン到達不能時にメンテナンスページを返す Cloudflare Worker（手動で wrangler deploy）
 build/          rootless BuildKit で arm64 ネイティブビルドし、共有レジストリへ push する Job
 argocd/         Argo CD Application の雛形（実体は運用リポジトリ）
 ```
@@ -26,6 +27,17 @@ argocd/         Argo CD Application の雛形（実体は運用リポジトリ�
 - backend イメージは compose と同じものを使い、gunicorn の設定は env で上書きする。
   django はローリング更新で新 Pod を先に Ready にする。既存の WebSocket は旧 Pod の停止時に
   1012 で切れ、拡張機能は自動再接続しない。
+
+## メンテナンスページ
+
+- ページは `helm/d-party/files/maintenance.html` の 1 本だけ。chart の nginx・本番 compose の
+  nginx・`cloudflare/maintenance-worker` が同じファイルを使う。外部の CSS や画像を読ませない
+  （オリジンが落ちているときに出すページなので）。
+- nginx は upstream に届かないとき（502 / 504）と計画メンテナンス（`nginx.maintenance.enabled`）の
+  ときにこのページを 503 で返す。`proxy_intercept_errors` は入れない。django が返す
+  `/api/v1/health` の 503 をそのまま通すため。
+- `/healthz` はメンテナンス中も 200 のままにする（nginx の probe が使う）。
+- Worker は 503 を差し替えない（nginx のページと `/api/v1/health` を通すため）。手順は README の 7 章。
 
 ```bash
 helm lint infra/helm/d-party

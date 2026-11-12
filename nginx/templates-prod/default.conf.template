@@ -38,9 +38,14 @@ server {
         alias /static/;
     }
 
+    # 計画メンテナンス: `touch nginx/maintenance.on` で各 location が 503（静的ページ）を返し、
+    # `rm nginx/maintenance.on` で戻る。リクエストごとに見るので reload は要らない。
 
     # ── Django (ASGI): REST API・管理画面・WebSocket ──
     location /api/ {
+        if (-f /etc/nginx/maintenance.on) {
+            return 503;
+        }
         add_header Access-Control-Allow-Origin "*" always;
         add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
         add_header Access-Control-Allow-Headers "Content-Type, Accept" always;
@@ -66,15 +71,24 @@ server {
         return 301 /admin/;
     }
     location /admin/ {
+        if (-f /etc/nginx/maintenance.on) {
+            return 503;
+        }
         try_files $uri @proxy_to_app;
     }
     # WebSocket（同時視聴の同期）。party/ は Django、/anime-store/lobby/ はフロント。
     location /anime-store/party/ {
+        if (-f /etc/nginx/maintenance.on) {
+            return 503;
+        }
         try_files $uri @proxy_to_app;
     }
 
     # ── React フロントエンド: 公開ページ + 静的アセット ──
     location / {
+        if (-f /etc/nginx/maintenance.on) {
+            return 503;
+        }
         try_files $uri @proxy_to_frontend;
     }
 
@@ -102,8 +116,13 @@ server {
         proxy_pass http://frontend_server;
     }
 
-    error_page 500 502 503 504 /50x.html;
-    location = /50x.html {
-        root /usr/share/nginx/html;
+    # upstream に届かない（502/504）ときと計画メンテナンス（503）のときに返す静的ページ。
+    # upstream 自身が返した 5xx（/api/v1/health の 503 など）はそのまま通す。
+    error_page 502 503 504 =503 /maintenance.html;
+    location = /maintenance.html {
+        internal;
+        root /usr/share/nginx/maintenance;
+        add_header Cache-Control "no-store" always;
+        add_header Retry-After "60" always;
     }
 }
