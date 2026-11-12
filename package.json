@@ -17,6 +17,7 @@
     "license:check": "turbo run license:check"
   },
   "devDependencies": {
+    "playwright": "^1.65.0",
     "turbo": "^2.11.10"
   },
   "packageManager": "pnpm@12.4.2",
