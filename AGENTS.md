@@ -57,13 +57,16 @@ docker-compose.prod.yml       prod（nginx が TLS 終端・certbot）
 docker-compose.loadtest.yml   k6（loadtest profile）
 .env.global                   全環境共通の env
 .env.dev / .env.prod          環境固有の env
+.env.secret                   本番の秘密値（git 管理外。.env.secret.example 参照）
 nginx/ postgres/ redis/       各サービスの設定
 ```
 
 - frontend のビルドコンテキストはルート（`dockerfile: frontend/Dockerfile`）。
   ロックファイルがルートにあり、`frontend/` 単体では `--frozen-lockfile` を満たせない。
-- `DEBUG` / `MY_DOMAIN` などの環境固有値を `.env.global` に置かない。backend は
-  `.env.global` を `override=True` で読むので、本番の値が上書きされる。
+- `DEBUG` / `MY_DOMAIN` などの環境固有値を `.env.global` に置かない（dev と prod の両方で読まれる）。
+- 本番の秘密値（`SECRET_KEY` / `POSTGRES_PASSWORD`）は git 管理外の `.env.secret` に置き、
+  `docker-compose.prod.yml` が django と postgres へ注入する。リポジトリにある値は開発用。
+- backend の `manage.py` は `/env_files/*.env` を既存の環境変数を上書きせずに読む。
 
 ```bash
 docker compose up -d

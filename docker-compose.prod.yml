@@ -1,4 +1,5 @@
 # 本番用。frontend は standalone、nginx が TLS を終端し、certbot が証明書を更新する。
+# 秘密値（SECRET_KEY / POSTGRES_PASSWORD）は git 管理外の .env.secret から注入する。
 #   ./init-letsencrypt.sh --staging        # 初回。確認後に --production
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile letsencrypt up -d
 
@@ -6,6 +7,13 @@ services:
   django:
     env_file:
       - ./.env.prod
+      # 本番の秘密値（git 管理外）。無ければ compose が起動を拒否する。
+      - ./.env.secret
+    restart: unless-stopped
+
+  postgres:
+    env_file:
+      - ./.env.secret
     restart: unless-stopped
 
   frontend:
