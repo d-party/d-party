@@ -8,6 +8,7 @@ from django.core.cache import cache
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -21,6 +22,16 @@ from streamer.models import (
     ReactionType,
 )
 
+from .serializers import (
+    ApiMessageSerializer,
+    CountResultSerializer,
+    LobbyRedirectSerializer,
+    PerDayResultSerializer,
+    ReactionTypeCountResultSerializer,
+    ShieldsBadgeSerializer,
+    VersionCheckResultSerializer,
+)
+
 # A strict ``major.minor.patch`` triple.
 _STRICT_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
@@ -29,6 +40,30 @@ DEFAULT_STATS_DAYS = 365
 MAX_STATS_DAYS = 365
 # 統計レスポンスのキャッシュ秒数。
 STATS_CACHE_SECONDS = int(os.getenv("STATS_CACHE_SECONDS", "300"))
+
+# OpenAPI スキーマ（``backend/openapi.json``）に載せる ``?days=N`` の定義。
+_DAYS_PARAMETER = OpenApiParameter(
+    name="days",
+    type={
+        "type": "integer",
+        "minimum": 1,
+        "maximum": MAX_STATS_DAYS,
+        "default": DEFAULT_STATS_DAYS,
+    },
+    description="集計する日数。",
+)
+
+
+def _stats_schema(operation_id: str, response, *, days: bool = True):
+    """統計 API の ``get`` に付けるスキーマ。``operation_id`` が TypeScript の関数名になる。"""
+    responses = {200: response}
+    if days:
+        responses[400] = ApiMessageSerializer
+    return extend_schema(
+        operation_id=operation_id,
+        parameters=[_DAYS_PARAMETER] if days else [],
+        responses=responses,
+    )
 
 
 def _parse_days(request) -> int | None:
@@ -149,6 +184,7 @@ class HealthCheckAPI(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(operation_id="health", responses={200: None})
     def get(self, request, format=None) -> Response:
         return Response(status=status.HTTP_200_OK)
 
@@ -158,6 +194,22 @@ class ChromeExtensionVersionCheckAPI(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        operation_id="versionCheck",
+        parameters=[
+            OpenApiParameter(
+                name="extension-version",
+                type=str,
+                required=True,
+                description="拡張機能のバージョン（x.y.z）。",
+            )
+        ],
+        responses={
+            200: VersionCheckResultSerializer,
+            400: ApiMessageSerializer,
+            406: ApiMessageSerializer,
+        },
+    )
     def get(self, request, format=None) -> Response:
         if "extension-version" not in request.GET:
             return Response(
@@ -188,6 +240,7 @@ class AnimeActiveUserPerDayAPI(APIView):
 
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsActiveUserPerDay", PerDayResultSerializer)
     def get(self, request, format=None) -> Response:
         days = _parse_days(request)
         if days is None:
@@ -205,6 +258,7 @@ class AnimeActiveRoomPerDayAPI(APIView):
 
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsActiveRoomPerDay", PerDayResultSerializer)
     def get(self, request, format=None) -> Response:
         days = _parse_days(request)
         if days is None:
@@ -222,6 +276,7 @@ class AnimeRoomReactionCountAPI(APIView):
 
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsReactionCount", ReactionTypeCountResultSerializer)
     def get(self, request, format=None) -> Response:
         days = _parse_days(request)
         if days is None:
@@ -243,6 +298,7 @@ class AnimeRoomReactionAllCountAPI(APIView):
 
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsReactionAllCount", CountResultSerializer)
     def get(self, request, format=None) -> Response:
         days = _parse_days(request)
         if days is None:
@@ -261,6 +317,7 @@ class AnimeUserAllCountAPI(APIView):
 
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsUserAllCount", CountResultSerializer)
     def get(self, request, format=None) -> Response:
         days = _parse_days(request)
         if days is None:
@@ -279,6 +336,7 @@ class AnimeRoomAllCountAPI(APIView):
 
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsRoomAllCount", CountResultSerializer)
     def get(self, request, format=None) -> Response:
         days = _parse_days(request)
         if days is None:
@@ -297,6 +355,7 @@ class AnimeUserAliveCountAPI(APIView):
 
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsUserAliveCount", CountResultSerializer, days=False)
     def get(self, request, format=None) -> Response:
         return Response({"data": {"count": AnimeUser.objects.alive().count()}})
 
@@ -306,6 +365,7 @@ class AnimeRoomAliveCountAPI(APIView):
 
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsRoomAliveCount", CountResultSerializer, days=False)
     def get(self, request, format=None) -> Response:
         return Response({"data": {"count": AnimeRoom.objects.alive().count()}})
 
@@ -318,6 +378,7 @@ class _ShieldsView(APIView):
     def shields_data(self) -> dict:
         raise NotImplementedError
 
+    @extend_schema(responses={200: ShieldsBadgeSerializer})
     def get(self, request, format=None) -> Response:
         return Response({"schemaVersion": 1, **self.shields_data()})
 
@@ -370,6 +431,10 @@ class AnimeStoreLobbyResolveAPI(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        operation_id="lobbyResolve",
+        responses={200: LobbyRedirectSerializer, 404: ApiMessageSerializer},
+    )
     def get(self, request, room_id, format=None) -> Response:
         anime_store_domain = os.environ.get(
             "D_ANIME_STORE_DOMAIN", "animestore.docomo.ne.jp"

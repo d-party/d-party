@@ -33,8 +33,20 @@ Django ──▶ PostgreSQL（永続化） / Redis（Channels レイヤ）
 次は拡張機能・フロント・backend の間の契約。片側だけ変えないこと。
 
 - WebSocket プロトコル: `backend/streamer/format.py` ⇔ `extension/src/domain/protocol.ts`
-- REST API: `backend/api/` ⇔ `{extension,frontend}/openapi/openapi.json`（orval で生成）
+- REST API: `backend/api/` → `backend/openapi.json`（drf-spectacular が出力）→
+  `{extension,frontend}/src/infrastructure/api/generated/`（orval が生成）。手で書かない。
 - ロビーの DOM 契約: `frontend` の `.chrome_extension_field` ⇔ `extension` の `content-version`
+
+### REST API の型連携
+
+レスポンスの形は `backend/api/serializers.py` に宣言し、view に `@extend_schema` で結び付ける。
+view や serializer を変えたら次の 2 つを走らせ、生成物もコミットする（CI が差分を検出して落とす）。
+
+```bash
+# settings が env を要求するので、コンテナの中で走らせる
+docker compose exec django python manage.py spectacular --format openapi-json --file openapi.json --validate --fail-on-warn
+pnpm run api:generate
+```
 
 ## docker compose（ルート）
 

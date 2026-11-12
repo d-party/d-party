@@ -5,7 +5,7 @@
 - Next.js 16（App Router · Turbopack）· React 19 · TypeScript（strict）· Tailwind CSS v4 · shadcn/ui
 - primitive と `cn` は `@d-party/ui`。`Button` だけ `src/components/ui/button.tsx` に自前で持つ。
   テーマトークン（`globals.css`）と orval の設定は拡張機能と揃えている。
-- REST クライアントは orval で生成（`openapi/openapi.json` → `src/infrastructure/api/generated/`）。
+- REST クライアントは orval で生成（`../backend/openapi.json` → `src/infrastructure/api/generated/`）。
 - 接続先は `src/infrastructure/env.ts`（`NEXT_PUBLIC_*` で上書き、既定 `localhost`）。
 
 ```

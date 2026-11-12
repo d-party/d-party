@@ -8,7 +8,7 @@ Django へ振り分ける。
 | 項目 | 採用 |
 | --- | --- |
 | 言語 / 依存管理 | Python 3.15 / uv（`pyproject.toml` · `uv.lock`） |
-| フレームワーク | Django 6 · Channels 4 · DRF · djangochannelsrestframework |
+| フレームワーク | Django 6 · Channels 4 · DRF（スキーマは drf-spectacular）· djangochannelsrestframework |
 | ASGI | 本番 gunicorn + uvicorn-worker / dev（`DEBUG=1`）runserver |
 | DB / レイヤ | PostgreSQL 16 / Redis 7（`channels-redis`） |
 | Lint・型 | ruff（format · lint · import 順序 · SAST · 複雑度）/ mypy（django-stubs · drf-stubs） |
@@ -42,6 +42,8 @@ compose・nginx・env はルートが持ち、`backend/` は build context と�
 - **論理削除**: `objects.alive()` / `delete()`（論理）/ `delete(hard=True)`（物理）の意味を変えない。
 - **暗号化**: `AnimeUser.user_name` の鍵は `SECRET_KEY` から作る。`SECRET_KEY` を変えると既存行は復号できない。
 - **REST API**: `api/urls.py` のパスとレスポンスの形は外部から参照される（shields は `{"schemaVersion": 1, ...}`）。
+  レスポンスの形は `api/serializers.py` に宣言し、`@extend_schema` の `operation_id` が
+  TypeScript の関数名になる。変えたら `openapi.json` を再生成する（手順はルートの `AGENTS.md`）。
 - **観覧専用（`spectate`）**: `AnimeUser` を作らずにグループへ読み取り参加する（人数・一覧・
   ホスト委譲・自動削除に影響しない）。フロントのタイマー画面が使う。`host_send` / `user_send` は
   `anime_user is None` を必ずガードする。フロントのオリジンから張るので `asgi.py` で `MY_DOMAIN` を許可している。
@@ -72,7 +74,7 @@ migration はコミット済み。モデルを変えたときだけ `makemigrati
 
 ## CI
 
-- `Backend/CI`：ruff · pytest（カバレッジは PR にコメントし、`python-coverage-comment-action-data` ブランチへ保存）· mypy · license-check
+- `Backend/CI`：ruff · pytest（カバレッジは PR にコメントし、`python-coverage-comment-action-data` ブランチへ保存）· mypy · openapi（`openapi.json` が最新か）· license-check
 - `Backend/Build`：hadolint → build → dockle → 実 PostgreSQL / Redis で migrate → 起動 → `/api/v1/health` が 200
 - linter は ruff に集約する（SAST は `S`、複雑度は `C90`（10）と `PLR09xx`）。taint 解析だけは `Repo/CI` の CodeQL。
 - フォーマットは検査のみで、自動コミットはしない。

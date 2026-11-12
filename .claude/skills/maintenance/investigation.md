@@ -96,7 +96,7 @@ grep -rn "<import 名>" backend/d_party/settings.py backend/pyproject.toml backe
 
 - WebSocket プロトコル（`backend/streamer/format.py` ⇔ `extension/src/domain/protocol.ts`）—
   Channels · channels-redis · daphne · シリアライズ周り
-- REST API と生成コード（`backend/api/` ⇔ `openapi/openapi.json` ⇔ orval の出力）—
+- REST API と生成コード（`backend/api/` → `backend/openapi.json` → orval の出力）—
   DRF · drf-spectacular · orval
 - ロビーの DOM 契約（`.chrome_extension_field`）— Next.js · React
 
