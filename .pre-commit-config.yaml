@@ -2,6 +2,8 @@
 minimum_pre_commit_version: "3.5.0"
 
 files: '^backend/'
+# drf-spectacular の出力そのまま（末尾改行なし）。整形すると CI の差分検査で落ちる。
+exclude: '^backend/openapi\.json$'
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

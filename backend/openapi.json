@@ -1,0 +1,740 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "d-party backend API",
+        "version": "1.0.0"
+    },
+    "paths": {
+        "/api/shields/room-par-day": {
+            "get": {
+                "operationId": "shields_room_par_day_retrieve",
+                "description": "Base view returning a shields.io endpoint badge payload (``schemaVersion`` 1).",
+                "tags": [
+                    "shields"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShieldsBadge"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/shields/total-reaction": {
+            "get": {
+                "operationId": "shields_total_reaction_retrieve",
+                "description": "Base view returning a shields.io endpoint badge payload (``schemaVersion`` 1).",
+                "tags": [
+                    "shields"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShieldsBadge"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/shields/total-room": {
+            "get": {
+                "operationId": "shields_total_room_retrieve",
+                "description": "Base view returning a shields.io endpoint badge payload (``schemaVersion`` 1).",
+                "tags": [
+                    "shields"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShieldsBadge"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/shields/total-user": {
+            "get": {
+                "operationId": "shields_total_user_retrieve",
+                "description": "Base view returning a shields.io endpoint badge payload (``schemaVersion`` 1).",
+                "tags": [
+                    "shields"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShieldsBadge"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/shields/user-par-day": {
+            "get": {
+                "operationId": "shields_user_par_day_retrieve",
+                "description": "Base view returning a shields.io endpoint badge payload (``schemaVersion`` 1).",
+                "tags": [
+                    "shields"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ShieldsBadge"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/anime-store/lobby/{room_id}": {
+            "get": {
+                "operationId": "lobbyResolve",
+                "description": "Resolve a room id to the dアニメストア redirect URL.\n\nCalled by the frontend's lobby page (``/anime-store/lobby/<room_id>``).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "room_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LobbyRedirect"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/chrome-extension/version-check": {
+            "get": {
+                "operationId": "versionCheck",
+                "description": "Check whether a Chrome extension version is compatible with the backend.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "extension-version",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "拡張機能のバージョン（x.y.z）。",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VersionCheckResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "406": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/health": {
+            "get": {
+                "operationId": "health",
+                "description": "Readiness of the whole service: Django, PostgreSQL and Redis.\n\nReturns 200 when rooms can be created, 503 otherwise. The extension disables\nthe \"create room\" button on anything but 200. The body stays empty; which\ndependency failed is only logged.\n\nNot for container liveness probes: those must not depend on the database.",
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    },
+                    "503": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/statistics/anime-store/active-room-per-day": {
+            "get": {
+                "operationId": "statsActiveRoomPerDay",
+                "description": "Daily count of rooms created by users.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "days",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 365,
+                            "default": 365
+                        },
+                        "description": "集計する日数。"
+                    }
+                ],
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PerDayResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/statistics/anime-store/active-user-per-day": {
+            "get": {
+                "operationId": "statsActiveUserPerDay",
+                "description": "Daily count of users that have ever been in a room.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "days",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 365,
+                            "default": 365
+                        },
+                        "description": "集計する日数。"
+                    }
+                ],
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PerDayResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/statistics/anime-store/anime-reaction-all-count": {
+            "get": {
+                "operationId": "statsReactionAllCount",
+                "description": "Total reaction count.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "days",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 365,
+                            "default": 365
+                        },
+                        "description": "集計する日数。"
+                    }
+                ],
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CountResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/statistics/anime-store/anime-reaction-count": {
+            "get": {
+                "operationId": "statsReactionCount",
+                "description": "Per-type reaction counts.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "days",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 365,
+                            "default": 365
+                        },
+                        "description": "集計する日数。"
+                    }
+                ],
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReactionTypeCountResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/statistics/anime-store/anime-room-alive-count": {
+            "get": {
+                "operationId": "statsRoomAliveCount",
+                "description": "Currently active room count.",
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CountResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/statistics/anime-store/anime-room-all-count": {
+            "get": {
+                "operationId": "statsRoomAllCount",
+                "description": "Room count within the requested period (by creation date).",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "days",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 365,
+                            "default": 365
+                        },
+                        "description": "集計する日数。"
+                    }
+                ],
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CountResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/statistics/anime-store/anime-user-alive-count": {
+            "get": {
+                "operationId": "statsUserAliveCount",
+                "description": "Currently connected user count.",
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CountResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/statistics/anime-store/anime-user-all-count": {
+            "get": {
+                "operationId": "statsUserAllCount",
+                "description": "User count within the requested period (by creation date).",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "days",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 365,
+                            "default": 365
+                        },
+                        "description": "集計する日数。"
+                    }
+                ],
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CountResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ApiMessage": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "Count": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "count"
+                ]
+            },
+            "CountResult": {
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/Count"
+                    }
+                },
+                "required": [
+                    "data"
+                ]
+            },
+            "LobbyRedirect": {
+                "type": "object",
+                "properties": {
+                    "redirect_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "description": "dアニメストアの再生ページの URL。"
+                    },
+                    "part_id": {
+                        "type": "string"
+                    },
+                    "room_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "作品名。古い拡張機能が作ったルームでは空文字。"
+                    }
+                },
+                "required": [
+                    "part_id",
+                    "redirect_url",
+                    "room_id",
+                    "title"
+                ]
+            },
+            "PerDayCount": {
+                "type": "object",
+                "properties": {
+                    "day": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "count",
+                    "day"
+                ]
+            },
+            "PerDayResult": {
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PerDayCount"
+                        }
+                    }
+                },
+                "required": [
+                    "data"
+                ]
+            },
+            "ReactionTypeCount": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "reaction_type": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "count",
+                    "reaction_type"
+                ]
+            },
+            "ReactionTypeCountResult": {
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReactionTypeCount"
+                        }
+                    }
+                },
+                "required": [
+                    "data"
+                ]
+            },
+            "ShieldsBadge": {
+                "type": "object",
+                "description": "shields.io の endpoint badge（https://shields.io/badges/endpoint-badge）。",
+                "properties": {
+                    "schemaVersion": {
+                        "type": "integer"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "color": {
+                        "type": "string"
+                    },
+                    "cacheSeconds": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "label",
+                    "message",
+                    "schemaVersion"
+                ]
+            },
+            "VersionCheckResult": {
+                "type": "object",
+                "properties": {
+                    "is_possible": {
+                        "type": "boolean",
+                        "description": "拡張機能のバージョンが backend の要求を満たすか。"
+                    }
+                },
+                "required": [
+                    "is_possible"
+                ]
+            }
+        }
+    }
+}

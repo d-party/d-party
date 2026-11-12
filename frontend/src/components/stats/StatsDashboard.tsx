@@ -31,7 +31,7 @@ import {
   statsUserAllCount,
 } from "@/infrastructure/api/generated/d-party";
 import { Skeleton } from "@d-party/ui";
-import type { PerDayResultDataItem } from "@/infrastructure/api/generated/model";
+import type { PerDayCount } from "@/infrastructure/api/generated/model";
 
 type Totals = {
   userAll: number;
@@ -192,7 +192,7 @@ function StatCard({
   );
 }
 
-const toBars = (rows: PerDayResultDataItem[]): Bar[] =>
+const toBars = (rows: PerDayCount[]): Bar[] =>
   rows.map((r) => ({ label: String(r.day), value: r.count }));
 
 /** The backend pads a full year of mostly zeros; trim both ends so bars are visible. */
@@ -210,6 +210,16 @@ type StatsData = {
   roomSeries: Bar[];
   reactions: ReactionRow[];
 };
+
+/** 200 の本体を取り出す。400 や nginx の 502 は例外にしてエラー表示へ倒す。 */
+function okData<R extends { status: number; data: unknown }>(
+  res: R,
+): Extract<R, { status: 200 }>["data"] {
+  if (res.status !== 200) {
+    throw new Error(`stats API responded with ${res.status}`);
+  }
+  return res.data;
+}
 
 export function StatsDashboard({ days }: { days: number }): React.JSX.Element {
   const { loading, error, value } = useAsync(async (): Promise<StatsData> => {
@@ -235,15 +245,15 @@ export function StatsDashboard({ days }: { days: number }): React.JSX.Element {
     ]);
     return {
       totals: {
-        userAll: userAll.data.data.count,
-        roomAll: roomAll.data.data.count,
-        reactionAll: reactionAll.data.data.count,
-        userAlive: userAlive.data.data.count,
-        roomAlive: roomAlive.data.data.count,
+        userAll: okData(userAll).data.count,
+        roomAll: okData(roomAll).data.count,
+        reactionAll: okData(reactionAll).data.count,
+        userAlive: okData(userAlive).data.count,
+        roomAlive: okData(roomAlive).data.count,
       },
-      userSeries: toBars(userPerDay.data.data),
-      roomSeries: toBars(roomPerDay.data.data),
-      reactions: reactionByType.data.data,
+      userSeries: toBars(okData(userPerDay).data),
+      roomSeries: toBars(okData(roomPerDay).data),
+      reactions: okData(reactionByType).data,
     };
   }, [days]);
 

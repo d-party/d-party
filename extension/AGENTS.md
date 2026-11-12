@@ -4,7 +4,7 @@ dアニメストアのページに注入して同時視聴を実現する Manife
 
 - TypeScript（strict）· React 19 · rspack（swc）· Tailwind CSS v4 · shadcn/ui
 - primitive と `cn` は `@d-party/ui`。`Button` だけ `src/components/ui/button.tsx` に自前で持つ。
-- REST クライアントは orval で生成（`openapi/openapi.json` → `src/infrastructure/api/generated/`）。
+- REST クライアントは orval で生成（`../backend/openapi.json` → `src/infrastructure/api/generated/`）。
   生成物はコミットし、CI が差分ゼロを確かめる。
 
 ```

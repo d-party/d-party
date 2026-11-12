@@ -8,6 +8,7 @@ on:
     # Actions は YAML アンカーを解釈しないので、push と pull_request に同じリストを書く。
     paths:
       - "extension/**"
+      - "backend/openapi.json"
       - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -17,6 +18,7 @@ on:
   pull_request:
     paths:
       - "extension/**"
+      - "backend/openapi.json"
       - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"

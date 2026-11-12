@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a unified d-party release by dispatching the root release.yml workflow with a patch / minor / major version bump. Always confirms the bump type with the user through explicit options before dispatching (in the scheduled GitHub Actions run it picks the bump by the rules in its non-interactive section instead), then watches the run through the version bump, the amd64 / arm64 GHCR image builds and the Chrome Web Store upload. Use when asked to release, cut a version, publish, or tag d-party.
+description: Cut a unified d-party release by dispatching the root release.yml workflow with a patch / minor / major version bump. Confirms the bump type with the user through explicit options before dispatching (the scheduled GitHub Actions run and the maintenance skill decide it by their own rules instead), then watches the run through the version bump, the amd64 / arm64 GHCR image builds and the Chrome Web Store upload. Use when asked to release, cut a version, publish, or tag d-party.
 ---
 
 # Release (d-party)
@@ -24,7 +24,11 @@ d-party はモノレポで、リリースは **`release` ワークフロー 1 �
 ## 1. バンプ種別を必ずユーザーに確認する
 
 **対話セッションでは省略禁止。** 勝手に patch を選ばない。`AskUserQuestion` で選択肢として提示する。
-唯一の例外は末尾の「非対話モード」（GitHub Actions の定期実行）で、そこでは決められた規則で選ぶ。
+例外は 2 つ。どちらも決められた規則で選ぶ。
+
+- 末尾の「非対話モード」（GitHub Actions の定期実行）
+- `maintenance` skill の最後の段階として呼ばれたとき。`bump_type` · `publish` · `release_note` は
+  `maintenance` の「リリース」節で決めた値を使い、この節の確認は行わない
 
 - **patch** — バグ修正・依存更新のみ。ユーザー向けの機能変更なし
 - **minor** — 後方互換のある機能追加

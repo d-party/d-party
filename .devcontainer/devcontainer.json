@@ -2,7 +2,7 @@
   "name": "d-party Dev Container",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config graphviz && sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*",
-  "postCreateCommand": "(cd backend && uv sync) && pre-commit install --install-hooks && pnpm install --frozen-lockfile",
+  "postCreateCommand": "(cd backend && uv sync) && pre-commit install --install-hooks && pnpm install --frozen-lockfile && pnpm exec playwright install --with-deps --only-shell chromium",
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.15"
@@ -33,7 +33,7 @@
     "ghcr.io/devcontainers-extra/features/cloudflared:1": {},
     "ghcr.io/rio/features/k3d:1": {},
     "ghcr.io/devcontainers-extra/features/k6:1": {
-      "version": "0.55.0"
+      "version": "2.3.0"
     }
   },
   "remoteEnv": {

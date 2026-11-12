@@ -33,8 +33,20 @@ Django ──▶ PostgreSQL（永続化） / Redis（Channels レイヤ）
 次は拡張機能・フロント・backend の間の契約。片側だけ変えないこと。
 
 - WebSocket プロトコル: `backend/streamer/format.py` ⇔ `extension/src/domain/protocol.ts`
-- REST API: `backend/api/` ⇔ `{extension,frontend}/openapi/openapi.json`（orval で生成）
+- REST API: `backend/api/` → `backend/openapi.json`（drf-spectacular が出力）→
+  `{extension,frontend}/src/infrastructure/api/generated/`（orval が生成）。手で書かない。
 - ロビーの DOM 契約: `frontend` の `.chrome_extension_field` ⇔ `extension` の `content-version`
+
+### REST API の型連携
+
+レスポンスの形は `backend/api/serializers.py` に宣言し、view に `@extend_schema` で結び付ける。
+view や serializer を変えたら次の 2 つを走らせ、生成物もコミットする（CI が差分を検出して落とす）。
+
+```bash
+# settings が env を要求するので、コンテナの中で走らせる
+docker compose exec django python manage.py spectacular --format openapi-json --file openapi.json --validate --fail-on-warn
+pnpm run api:generate
+```
 
 ## docker compose（ルート）
 
@@ -118,6 +130,29 @@ pre-commit run --all-files
 cd backend && uv run ruff check . && uv run mypy . && uv run pytest
 pnpm run typecheck && pnpm run lint && pnpm run build
 act pull_request -W .github/workflows/frontend-ci.yml
+```
+
+## 画面の確認とスクリーンショット
+
+Dev Container にはヘッドレスの Chromium が入っている（ルートの devDependency `playwright` と、
+`postCreateCommand` の `playwright install`）。画面を変えたら実際に描画して確かめる。
+
+```bash
+pnpm exec playwright screenshot --viewport-size=1280,720 http://localhost/ out.png
+# 拡張機能のサイドバーなどは Storybook を静的ビルドして撮る
+pnpm --filter d-party-chrome-extension run build-storybook
+python3 -m http.server 6006 -d extension/storybook-static
+pnpm exec playwright screenshot 'http://localhost:6006/iframe.html?id=<story-id>&viewMode=story' out.png
+```
+
+hover やクリックが要るときは `import { chromium } from "playwright"` のスクリプトで操作する。
+
+**画面が変わる PR には、変更後のスクリーンショットを PR 本文に貼る。** 画像は作業ブランチに
+コミットせず、置き場の `pr-screenshots` ブランチ（main とは無関係の履歴。マージしない）へ
+`<作業ブランチ名>/` のディレクトリで push し、コミット SHA 入りの URL で参照する。
+
+```
+![説明](https://raw.githubusercontent.com/d-party/d-party/<pr-screenshots のコミット SHA>/<作業ブランチ名>/<file>.png)
 ```
 
 外部サイトは bot 検出でブロックされることがある。調べものは WebSearch / WebFetch を使い、

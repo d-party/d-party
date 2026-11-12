@@ -48,10 +48,10 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           working-directory: backend
-          cache-dependency-glob: "backend/uv.lock"
+          cache-dependency-glob: "uv.lock"
 
       - name: Determine next version
         id: version
@@ -275,13 +275,18 @@ jobs:
         run: docker buildx imagetools inspect "${IMAGE}:${TAG}"
 
   # ── 3. 拡張機能をビルドして Release に添付し、Chrome Web Store へ ─────────
-  extension:
-    name: Build & publish the extension
+  #
+  # ビルドと公開はジョブを分ける。ビルドは pnpm install / orval / rspack で
+  # サードパーティのコードを実行するので、Chrome Web Store の secrets と
+  # contents: write の GITHUB_TOKEN は、依存パッケージを動かさない publish ジョブにだけ渡す。
+  # 同じジョブだと、先のステップが残したプロセスが後のステップの env を読めてしまう。
+  extension-build:
+    name: Build the extension
     needs: version
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -313,9 +318,30 @@ jobs:
           set -euo pipefail
           (cd extension/dist && zip -r "${GITHUB_WORKSPACE}/d-party_${TAG}.zip" .)
 
+      - uses: actions/upload-artifact@v7
+        with:
+          name: extension-zip
+          path: d-party_${{ needs.version.outputs.tag }}.zip
+          if-no-files-found: error
+
+  # zip を受け取って Release と Chrome Web Store へ上げるだけ。checkout も
+  # pnpm も使わず、zip の中身も実行しない。
+  extension-publish:
+    name: Publish the extension
+    needs: [version, extension-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: extension-zip
+
       - name: Attach the zip to the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.version.outputs.tag }}
         run: gh release upload "${TAG}" "d-party_${TAG}.zip" --clobber
 
