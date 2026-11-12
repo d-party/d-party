@@ -37,17 +37,20 @@ from .util import is_valid_uuid
 ROOM_GRACE_SECONDS = 60.0
 _pending_room_deletes: dict[str, asyncio.Task] = {}
 
-# クライアントから受け取る文字列の上限。永続化するものは models の max_length と揃える。
+# クライアントから受け取る文字列の上限。永続化するものは models の max_length をそのまま使う。
 # 拡張機能側の入力制限は WebSocket を直接叩けば迂回できるので、受信時に切り詰めて
 # DataError（接続断）や過大なブロードキャストを防ぐ。
-USER_NAME_MAX_LENGTH = 20
-USER_ICON_MAX_LENGTH = 64
-PART_ID_MAX_LENGTH = 16
-TITLE_MAX_LENGTH = 255
+_USER_NAME_FIELD = AnimeUser._meta.get_field("user_name")
+_USER_ICON_FIELD = AnimeUser._meta.get_field("user_icon")
+USER_NAME_MAX_LENGTH: int = _USER_NAME_FIELD.max_length
+USER_ICON_MAX_LENGTH: int = _USER_ICON_FIELD.max_length
+PART_ID_MAX_LENGTH: int = AnimeRoom._meta.get_field("part_id").max_length
+TITLE_MAX_LENGTH: int = AnimeRoom._meta.get_field("title").max_length
+DEFAULT_USER_NAME: str = _USER_NAME_FIELD.default
+DEFAULT_USER_ICON: str = _USER_ICON_FIELD.default
+# 以下は永続化しない（ブロードキャストだけの）値なので models に対応する上限が無い。
 OPERATION_MAX_LENGTH = 32
 REACTION_TYPE_MAX_LENGTH = 32
-DEFAULT_USER_NAME = "user"
-DEFAULT_USER_ICON = "FaRegUser"
 
 
 def _clip(value, max_length: int, default: str = "") -> str:
