@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-/** Ported from web/templates/footer.html. */
 export function Footer(): React.JSX.Element {
   return (
     <footer className="mt-auto border-t border-border bg-card py-6">

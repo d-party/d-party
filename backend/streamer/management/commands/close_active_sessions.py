@@ -1,23 +1,12 @@
 """Reap stale "alive" rooms / users left behind by an ungraceful shutdown.
 
-Channels WebSocket session state lives only in the Django process
-(`AnimePartyConsumer`). On a graceful shutdown each connection's
-``disconnect`` fires and ``leave_party`` cleans up the rows, but on a hard
-crash (OOMKill / node loss / SIGKILL) ``disconnect`` never runs and the
-``AnimeRoom`` / ``AnimeUser`` rows stay ``alive`` forever — inflating the
-``alive`` count stats.
+On a hard crash ``disconnect`` never runs, so rows stay ``alive``. ``updated_at``
+is not a heartbeat (it only moves when a row is saved), so the command assumes
+sessions do not outlast ``STALE_AFTER`` and closes only rows older than that,
+which leaves the live sessions of other replicas alone. Safe to run on every start.
 
-``updated_at`` is *not* a heartbeat: it only moves when a row is saved (room
-creation, a part_id change, a host promotion). The command therefore relies on
-sessions not lasting longer than ``STALE_AFTER`` and closes only rows older than
-that, instead of *all* alive rows, so a freshly started replica does not wipe
-the sessions another replica is serving.
-
-Stale rooms are closed the same way a room normally ends: their reactions are
-folded into ``ReactionStat`` first, otherwise those reactions would drop out of
-the statistics for good (live counts only include rooms that are still alive).
-
-Idempotent, so it is fine to run unconditionally on every startup.
+Stale rooms are closed the way a room normally ends: their reactions are folded
+into ``ReactionStat`` first, otherwise they would drop out of the statistics.
 """
 
 import datetime
@@ -28,8 +17,6 @@ from django.utils.timezone import now
 from streamer.cron import fold_room_reactions
 from streamer.models import AnimeRoom, AnimeUser
 
-# Sessions are not expected to last this long; anything older that is still
-# marked alive is a leftover ghost from an ungraceful shutdown.
 STALE_AFTER = datetime.timedelta(days=1)
 
 

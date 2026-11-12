@@ -8,10 +8,7 @@ const video = () => document.getElementById("video") as HTMLVideoElement;
 const click = (selector: string) =>
   (document.querySelector(selector) as HTMLElement | null)?.click();
 
-/**
- * Drives the dアニメストア HTML5 player by clicking its native controls and
- * setting media properties — a faithful port of the player.js control helpers.
- */
+/** Drives the player by clicking its native controls. */
 export class PlayerControllerDom implements PlayerController {
   constructor(private readonly guard: ActionGuard) { }
 
@@ -41,7 +38,6 @@ export class PlayerControllerDom implements PlayerController {
         this.pause();
         break;
       case "prev":
-        // The original fell through prev -> prev_thumbnail.
         this.prevButton();
         this.prevThumbnailButton();
         break;
@@ -55,7 +51,6 @@ export class PlayerControllerDom implements PlayerController {
         this.nextThumbnailButton();
         break;
       case "back_area":
-        // The original fell through back_area -> seek.
         this.backArea();
         this.seek(option);
         break;
@@ -72,8 +67,7 @@ export class PlayerControllerDom implements PlayerController {
   }
 
   onSync(option: SyncOption): void {
-    // drift が小さいときに毎回 seek すると音飛び・ジッタの原因になるので、
-    // 0.5s 以上ズレているときだけ seek する。レートと再生/停止状態は常に合わせる。
+    // 小さなずれで毎回 seek すると音が飛ぶので、0.5 秒以上のときだけ seek する。
     const v = video();
     const target = option.time;
     if (Math.abs(v.currentTime - target) > 0.5) {
@@ -111,13 +105,10 @@ export class PlayerControllerDom implements PlayerController {
     if (video().playbackRate !== rate) {
       video().playbackRate = rate;
     }
-    // The original also assigned `video.paused = option.paused`, which is a
-    // no-op on the read-only property — omitted (it would throw in module/strict mode).
   }
 
-  // prev / prev_thumbnail are wire-distinct operations but drive the same
-  // native control on the dアニメストア player: reveal the prev popup and click
-  // its thumbnail button. Kept as one helper to avoid drift between the two.
+  // prev and prev_thumbnail use the same native control.
+
   private showPrevThumbnail(): void {
     const popup = document.getElementById("prevPopupIn");
     popup?.classList.remove("hide");

@@ -1,12 +1,5 @@
-/** DOM/URL helpers shared by the content scripts (port of the old utils.js). */
 
-/**
- * Read a query-string parameter (defaults to the current page URL).
- *
- * `name` is interpolated into a regular expression, so every metacharacter has
- * to be escaped — not just the brackets. Escaping only `[` and `]` leaves a
- * backslash in `name` able to change the meaning of the pattern that follows it.
- */
+/** `name` goes into a regular expression, so every metacharacter is escaped. */
 export function getParam(name: string, url: string = window.location.href): string | null {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const regex = new RegExp("[?&]" + escaped + "(=([^&#]*)|&|#|$)");
@@ -17,14 +10,8 @@ export function getParam(name: string, url: string = window.location.href): stri
 }
 
 /**
- * Resolve `value` against `base` and return it only when it navigates over
- * http(s).
- *
- * Used for values read out of the page's own DOM. Those are attacker-controlled
- * as far as the extension is concerned: a `javascript:` URL assigned to
- * `location.href` from a content script runs in the page, so the scheme has to
- * be checked before navigating. Returns `null` for anything else (including
- * unparsable input).
+ * Resolve `value` against `base`; null unless it is http(s). Values from the
+ * page's DOM are untrusted, and a `javascript:` URL would run in the page.
  */
 export function toHttpUrl(value: string, base: string = window.location.href): string | null {
   try {
@@ -35,7 +22,6 @@ export function toHttpUrl(value: string, base: string = window.location.href): s
   }
 }
 
-/** Inject the Material Icons stylesheet. */
 export function makeFontFace(): void {
   const link = document.createElement("link");
   link.setAttribute("rel", "stylesheet");
@@ -44,7 +30,8 @@ export function makeFontFace(): void {
   document.head.appendChild(link);
 }
 
-/** Inclusive random integer in [min, max]. */
+/** Inclusive. */
+
 export function getRandomIntInclusive(min: number, max: number): number {
   min = Math.ceil(min);
   max = Math.floor(max);

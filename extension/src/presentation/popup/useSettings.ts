@@ -7,21 +7,15 @@ import { ChromeStorageSettingsRepository } from "@/infrastructure/storage/Chrome
 const repo = new ChromeStorageSettingsRepository();
 
 export interface UseSettings {
-  /** Current settings (defaults until the first read resolves). */
+  /** Defaults until the first read resolves. */
   settings: Settings;
-  /** True once the initial read from chrome.storage has completed. */
   loaded: boolean;
-  /** Persist a single setting (optimistically updates local state). */
+  /** Updates local state optimistically. */
   update: <K extends keyof Settings>(key: K, value: Settings[K]) => Promise<void>;
 }
 
-/**
- * React binding over {@link ChromeStorageSettingsRepository}.
- *
- * `chrome.storage.sync` remains the single source of truth; this hook just
- * mirrors it into React state and stays in sync with changes made from any
- * extension context (other popups, content scripts) via `chrome.storage.onChanged`.
- */
+/** Mirrors `chrome.storage.sync` (the source of truth), including changes from other contexts. */
+
 export function useSettings(): UseSettings {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [loaded, setLoaded] = useState(false);

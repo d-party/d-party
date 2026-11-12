@@ -26,15 +26,10 @@ import { SharePanel } from "./sidebar/SharePanel";
 
 export interface SidebarProps {
   store: SidebarStore;
-  /** Host the room (create-mode CTA). */
   onCreateRoom: () => void;
-  /** Leave the room. */
   onLeave: () => void;
-  /** Delete the room (owner only). */
   onDeleteRoom: () => void;
-  /** Update room settings (owner only; ignored by the server for non-hosts). */
   onUpdateRoomSettings: (settings: RoomSettingsValue) => void;
-  /** Called when the active tab changes (used to refresh the user list). */
   onTabChange?: (tab: SidebarTab) => void;
 }
 

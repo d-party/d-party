@@ -10,12 +10,8 @@ import {
 const SITE_NAME = "d-party";
 
 /**
- * The shared card, served by `app/opengraph-image.tsx` / `app/twitter-image.tsx`.
- *
- * Those file conventions already attach the image to any route that inherits the
- * root layout's `openGraph` as-is — but a page that declares its own `openGraph`
- * *replaces* the resolved one, image included. Every page here declares one (it
- * needs its own og:title/description), so the image has to be named explicitly.
+ * A page's own `openGraph` replaces the inherited one, image included, so every
+ * page has to name the shared card explicitly.
  */
 const SITE_OG_IMAGE = {
   url: SITE_OG_IMAGE_PATH,
@@ -27,26 +23,17 @@ const SITE_OG_IMAGE = {
 const SITE_TWITTER_IMAGE = { ...SITE_OG_IMAGE, url: SITE_TWITTER_IMAGE_PATH };
 
 export interface PageMetadataInput {
-  /** Path of the page, e.g. `"/usage"`. Becomes `og:url` and the canonical URL. */
+  /** e.g. `"/usage"`. Used for `og:url` and the canonical URL. */
   path: string;
-  /** `<title>` without the `| d-party` suffix — the root layout's template adds it. */
+  /** Without the `| d-party` suffix. */
   title: string;
-  /** `<meta name="description">`, also reused for `og:description` / Twitter. */
   description: string;
-  /**
-   * Set when `title` already carries the brand (the landing page): the `<title>`
-   * is then used as-is instead of going through the `%s | d-party` template.
-   */
+  /** `title` already contains the brand; skip the `%s | d-party` template. */
   titleIsBranded?: boolean;
 }
 
-/**
- * Build the metadata for a public page: title, description, canonical URL, and
- * the Open Graph / Twitter card (per-page text on the shared site image).
- *
- * The room lobby does not use this: it renders a per-room card and stays out of
- * the index (see `app/anime-store/lobby/[roomId]/layout.tsx`).
- */
+/** For public pages. The room lobby has its own (`app/anime-store/lobby/[roomId]/layout.tsx`). */
+
 export function pageMetadata({
   path,
   title,

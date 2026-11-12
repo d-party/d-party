@@ -1,14 +1,12 @@
-// 1 つの WebSocket 接続（= 1 参加者）を Promise ベースで扱うラッパ。
-// k6/experimental/websockets はイベント駆動（open/message/close/error）なので、
-// 「open まで待つ」「特定 action を受け取るまで待つ」「ping を受信したら遅延を記録」
-// といった操作を async/await で書けるように薄くまとめる。
+// 1 参加者 = 1 WebSocket 接続。k6 のイベント駆動の API を async/await で扱えるようにする。
 
-import { WebSocket } from 'k6/experimental/websockets';
+import { WebSocket } from 'k6/websockets';
 import { withTimeout, pingSentAt } from './protocol.js';
 
 export class Participant {
   // metrics: { connectTime, broadcastLatency, broadcastReceived, wsErrors } を注入
-  // headers: WS ハンドシェイクに付与する追加ヘッダ（本番想定の OriginValidator 越えに Origin 等）
+  // headers: ハンドシェイクの追加ヘッダ（Origin など）
+
   constructor(url, { name, metrics, connectTimeoutMs = 5000, headers = null }) {
     this.url = url;
     this.name = name;

@@ -26,7 +26,6 @@ import { cn } from "@d-party/ui";
 import type { HistoryEntry, SidebarState } from "../sidebarStore";
 import { EmptyHint } from "./panels";
 
-/** lucide icon for each operation/event kind. */
 const HISTORY_ICONS: Record<HistoryIcon, LucideIcon> = {
   play: Play,
   pause: Pause,
@@ -45,7 +44,7 @@ const HISTORY_ICONS: Record<HistoryIcon, LucideIcon> = {
 const ALL_FILTER = "__all__";
 const SELF_FILTER = "__self__";
 
-/** Vertical gap between rows (`gap-0.5` = 2px), needed for the fit calculation. */
+/** `gap-0.5`. Used to fit rows to the height. */
 const ROW_GAP_PX = 2;
 
 export function HistoryPanel({
@@ -58,7 +57,6 @@ export function HistoryPanel({
   const [perPage, setPerPage] = useState(8);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // 履歴に登場した「相手の参加者」を絞り込み候補として集める。
   const actors = useMemo(() => {
     const names = new Set<string>();
     for (const entry of state.history) if (entry.user) names.add(entry.user);
@@ -69,14 +67,12 @@ export function HistoryPanel({
     [state.history],
   );
 
-  // 選択中の絞り込み候補が履歴から消えたら "すべて" 扱いにする（state は持ち越して
-  // 候補が再び現れたら復帰させる）。
+  // 選んだ人が履歴から消えたら "すべて" として扱う（state は残し、戻れば復帰する）。
   const filterValid =
     filter === ALL_FILTER ||
     (filter === SELF_FILTER ? hasSent : actors.includes(filter));
   const activeFilter = filterValid ? filter : ALL_FILTER;
 
-  // 新しい履歴が上に来るよう降順で並べる。
   const visible = useMemo(
     () =>
       state.history
@@ -263,8 +259,6 @@ function HistoryRow({ entry }: { entry: HistoryEntry }): React.JSX.Element {
   );
 }
 
-/** Leading badge: a send/receive arrow for operations, the event icon for
- * system messages. */
 function DirectionBadge({ entry }: { entry: HistoryEntry }): React.JSX.Element {
   if (entry.direction === "sent") {
     return (
