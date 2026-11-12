@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
+from api import serializers
 from streamer.factories import AnimeRoomFactory, AnimeUserFactory, DmmRoomFactory
 from streamer.models import (
     AnimeReaction,
@@ -39,7 +40,6 @@ class TestHealthCheckAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_health_check_ok_200(self):
-        """ヘルスチェックエンドポイントが 200 を返し、ボディが空であることを確認"""
         response = self.client.get(self.endpoint)
         assert response.status_code == status.HTTP_200_OK
         assert response.content == b""
@@ -52,10 +52,6 @@ class TestVersionCheckAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_version_check_possible_ok_200(self):
-        """version checkが成功する場合のテストケース
-        求められる最小のバージョンを超えている場合、status_code:200が返ることを確認
-        is_possibleがtrueであることを確認
-        """
         get_params = {"extension-version": "1000.0.0"}
         response = self.client.get(self.endpoint, get_params)
         assert response.status_code == status.HTTP_200_OK
@@ -64,10 +60,7 @@ class TestVersionCheckAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_version_check_possible_edgecase_ok_200(self):
-        """version checkが成功する場合のテストケース
-        求められる最小のバージョンとイコールの場合、status_code:200が返ることを確認
-        is_possibleがtrueであることを確認
-        """
+        """最小バージョンと同じなら可。"""
         get_params = {
             "extension-version": str(os.getenv("CHROME_EXTENSION_REQUIRED_VERSION"))
         }
@@ -78,10 +71,6 @@ class TestVersionCheckAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_version_check_impossible_ok_200(self):
-        """version checkが失敗する場合のテストケース
-        求められる最小のバージョンを超えていない場合、status_code:200が返ることを確認
-        is_possibleがfalseであることを確認
-        """
         get_params = {"extension-version": "0.0.0"}
         response = self.client.get(self.endpoint, get_params)
         assert response.status_code == status.HTTP_200_OK
@@ -90,9 +79,6 @@ class TestVersionCheckAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_version_check_ng_406(self):
-        """version checkが失敗する場合のテストケース
-        フォーマット通りではない場合に、406が返ってくることを確認
-        """
         get_params = {"extension-version": "string"}
         response = self.client.get(self.endpoint, get_params)
         assert response.status_code == status.HTTP_406_NOT_ACCEPTABLE
@@ -105,9 +91,6 @@ class TestVersionCheckAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_version_check_ng_400(self):
-        """version checkが失敗する場合のテストケース
-        extension-versionが存在しない場合、400が返ってくることを確認
-        """
         response = self.client.get(self.endpoint)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         get_params = {"version": "1000.0.0"}
@@ -124,7 +107,6 @@ class TestAnimeStoreLobbyResolveAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_lobby_resolve_ok_200(self):
-        """ルームが存在する場合、redirect_url と保存済みタイトルを返すことを確認"""
         room = AnimeRoomFactory(part_id="654321", title="鬼滅の刃 - 第1話 - 残酷")
         response = self.client.get(self.endpoint(room.room_id))
         assert response.status_code == status.HTTP_200_OK
@@ -135,7 +117,6 @@ class TestAnimeStoreLobbyResolveAPI(APITestCase):
 
     @pytest.mark.django_db
     def test_lobby_resolve_not_found_404(self):
-        """存在しないルーム ID では 404 が返ることを確認"""
         import uuid
 
         response = self.client.get(self.endpoint(uuid.uuid4()))
@@ -315,7 +296,85 @@ class TestStatsCache(APITestCase):
         first = self.client.get(self.endpoint, {"days": "30"})
         assert first.data["data"]["count"] == 3
 
-        # キャッシュ後に DB を増やしても、同一キーは TTL 内でキャッシュ値を返す。
         ReactionStat.objects.filter(date=today, reaction_type="S").update(count=99)
         second = self.client.get(self.endpoint, {"days": "30"})
         assert second.data["data"]["count"] == 3  # キャッシュヒット
+
+
+class TestReactionCountShieldsAPI(APITestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.endpoint = "/api/shields/total-reaction"
+        _clear_reaction_tables()
+
+    @pytest.mark.django_db
+    def test_counts_folded_and_live_reactions(self):
+        """畳み込み済み（ReactionStat）と生存ルームの未畳み込み分を合算する"""
+        today = timezone.localdate()
+        ReactionStat.objects.create(date=today, reaction_type="S", count=5)
+        live_room = AnimeRoomFactory()
+        AnimeReaction.objects.create(room_id=live_room, reaction_type="F")
+        response = self.client.get(self.endpoint)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["schemaVersion"] == 1
+        assert response.data["message"] == "6"
+
+
+class TestResponsesMatchSchema(APITestCase):
+    """実際のレスポンスが ``serializers.py`` の宣言（= OpenAPI スキーマ）と一致すること。
+
+    view は serializer を通さずに dict を返すので、宣言だけがずれても気付けない。
+    """
+
+    def assert_matches(self, url: str, serializer_class) -> None:
+        response = self.client.get(url)
+        assert response.status_code == status.HTTP_200_OK, url
+        body = response.json()
+        serializer = serializer_class(data=body)
+        assert serializer.is_valid(), (url, serializer.errors)
+        # 宣言に無いキーを返していないこと（必須キーの欠落は is_valid が見る）。
+        assert set(body) <= set(serializer.fields), url
+
+    @pytest.mark.django_db
+    def test_responses_match_schema(self):
+        room = AnimeRoomFactory(part_id="654321", title="title")
+        AnimeUserFactory(room_id=room)
+        stats = "/api/v1/statistics/anime-store"
+        cases = [
+            (
+                "/api/v1/chrome-extension/version-check?extension-version=1.0.0",
+                serializers.VersionCheckResultSerializer,
+            ),
+            (
+                f"/api/v1/anime-store/lobby/{room.room_id}",
+                serializers.LobbyRedirectSerializer,
+            ),
+            (f"{stats}/active-user-per-day", serializers.PerDayResultSerializer),
+            (f"{stats}/active-room-per-day", serializers.PerDayResultSerializer),
+            (
+                f"{stats}/anime-reaction-count",
+                serializers.ReactionTypeCountResultSerializer,
+            ),
+            (f"{stats}/anime-reaction-all-count", serializers.CountResultSerializer),
+            (f"{stats}/anime-room-all-count", serializers.CountResultSerializer),
+            (f"{stats}/anime-user-all-count", serializers.CountResultSerializer),
+            (f"{stats}/anime-room-alive-count", serializers.CountResultSerializer),
+            (f"{stats}/anime-user-alive-count", serializers.CountResultSerializer),
+            ("/api/shields/total-room", serializers.ShieldsBadgeSerializer),
+            ("/api/shields/room-par-day", serializers.ShieldsBadgeSerializer),
+            ("/api/shields/total-user", serializers.ShieldsBadgeSerializer),
+            ("/api/shields/user-par-day", serializers.ShieldsBadgeSerializer),
+            ("/api/shields/total-reaction", serializers.ShieldsBadgeSerializer),
+        ]
+        for url, serializer_class in cases:
+            self.assert_matches(url, serializer_class)
+
+    @pytest.mark.django_db
+    def test_error_responses_match_schema(self):
+        for url in [
+            "/api/v1/chrome-extension/version-check",
+            "/api/v1/statistics/anime-store/anime-user-all-count?days=0",
+            "/api/v1/anime-store/lobby/00000000-0000-0000-0000-000000000000",
+        ]:
+            body = self.client.get(url).json()
+            assert serializers.ApiMessageSerializer(data=body).is_valid(), url

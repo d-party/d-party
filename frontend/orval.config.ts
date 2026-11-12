@@ -1,19 +1,18 @@
 import { defineConfig } from "orval";
 
 /**
- * Generates a type-safe REST client for the d-party backend from its OpenAPI
- * schema (kept in lock-step with the Chrome extension's schema, plus the lobby
- * room-resolution endpoint consumed by the room-transition page).
- *
- * Regenerate with: `pnpm api:generate`
+ * REST client from the backend's OpenAPI schema (`backend/openapi.json`, written by
+ * `manage.py spectacular`). Run `pnpm api:generate`.
  */
+
 export default defineConfig({
   dParty: {
     input: {
-      target: "./openapi/openapi.json",
+      target: "../backend/openapi.json",
     },
     output: {
       mode: "single",
+      clean: true,
       target: "src/infrastructure/api/generated/d-party.ts",
       schemas: "src/infrastructure/api/generated/model",
       client: "fetch",

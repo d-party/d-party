@@ -1,11 +1,4 @@
-/**
- * Site-wide Open Graph card — shown for every page that does not ship its own
- * (landing, 使い方, Q&A, 統計, プライバシーポリシー, 404).
- *
- * Rasterized to PNG at build time by `app/opengraph-image.tsx` /
- * `app/twitter-image.tsx`, and previewable as HTML in Storybook
- * (`SiteOgImage.stories.tsx`). See {@link OgCard} for the Satori constraints.
- */
+/** OG card for every page except the room lobby. */
 
 import { OgCard } from "@/components/og/OgCard";
 

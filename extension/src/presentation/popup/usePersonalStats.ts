@@ -7,19 +7,14 @@ import { ChromePersonalStatsRepository } from "@/infrastructure/storage/ChromePe
 const repo = new ChromePersonalStatsRepository();
 
 export interface UsePersonalStats {
-  /** Current stats (zeros until the first read resolves). */
+  /** Zeros until the first read resolves. */
   stats: PersonalStats;
-  /** True once the initial read from chrome.storage has completed. */
   loaded: boolean;
-  /** Clear all accumulated statistics back to zero. */
   reset: () => Promise<void>;
 }
 
-/**
- * React binding over {@link ChromePersonalStatsRepository}. Mirrors the stored
- * stats into React state and stays in sync with writes made from any extension
- * context (e.g. the player content script) via `chrome.storage` change events.
- */
+/** Follows writes from other contexts (e.g. the player content script). */
+
 export function usePersonalStats(): UsePersonalStats {
   const [stats, setStats] = useState<PersonalStats>(emptyStats);
   const [loaded, setLoaded] = useState(false);

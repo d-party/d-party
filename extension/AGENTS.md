@@ -1,110 +1,76 @@
-# AGENTS.md — d-party Chrome Extension
+# AGENTS.md — extension
 
-AI エージェント・開発者向けガイド。dアニメストアで「同時視聴」を実現する Chrome 拡張機能。
+dアニメストアのページに注入して同時視聴を実現する Manifest V3 拡張機能。
 
-## スタック
-
-- **Manifest V3** / TypeScript（strict）
-- **pnpm** + **rspack**（swc）でビルド、エントリごとに自己完結バンドル
-- **React 18** + **shadcn/ui**（Radix + Tailwind CSS v4）で popup を実装
-- **Storybook**（react-vite）でUIコンポーネントを文書化
-- **ESLint**（flat config, typescript-eslint）+ **Prettier**
-- **orval** でバックエンドREST APIを型安全に生成（`openapi/openapi.json` → `src/infrastructure/api/generated/`）
-
-## アーキテクチャ（クリーンアーキテクチャ）
+- TypeScript（strict）· React 19 · rspack（swc）· Tailwind CSS v4 · shadcn/ui
+- primitive と `cn` は `@d-party/ui`。`Button` だけ `src/components/ui/button.tsx` に自前で持つ。
+- REST クライアントは orval で生成（`../backend/openapi.json` → `src/infrastructure/api/generated/`）。
+  生成物はコミットし、CI が差分ゼロを確かめる。
 
 ```
 src/
-  domain/          プロトコル/設定/リアクションの型（フレームワーク非依存）
-    protocol.ts      WebSocket メッセージ型。バックエンド streamer/format.py と1対1で対応
-  application/     ユースケース・ポート（IO境界のインターフェース）
-    RoomSession.ts   同時視聴の同期オーケストレーション（旧 player.js のWS中核を移植）
-    ports.ts         PlayerController / SidebarView / Notifier 等の境界
-    ActionGuard.ts   送受信ループ抑止フラグ（旧 available_action）
-  infrastructure/  外部I/O実装
-    ws/              PartyWebSocketClient
-    storage/         ChromeStorageSettingsRepository（chrome.storage.sync）
-    notifier/        ReactNotifier（Shadow DOM 内の shadcn 風トースト）
-    api/             orval生成クライアント + customFetch mutator
-    env.ts           接続先設定（旧 settings.js 定数）
-  presentation/    DOM/UIアダプタ（注入対象ごとのエントリ）
+  domain/          フレームワーク非依存の型とロジック
+    protocol.ts      WS メッセージ型（backend streamer/format.py と 1 対 1）
+    roomSettings.ts  ルーム設定
+  application/     ユースケースとポート
+    RoomSession.ts   再生同期のオーケストレーション
+    ports.ts         PlayerController / SidebarView / Notifier などの境界
+    ActionGuard.ts   受信した操作を送り返さないためのフラグ
+  infrastructure/  ws/ · storage/（chrome.storage.sync）· notifier/ · api/ · env.ts
+  presentation/    注入先ごとのエントリ
     background/      service worker
-    content/store/   エピソード一覧ページ（ci_pc/tp_pc）
-    content/party/   プレイヤーページ（sc_d_pc）: Sidebar + Player + Reaction
-    content/version/ d-party.net ロビーのバージョン確認
-    popup/           React + shadcn の設定UI
-  components/ui/   shadcn コンポーネント（Button/Switch/Label/Input）
-  lib/utils.ts     cn()
+    content/store/   作品ページ
+    content/party/   プレイヤーページ（サイドバー・プレイヤー・リアクション）
+    content/version/ ロビーでのバージョン確認
+    popup/           設定 UI
 ```
 
-**rspack エントリ**: `background` / `content-store` / `content-party` / `content-version` / `popup`。
-content script はバンドラCSSではなく `manifest.json` の `css` 配列で注入する（`public/css/*`）。
+rspack のエントリは `background` · `content-store` · `content-party` · `content-version` ·
+`popup` · `sidebar-style`。ページへ直接当てる CSS は `manifest.json` の `css`（`public/css/`）で
+注入し、Shadow DOM 用の CSS（`sidebar-style`）だけをバンドルして実行時に読み込む。
 
-## コアロジックは不変
+## 約束
 
-WebSocket同期プロトコル（`domain/protocol.ts`）はバックエンド `streamer/format.py` と
-完全一致させること。アクション名・メッセージ形・`option.paused`/`rate` の文字列表現を変えない。
+- `domain/protocol.ts` は backend の `streamer/format.py` と一致させる。アクション名・
+  メッセージの形・`option.paused` / `rate` の文字列表現を変えない。
+- `video_operation` には任意の `title` を付ける（通常の操作と 5 秒ごとのハートビートの両方）。
+  フロントのタイマー画面がエピソードの切り替えに追従するため。
+- ルーム設定は create メッセージに含めず、create の後にオーナーが `update_setting` で送る。
+  現在値はサーバの `room_setting` で受け取る。一方通行では非オーナーは `video_operation` を送らず、
+  リアクション禁止では送信せず自分にだけ表示する（`RoomSession`）。
+- 共有パネルの「タイマーのみの URL」はロビー URL に `?timer=true` を付けたもの。
 
-### タイマーURL（フロントのタイマー画面向け）
-
-`video_operation` に任意 `title` を同梱する（通常操作・5s ハートビート双方）。フロントの
-タイマー画面（拡張機能なしのユーザー）が既存ブロードキャストからエピソード切替に追従して
-タイトルを表示するため。旧バックエンドは無視するため後方互換。共有パネル（`SharePanel`）には
-共有 URL の下に「タイマーのみのURL」アコーディオンを置き、ロビー URL + `?timer=true` を表示する
-（新規 URL は発行しない）。
-
-### ルーム詳細設定（`domain/roomSettings.ts`）
-
-ルーム作成 UI の「詳細設定」アコーディオンで一方通行（アクセラレーター）モード・オーナー
-退室時自動削除・リアクション禁止をトグルする（`sidebar/RoomSettings.tsx`、作成時と操作タブ
-で共用）。設定は create メッセージを変えず、create 確定後に owner 限定の `update_setting`
-アクションで適用する（旧バックエンド互換）。現在値はサーバの `room_setting` イベントで受信。
-一方通行では非オーナーの `video_operation` を送らず、リアクション禁止では送信せず自分にだけ
-ローカル表示する（`RoomSession`）。
-
-## コマンド
+## ビルドと読み込み
 
 ```bash
-pnpm install
-pnpm api:generate     # orval でRESTクライアント再生成
-pnpm typecheck        # tsc --noEmit
-pnpm build            # rspack → dist/（chrome://extensions で読み込む）
-pnpm dev              # rspack --watch
-pnpm lint             # eslint .
-pnpm storybook        # Storybook 起動 (:6006)
+pnpm build          # localhost（http / ws）向け → dist/
+pnpm build:prod     # d-party.net（https / wss）向け。manifest から localhost の権限を除く
+pnpm dev            # rspack --watch
+pnpm api:generate && pnpm typecheck && pnpm lint
+pnpm storybook      # :6006
 ```
 
-## 拡張機能の読み込み
+接続先はビルド時の `D_PARTY_ENV` を `DefinePlugin` がリテラルに置き換える（`src/infrastructure/env.ts`）。
+`chrome://extensions` の「パッケージ化されていない拡張機能を読み込む」で `dist/` を選ぶ。
 
-`pnpm build` 後、`chrome://extensions` →「パッケージ化されていない拡張機能を読み込む」で
-`dist/` を選択する。接続先は `src/infrastructure/env.ts`（既定 `wss://d-party.net`）。
-ローカルバックエンドへは `localhost/` `http://` `ws://` に変更する。
+対象ページ:
 
-## 対象サイト
+- `https://animestore.docomo.ne.jp/animestore/*`（`anime.dmkt-sp.jp` も同じ。プレイヤーは `sc_d_pc`）
+- `https://tv.dmm.com/*`（作品詳細へのアイコン注入）と `https://tv.dmm.com/vod/playback/on-demand/*`
+  （再生ページのプレイヤー同期）
+- `https://d-party.net/{anime-store,dmm-tv}/lobby/*`（dev は `http://localhost/...`）
 
-- `https://anime.dmkt-sp.jp/animestore/sc_d_pc?*`（プレイヤー）
-- `https://anime.dmkt-sp.jp/animestore/{ci_pc,tp_pc}*`（一覧）
-- `https://d-party.net/anime-store/lobby/*`（バージョン確認）
+content script の DOM 操作は、有料の dアニメストア実ページでしか最終確認できない。
+実ページから localhost の backend へつなぐには `chrome://flags/#block-insecure-private-network-requests`
+を Disabled にする。
 
-> 注意: content script の DOM 動作は有料の dアニメストア実ページでしか完全検証できない。
-> ロジック層（domain/application）は移植で挙動を保持しているが、UI結合の最終確認は実機で行うこと。
+## リアクション素材
 
-## リアクション素材（サードパーティ）
+アニメーションは Google Noto Emoji（Apache-2.0）の Lottie。既定 5 種とエクストラ最大 200 種を
+`src/presentation/content/party/react/reactions/lottie/` に同梱する。エクストラを静的 import
+しているので `content-party` は十数 MB になる。静的アイコンは react-icons と lucide。
 
-リアクションのアニメーションは **Google Noto Emoji**
-（[noto-emoji-animation](https://googlefonts.github.io/noto-emoji-animation/)）の Lottie。
-ライセンスは **Apache License 2.0**。
+## CI
 
-- デフォルト 5 種とエクストラのカタログ（最大 200 種、肌色は黄色のみ）を
-  `src/presentation/content/party/react/reactions/lottie/`（エクストラは `extra/`）へ同梱する。
-- 静的アイコンは [react-icons](https://react-icons.github.io/react-icons/)（Font Awesome 6）と
-  [lucide](https://lucide.dev/)。
-- **注意**: エクストラ 200 種を `content-party` バンドルへ静的 import しているため、
-  当該バンドルは十数 MB になる（オフラインで動く代わりにサイズが大きい）。将来的には
-  id ごとの動的 import チャンク化 + `web_accessible_resources` の遅延読み込みで縮小できる。
-
-## ローカルバックエンドへ繋ぐときの注意
-
-dアニメストアの実ページから `localhost` のバックエンドへ接続するには、Chrome の
-Private Network Access ブロックを無効化する必要がある
-（`chrome://flags/#block-insecure-private-network-requests` を Disabled）。
+`Extension/CI`（生成物の drift · typecheck · lint · license-check）と
+`Extension/Build`（build:prod と manifest の参照先の実在確認 · zip · storybook）。

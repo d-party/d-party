@@ -8,12 +8,7 @@ import {
   type ReactionPush,
 } from "./react/reactions/ReactionLayer";
 
-/**
- * React-based reaction overlay. Mounts a transparent layer over the
- * `.videoWrapper` and renders Lottie animations for each `play()` call.
- *
- * Replaces the legacy jQuery + Font Awesome `ReactionViewDom`.
- */
+/** Transparent layer over `.videoWrapper` that plays the Lottie animations. */
 export class ReactionViewReact implements ReactionView {
   private handle: ReactionLayerHandle | null = null;
   private mounted = false;
@@ -49,7 +44,6 @@ export class ReactionViewReact implements ReactionView {
     if (this.mounted) return;
     const wrapper = this.resolveContainer();
     if (!wrapper) return;
-    // 重ねる要素は絶対配置オーバーレイの位置基準が必要（static なら relative にする）。
     if (getComputedStyle(wrapper).position === "static") {
       wrapper.style.position = "relative";
     }

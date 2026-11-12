@@ -1,10 +1,7 @@
-/**
- * Constants shared by the OG cards, the routes that rasterize them, and the
- * page metadata. Plain values only — no `next/og`, no JSX — so both the server
- * routes and Storybook can import this freely.
- */
+/** Plain values only (no `next/og`, no JSX), so Storybook can import them too. */
 
-/** Card size in px. The 1.91:1 ratio Open Graph / Twitter expect. */
+/** 1.91:1, as Open Graph / Twitter expect. */
+
 export const OG_SIZE = { width: 1200, height: 630 } as const;
 
 /** `alt` of the site-wide card. */

@@ -19,12 +19,18 @@ from .models import (
 )
 
 
-@admin.action(description="Logically delete selected items")
+@admin.action(
+    description="Logically delete selected items",
+    permissions=["change", "delete"],
+)
 def logically_delete(modeladmin, request, queryset):
     queryset.update(deleted_at=now())
 
 
-@admin.action(description="Revive selected items")
+@admin.action(
+    description="Revive selected items",
+    permissions=["change", "delete"],
+)
 def revive(modeladmin, request, queryset):
     queryset.update(deleted_at=None)
 
@@ -34,7 +40,6 @@ class LogicalDeletionModelAdmin(ModelAdmin):
 
     actions = [logically_delete, revive]
     readonly_fields = ("deleted_at",)
-    # 既定は作成日時の降順（新しいものが先頭）で並べる。
     ordering = ("-created_at",)
 
     def get_queryset(self, request):
@@ -59,8 +64,7 @@ class RoomModelAdmin(LogicalDeletionModelAdmin):
     )
 
     def get_queryset(self, request):
-        # 人数はルームのカラムではなく参加ユーザーから導出する。一覧の各行で
-        # COUNT を撃たないよう、クエリセット側でまとめて注釈しておく（N+1 回避）。
+        # 行ごとに COUNT しないよう、まとめて注釈する。
         return super().get_queryset(request).with_people_counts()
 
     @admin.display(description=_("in room"), ordering="num_people")
@@ -81,9 +85,7 @@ class AnimeRoomAdmin(RoomModelAdmin):
 
 @admin.register(AnimeUser)
 class AnimeUserAdmin(LogicalDeletionModelAdmin):
-    # user_name は EncryptedCharField（保存時暗号化）だが from_db_value で
-    # ORM 読み込み時に透過的に復号されるため、そのまま平文で表示できる。
-    # 暗号化列のため DB 側での並べ替え・検索はできない（表示のみ）。
+    # user_name は暗号化列なので、表示はできるが DB での並べ替え・検索はできない。
     list_display = ("user_name", "user_id", "is_host", "created_at", "deleted_at")
 
 
@@ -101,7 +103,6 @@ class SettingAdmin(ModelAdmin):
         "disable_reaction",
         "updated_at",
     )
-    # 既定は作成日時の降順（新しいものが先頭）で並べる。
     ordering = ("-created_at",)
 
 
@@ -134,17 +135,10 @@ class DmmSettingAdmin(ModelAdmin):
         "disable_reaction",
         "updated_at",
     )
-    # 既定は作成日時の降順（新しいものが先頭）で並べる。
     ordering = ("-created_at",)
 
 
-# ---------------------------------------------------------------------------
-# 認証（django.contrib.auth）
-# ---------------------------------------------------------------------------
-
-
-# django.contrib.auth の User / Group を unfold 仕様で再登録し、フォーム・変更画面の
-# 見た目も管理画面テーマに揃える（unfold.forms が Tailwind スタイルのウィジェットを提供）。
+# auth の User / Group を unfold のフォームで登録し直す。
 admin.site.unregister(User)
 admin.site.unregister(Group)
 
@@ -155,13 +149,9 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
     add_form = UserCreationForm
     change_password_form = AdminPasswordChangeForm
 
-    # 一覧からも姓名列（既定の first_name / last_name）を外す。
     list_display = ("username", "email", "is_staff")
 
-    # d-party の参加者は AnimeUser.user_name（表示名）で管理し、管理者アカウント
-    # （auth.User）の姓名（first_name / last_name）は一切使わない。カラム自体は
-    # Django 組み込みのため残るが、編集画面には出さないよう "Personal info" から
-    # 姓名を除いて email のみ残す。
+    # 管理者アカウントの姓名は使わないので、一覧と編集画面から外す。
     fieldsets = (
         (None, {"fields": ("username", "password")}),
         (_("Personal info"), {"fields": ("email",)}),

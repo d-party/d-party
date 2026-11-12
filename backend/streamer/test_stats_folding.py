@@ -42,7 +42,6 @@ def test_fold_room_reactions_aggregates_and_hard_deletes():
 
     fold_room_reactions(room.room_id)
 
-    # 生データはハードデリート済み。
     assert AnimeReaction.objects.filter(room_id=room.room_id).count() == 0
     # day1: S=2, F=1 / day2: S=1。TruncDate は TIME_ZONE(JST) で切るため、
     # 期待日付も _day()（= localdate）で合わせる（UTC .date() だと夕方に日付がずれる）。

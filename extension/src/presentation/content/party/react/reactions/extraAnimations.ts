@@ -1,10 +1,6 @@
 /**
- * エクストラリアクションの Lottie アニメーション（id → データ）。
- *
- * AUTO-GENERATED: `src/domain/extraReactions.ts` のカタログと 1 対 1。素材は
- * Google Noto Emoji（Apache License 2.0）を `lottie/extra/<id>.json` に同梱。
- *
- * 注意: content-party バンドルへ静的 import するためサイズが増える（README 参照）。
+ * AUTO-GENERATED. `src/domain/extraReactions.ts` と 1 対 1。静的 import なので
+ * content-party のバンドルが大きくなる。
  */
 
 import e1f44e from "./lottie/extra/1f44e.json";

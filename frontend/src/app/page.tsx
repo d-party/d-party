@@ -33,7 +33,6 @@ const STEPS = [
   },
 ];
 
-/** Landing page — modernised port of web/templates/index.html. */
 export default function HomePage(): React.JSX.Element {
   return (
     <>

@@ -32,8 +32,10 @@ export function Hero(): React.JSX.Element {
 
   return (
     <section className="relative overflow-hidden">
-      {/* Decorative, low-key brand glow — purely graphical, behind content. */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+      >
         <div className="absolute left-1/2 top-[-6rem] size-[28rem] -translate-x-1/2 rounded-full bg-primary/15 blur-3xl" />
         <div className="absolute right-[-8rem] top-32 size-[22rem] rounded-full bg-primary/10 blur-3xl" />
       </div>
@@ -44,8 +46,7 @@ export function Hero(): React.JSX.Element {
         animate="show"
         className="mx-auto flex max-w-4xl flex-col items-center px-4 pb-10 pt-20 text-center sm:pb-12 sm:pt-28"
       >
-        {/* Framed logo "app icon" enclosure. */}
-        <motion.div variants={item}>
+          <motion.div variants={item}>
           <motion.div
             animate={reduce ? undefined : { y: [0, -8, 0] }}
             transition={

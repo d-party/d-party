@@ -22,19 +22,11 @@ class BaseRoomQuerySet(LogicalDeletionQuerySet):
     def with_people_counts(self):
         """``num_people`` / ``sum_people`` を参加ユーザーから導出して注釈する。
 
-        かつては ``AnimeRoom`` の実カラムとして持ち、join / leave のたびに
-        インクリメント・デクリメントしていたが、参加ユーザーが既に人数の
-        単一の真実であり、キャッシュ側が容易に実体とズレた（別接続がキャッシュ
-        した行全体を ``save()`` で書き戻す・非アトミックな read-modify-write・
-        ``close_active_sessions`` による幽霊ユーザーの掃除が人数を減らさない、等）。
-        そのためカラムを廃し、必要な経路でここから導出する。
-
         * ``num_people``: 現在の在室人数（論理削除されていない参加ユーザー）。
         * ``sum_people``: 累計参加人数（退室済み＝論理削除済みも含む）。
           参加ユーザーは物理削除されないため、これが累計になる。
 
-        いずれもホスト（ルーム作成者）を 1 人として数える。観覧専用
-        （spectator）接続は ``AnimeUser`` を作らないため、従来どおり数えない。
+        ホストを含み、spectate の接続は含まない。
         """
         return self.annotate(
             num_people=Count("inroom", filter=Q(inroom__deleted_at__isnull=True)),
@@ -66,8 +58,7 @@ class BaseRoom(LogicalDeletionMixin):
 
     room_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     part_id = models.CharField(max_length=16)
-    # 視聴中コンテンツのタイトル。ルーム作成時に拡張機能がページ DOM から取得して
-    # 一度だけ送信する（以降は更新しない）。OGP 等の表示に使う。
+    # 作成時に拡張機能が送る作品名（以後は更新しない）。OGP などに使う。
     title = models.CharField(max_length=255, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -86,11 +77,7 @@ class BaseRoom(LogicalDeletionMixin):
 
     @property
     def alive_user_count(self) -> int:
-        """現在の在室人数。1 行だけ欲しい場合のヘルパ（都度 COUNT を発行する）。
-
-        一覧のように複数行を扱う場合は N+1 になるので
-        ``<Room>.objects.with_people_counts()`` を使うこと。
-        """
+        """現在の在室人数。複数行では ``with_people_counts()`` を使う（N+1 になる）。"""
         return self.inroom.alive().count()
 
     @property
@@ -102,19 +89,13 @@ class BaseRoom(LogicalDeletionMixin):
 class BaseSetting(models.Model):
     """ルームごとの詳細設定の共通スキーマ。具象は ``Setting`` / ``DmmSetting``。
 
-    ルームと 1:1 で対応し、``room`` を主キーとして共有する（``room`` は具象側で宣言）。
-    ルーム作成時に既定値（すべて ``False``）で自動生成され、以降はオーナー（ホスト）
-    ユーザーのみが WebSocket（Channels）経由で更新できる。オーナー以外からの更新要求は
-    consumer 側で無視される。旧クライアントは設定を送らないため、全 ``False`` = 現行の
-    ルーム挙動となり後方互換が保たれる。
+    ルーム作成時にすべて ``False`` で作り、ホストだけが ``update_setting`` で変えられる。
+    主キー兼外部キーの ``room`` は具象側で宣言する。
 
     Attributes:
-        one_way: 一方通行（アクセラレーター）モード。オーナーのみが動画操作でき、
-            オーナー以外からの動画操作はブロックされる（リアクションは許可）。有効時は
-            オーナー退室でルームが自動削除される（``owner_leave_delete`` を含意）。
-        owner_leave_delete: オーナー退室時にルームを自動削除する。
-        disable_reaction: リアクションを禁止する。ブロードキャストも永続化もされない
-            （送信者自身の画面にはクライアント側でローカル表示される）。
+        one_way: ホスト以外の再生操作を捨てる（リアクションは通す）。
+        owner_leave_delete: ホストが抜けたらルームを消す。
+        disable_reaction: リアクションを配信も保存もしない。
     """
 
     one_way = models.BooleanField(default=False)
@@ -136,9 +117,7 @@ class BaseUser(LogicalDeletionMixin):
 
     user_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user_name = EncryptedCharField(default="user", max_length=20)
-    # 表示アイコン。フロント（拡張）が react-icons (Font Awesome 6) のキー文字列を送る。
-    # アイコン名は PII ではないため平文。旧拡張が送らない場合は既定キーで、現行のシンプルな
-    # ユーザーアイコン相当（FaRegUser）にフォールバックさせる。
+    # react-icons (Font Awesome 6) のキー。個人情報ではないので平文。
     user_icon = models.CharField(default="FaRegUser", max_length=64)
     is_host = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -183,10 +162,8 @@ class BaseRoomHistory(models.Model):
 class BaseReactionStat(models.Model):
     """日次 × 種別に畳み込んだリアクションの集計（共通スキーマ）。
 
-    リアクションは 1 タップ = 1 行（``Base*Reaction``）で大量に蓄積されるため、ルームが
-    終了する瞬間に ``cron.fold_room_reactions`` がそのルームのリアクションを日次×種別で
-    ここへ加算し、元の生 Reaction 行はハードデリートする。これにより DB には集計済みの
-    統計だけが残り、生データは溜まらない。``(date, reaction_type)`` で一意。
+    ルーム終了時に ``cron.fold_room_reactions`` がそのルームのリアクションをここへ加算し、
+    元の行は物理削除する。``(date, reaction_type)`` で一意。
 
     具象（``ReactionStat`` / ``DmmReactionStat``）は制約・インデックス名が衝突しないよう
     それぞれ独自の ``Meta`` を宣言する。

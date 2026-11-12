@@ -1,6 +1,6 @@
 {
   "name": "d-party",
-  "version": "2.11.7",
+  "version": "2.12.5",
   "description": "dアニメストアで『同時視聴』を実現する d-party",
   "private": true,
   "type": "module",
@@ -17,9 +17,10 @@
     "license:check": "turbo run license:check"
   },
   "devDependencies": {
-    "turbo": "^2.10.13"
+    "playwright": "^1.65.0",
+    "turbo": "^2.11.10"
   },
-  "packageManager": "pnpm@10.28.1",
+  "packageManager": "pnpm@12.18.0",
   "engines": {
     "node": ">=22"
   }

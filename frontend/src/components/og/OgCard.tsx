@@ -1,16 +1,7 @@
 /**
- * Shared layout for every Open Graph card of the site (1200×630): brand header,
- * eyebrow + headline + sub, footer. `SiteOgImage` and `RoomOgImage` only fill in
- * the slots, so a link to the site and a link to a room look alike.
- *
- * Written with inline styles only, using the flexbox subset that Satori
- * (the engine behind `next/og`'s `ImageResponse`, i.e. `@vercel/og`) supports.
- * This lets the very same component be:
- *   - rendered to a PNG on the server by the `opengraph-image.tsx` /
- *     `twitter-image.tsx` route files
- *   - previewed as plain HTML in Storybook (`*.stories.tsx`).
- *
- * Keep it free of Tailwind classes, external CSS and unsupported CSS features.
+ * Layout shared by every OG card (1200×630). Inline styles and the flexbox
+ * subset Satori supports only — no Tailwind or external CSS — so the same
+ * component renders to PNG and previews in Storybook.
  */
 
 import { COLORS, LOGO_RED } from "@/components/og/brand";
@@ -18,13 +9,11 @@ import { COLORS, LOGO_RED } from "@/components/og/brand";
 export interface OgCardProps {
   /** Small red line above the headline, e.g. `"この作品を一緒に視聴中"`. */
   eyebrow: string;
-  /** Main line, set in the largest type. */
   headline: string;
   /** Optional muted line under the headline (episode, tagline, …). */
   sub?: string;
-  /** Pill in the top-right corner. */
   badge?: string;
-  /** Headline size in px. Long, wrapping headlines want a smaller size. */
+  /** Px. Use a smaller size for long headlines. */
   headlineSize?: number;
 }
 
@@ -51,7 +40,6 @@ export function OgCard({
         position: "relative",
       }}
     >
-      {/* Header: brand wordmark + badge */}
       <div
         style={{
           display: "flex",
@@ -105,7 +93,6 @@ export function OgCard({
         </div>
       </div>
 
-      {/* Center: eyebrow + headline + sub */}
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div
           style={{
@@ -126,7 +113,6 @@ export function OgCard({
             fontWeight: 700,
             lineHeight: 1.18,
             letterSpacing: -1,
-            // Clamp very long headlines to keep the layout balanced.
             overflow: "hidden",
             maxHeight: headlineSize * 1.18 * 3,
           }}
@@ -151,7 +137,6 @@ export function OgCard({
         ) : null}
       </div>
 
-      {/* Footer: tagline + domain */}
       <div
         style={{
           display: "flex",

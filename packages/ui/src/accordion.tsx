@@ -3,10 +3,8 @@ import * as AccordionPrimitive from "@radix-ui/react-accordion";
 
 import { cn } from "./lib/utils";
 
-/**
- * 汎用アコーディオン（Radix ベース）。shadcn 流儀だが、トリガのアイコンは組み込まず
- * 呼び出し側が任意に構成できる（「+詳細設定」のようにプラスアイコンを使うケースに対応）。
- */
+/** トリガのアイコンは呼び出し側が置く（shadcn と違い組み込まない）。 */
+
 function Accordion({
   ...props
 }: React.ComponentProps<typeof AccordionPrimitive.Root>): React.JSX.Element {

@@ -1,23 +1,15 @@
-// d-party WebSocket 同時視聴プロトコルのヘルパ。
-//
-// backend は djangochannelsrestframework の `@action()` ベースで、受信メッセージは
-//   { "action": "<name>", "request_id": "<id>", ...引数 }
-// というエンベロープを要求する（`action` / `request_id` が無いと dispatch でエラー）。
-// 対応する consumer / format は backend/streamer/{consumers,format}.py を参照。
-//
-// このファイルは「送信メッセージの組み立て」と「遅延計測用タイムスタンプの埋め込み /
-// 取り出し」だけを担う薄いユーティリティ。WS の張り方やシナリオは scenarios/ 側。
+// 送信メッセージの組み立てと、遅延計測用の時刻の埋め込み / 取り出し。
+// backend は `{ "action", "request_id", ...引数 }` を要求する。
 
 import { setTimeout, clearTimeout } from 'k6/timers';
 
 let _seq = 0;
-// k6 は crypto.randomUUID を持たないため、VU/iteration/連番で衝突しない request_id を作る。
+// k6 には crypto.randomUUID が無い。
 export function requestId() {
   _seq += 1;
   return `${__VU}-${__ITER}-${_seq}-${Date.now()}`;
 }
 
-// ── 送信メッセージ組み立て（consumer の @action 引数に対応）─────────────────────
 export function createMsg({ partId, userName, title = '', userIcon = 'FaRegUser' }) {
   return {
     action: 'create',
@@ -39,10 +31,8 @@ export function joinMsg({ roomId, userName, userIcon = 'FaRegUser' }) {
   };
 }
 
-// 遅延計測用の "ping"。video_operation の option はサーバ側で Option モデル
-// （time/src/paused/rate/part_id がいずれも必須）に validate されるため、全項目を
-// 埋める。自由文字列の `src` に送信時刻マーカーを載せて受信側で取り出す。
-// part_id は room と同一に保ち、余計な part_id 更新（DB 書き込み）を誘発しない。
+// 遅延計測用の ping。option は全項目が必須なので埋め、`src` に送信時刻を載せる。
+// part_id はルームと同じにして、part_id の更新（DB 書き込み）を起こさない。
 const PING_PREFIX = 'LT:';
 export function videoPingMsg({ partId }) {
   return {
@@ -59,8 +49,7 @@ export function videoPingMsg({ partId }) {
   };
 }
 
-// reaction_type は ReactionType（TextChoices）の「メンバー名」である必要がある:
-// cry / middle_finger / smile / thumbs_up / fav（サーバは ReactionType[name] で引く）。
+// ReactionType のメンバー名: cry / middle_finger / smile / thumbs_up / fav
 export function reactionMsg(reactionType = 'smile') {
   return {
     action: 'reaction',
@@ -73,9 +62,7 @@ export function leaveMsg() {
   return { action: 'leave', request_id: requestId() };
 }
 
-// 観覧専用（spectator / タイマー）参加。AnimeUser を作らず、既存の video_operation
-// ブロードキャストを受信するだけの読み取り専用参加。サーバは spectate 受理応答
-// （action:"spectate"）を返す。存在しないルームは server_message(failed_spectate)。
+// 無いルームには server_message(failed_spectate) が返る。
 export function spectateMsg({ roomId }) {
   return {
     action: 'spectate',
@@ -84,8 +71,7 @@ export function spectateMsg({ roomId }) {
   };
 }
 
-// ルーム詳細設定の更新（オーナー限定。バックエンドはホスト以外の update_setting を無視する）。
-// 一方通行(アクセラレーター)モードでは非オーナーの video_operation がブロードキャストされない。
+// ホスト以外が送っても無視される。
 export function updateSettingMsg({
   oneWay = false,
   ownerLeaveDelete = false,
@@ -100,8 +86,8 @@ export function updateSettingMsg({
   };
 }
 
-// 受信した video_operation ブロードキャストが loadtest ping なら、送信時刻(ms)を返す。
-// それ以外（実プレイヤー操作の形）なら null。
+// loadtest の ping なら送信時刻（ms）、それ以外は null。
+
 export function pingSentAt(msg) {
   const src = msg && msg.option && msg.option.src;
   if (typeof src === 'string' && src.startsWith(PING_PREFIX)) {

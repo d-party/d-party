@@ -12,10 +12,8 @@ import { useParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Download } from "lucide-react";
 
-import {
-  CHROME_WEBSTORE_URL,
-  DMM_LOBBY_RESOLVE_ENDPOINT,
-} from "@/infrastructure/env";
+import { dmmLobbyResolve } from "@/infrastructure/api/generated/d-party";
+import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
 
 /**
  * DMM TV のルーム遷移ロビー。dアニメの `anime-store/lobby/[roomId]` と同じ
@@ -37,13 +35,6 @@ const MAX_POLLS = 29;
 const NOTICE_FADE_MS = 2000;
 
 type Phase = "checking" | "incompatible" | "uninstalled" | "not-found";
-
-interface LobbyResolveResponse {
-  redirect_url: string;
-  part_id: string;
-  room_id: string;
-  title: string;
-}
 
 export default function DmmLobbyPage(): React.JSX.Element {
   return (
@@ -94,13 +85,12 @@ function LobbyContent(): React.JSX.Element {
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetch(`${DMM_LOBBY_RESOLVE_ENDPOINT}${roomId}`);
+        const res = await dmmLobbyResolve(roomId);
         if (cancelled) return;
-        if (res.ok) {
-          const data = (await res.json()) as LobbyResolveResponse;
-          redirectUrlRef.current = data.redirect_url;
+        if (res.status === 200) {
+          redirectUrlRef.current = res.data.redirect_url;
           if (redirectPendingRef.current) {
-            window.location.href = data.redirect_url;
+            window.location.href = res.data.redirect_url;
           }
         } else {
           setPhase("not-found");

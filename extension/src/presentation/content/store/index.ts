@@ -4,33 +4,12 @@ import { ChromeStorageSettingsRepository } from "@/infrastructure/storage/Chrome
 import { DEFAULT_SETTINGS, type Settings } from "@/domain/settings";
 
 /**
- * Content script for the dアニメストア episode-list pages (ci_pc / tp_pc).
- * Adds "open in another tab" (play) and "create party" (popper) icons to each
- * episode.
+ * Episode-list pages (ci_pc / tp_pc): adds "open in another tab" and "create
+ * party" icons to each episode, and decorates the episode detail modal.
  *
- * It also decorates the episode detail modal (opened on ci_pc): depending on the
- * "動画は全て別タブで開く" (autoAnotherTab) setting, either the page's own 視聴する
- * button is hijacked to open the player in a new tab, or an extra "別タブで開く"
- * icon button is shown next to it.
- *
- * Ported from the original store.js. Robustness fixes over the original:
- *  - content scripts run at `document_idle`, frequently *after* `window.load`
- *    has fired, so a bare `load` listener never ran and no icons appeared —
- *    we run immediately when the document is already loaded;
- *  - the episode list is loaded/extended dynamically (Swiper), so we
- *    (idempotently) re-decorate as new items appear via a MutationObserver.
- *
- * The original also injected an inline <script> into the page to strip dアニメ
- * ストア's own click handlers; that violated the page CSP (inline scripts are
- * blocked) and never worked from the isolated world, so it has been removed.
- *
- * Layout: the buttons are added as an absolutely-positioned overlay on top of
- * the card (see public/css/style.css). We deliberately do NOT restructure
- * dアニメストア's native list layout (no flexbox / width overrides on the
- * <section>/<a>). The previous approach shrank the real link to 80% and made
- * the icons flex siblings at height:100%, which stretched the row and drew a
- * line between the thumbnail and its frame — worse when an episode carried a
- * NEW tag (`optionIconContainer`) that changed the card height.
+ * The buttons are an absolute overlay on the card (public/css/style.css). Do not
+ * restyle the page's own list layout: it stretches the row and draws a line
+ * between the thumbnail and its frame.
  */
 
 const DECORATED_ATTR = "data-dparty-decorated";
@@ -38,11 +17,7 @@ const MODAL_DECORATED_ATTR = "data-dparty-modal-decorated";
 const PLAYLINK_ATTR = "data-dparty-playlink";
 
 const settingsRepo = new ChromeStorageSettingsRepository();
-/**
- * Cached settings, kept in sync with chrome.storage. The 視聴する click handler
- * reads this live, so toggling the setting takes effect without reloading; the
- * extra button's visibility is refreshed on each `decorate()`.
- */
+/** Kept in sync with chrome.storage and read at click time, so changes apply without reload. */
 let currentSettings: Settings = DEFAULT_SETTINGS;
 
 makeFontFace();
@@ -51,8 +26,7 @@ void loadSettings();
 
 function main(): void {
   decorate();
-  // Re-decorate as the (dynamically loaded) list grows and as the detail modal
-  // opens/navigates. Idempotent: already decorated nodes are skipped.
+  // The list (Swiper) and the modal change after load. decorate() skips done nodes.
   const observer = new MutationObserver(() => decorate());
   observer.observe(document.body, { childList: true, subtree: true });
 }
@@ -72,7 +46,6 @@ async function loadSettings(): Promise<void> {
   });
 }
 
-/** Add the play/popper icons to every not-yet-decorated episode link. */
 function decorateEpisodes(): void {
   const itemList =
     document.querySelectorAll<HTMLAnchorElement>(".itemModule.list a");
@@ -110,24 +83,12 @@ function decorateEpisodes(): void {
   }
 }
 
-/**
- * Build a single shadcn-like icon button.
- *
- * We deliberately use a <button>, not an <a>: dアニメストア styles `.itemModule
- * .list a` directly (hover underline, `position`, its own click handlers), and
- * those rules outrank ours, so as an <a> the underline showed through and our
- * `position: relative` (needed to anchor the tooltip) was overridden. A <button>
- * matches none of those `a` selectors, so all of it goes away at once. Navigation
- * is done by us via window.open below, so we don't need anchor semantics.
- */
 function createButton(opts: {
   icon: string;
   variant: "play" | "party";
   tooltip: string;
   href: string;
 }): HTMLButtonElement {
-  // Resolve the relative href against the current page so window.open gets an
-  // absolute URL (a <button> can't resolve it for us like an <a> would).
   const url = new URL(opts.href, window.location.href).href;
   return iconButton({
     icon: opts.icon,
@@ -141,21 +102,11 @@ function createButton(opts: {
 // `../dom/iconButton` へ切り出した（このファイルの createButton はそれを利用する）。
 
 /**
- * Decorate the episode detail modal's 視聴する button (opened on ci_pc).
+ * The detail modal's 視聴する button. With autoAnotherTab on it opens a new tab;
+ * otherwise an extra "別タブで視聴する" button sits at its right edge.
  *
- * - autoAnotherTab ON  : clicking 視聴する opens the player in a new tab instead
- *   of playing inline.
- * - autoAnotherTab OFF : 視聴する keeps its native behavior and an extra
- *   "別タブで視聴する" icon button overlays its right edge.
- *
- * We do NOT reparent or resize 視聴する. The extra button is appended INSIDE the
- * 視聴する pill and absolutely positioned just past its right edge (see css). This
- * matters: #streamingQuality is a flex "quality list", so a button placed as its
- * direct child counts as a second list item and the page's rules shrink 視聴する
- * to half width. Nested in 視聴する, it is out of that flex flow, so 視聴する keeps
- * its native centered width and our button sits in the empty space beside it.
- * The 視聴する handler reads the setting live, and the extra button's visibility
- * is refreshed every run, so toggling the setting takes effect immediately.
+ * The extra button goes inside the 視聴する pill. As a direct child of
+ * #streamingQuality (a flex list) it would count as an item and halve 視聴する.
  */
 function decorateModal(): void {
   const quality = document.querySelector("#streamingQuality");
@@ -165,7 +116,6 @@ function decorateModal(): void {
   if (!quality.hasAttribute(MODAL_DECORATED_ATTR)) {
     quality.setAttribute(MODAL_DECORATED_ATTR, "1");
 
-    // Hijack 視聴する only while "open all in new tab" is on (checked live).
     watchButton.addEventListener(
       "click",
       (event) => {
@@ -177,15 +127,12 @@ function decorateModal(): void {
       true,
     );
 
-    // Extra button for the OFF case, anchored to 視聴する's right edge (CSS).
     const openButton = iconButton({
       icon: "open_in_new",
       className: "dparty-btn dparty-btn--play dparty-modal-open",
       tooltip: "別タブで視聴する",
       onClick: () => openPlayerInNewTab(),
     });
-    // Anchor for the absolutely-positioned button; relative with no offsets does
-    // not move or resize 視聴する itself.
     watchButton.style.position = "relative";
     watchButton.appendChild(openButton);
   }
@@ -195,13 +142,9 @@ function decorateModal(): void {
 }
 
 /**
- * Hijack the inline-play links scattered across dアニメストア: when "動画は全て別タブ
- * で開く" is on, open the player in a new tab instead of playing inline. Otherwise
- * leave them alone. These all carry the partId directly in `data-partid`:
- *  - `a.playlink`        : the "今すぐ視聴する" links in hover popups (top page,
- *    genre/series lists, etc.);
- *  - `a.directPlayReady` : the "視聴中の作品 / 続きから視聴する" resume widget on the
- *    top page (tp_pc) — both its 続きから視聴する button and its thumbnail link.
+ * With autoAnotherTab on, open inline-play links in a new tab. Both carry
+ * `data-partid`: `a.playlink` (hover popups) and `a.directPlayReady` (the
+ * "続きから視聴する" widget on tp_pc).
  */
 function decoratePlaylinks(): void {
   const links = document.querySelectorAll<HTMLElement>(
@@ -229,10 +172,7 @@ function decoratePlaylinks(): void {
   }
 }
 
-/**
- * Open the currently-shown episode in the player in a new tab. Returns false if
- * the partId could not be resolved (so callers can fall back to native behavior).
- */
+/** Returns false when the partId is unknown, so callers keep the native behavior. */
 function openPlayerInNewTab(): boolean {
   const partId = currentPartId();
   if (!partId) return false;
@@ -242,9 +182,8 @@ function openPlayerInNewTab(): boolean {
 }
 
 /**
- * The partId of the episode currently shown in the modal. Read from the modal
- * thumbnail's filename (`.../28724001_1_1.png`) so it stays correct as the user
- * pages prev/next; falls back to the page URL's partId.
+ * Read from the modal thumbnail (`.../28724001_1_1.png`) so it follows prev/next;
+ * falls back to the page URL.
  */
 function currentPartId(): string | null {
   const img = document.querySelector<HTMLImageElement>("#modalThumbImg");
@@ -253,7 +192,8 @@ function currentPartId(): string | null {
   return match ? match[1] : getParam("partId");
 }
 
-/** Run `fn` now if the document has finished loading, otherwise on `load`. */
+/** Content scripts often start after `load`, so run now if it already fired. */
+
 function ready(fn: () => void): void {
   if (document.readyState === "complete") {
     fn();

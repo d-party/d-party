@@ -1,12 +1,5 @@
-# Storybook を GitHub Pages へ公開する。
-#
-# **GitHub Pages は 1 リポジトリにつき 1 サイト**なので、パッケージごとに
-# デプロイを分けると後から走った方が先の Storybook を上書きしてしまう。
-# 両方をビルドし、1 回の Pages デプロイにサブパスとしてまとめる:
-#
-#   https://<org>.github.io/<repo>/extension/   ← 拡張機能の Storybook
-#   https://<org>.github.io/<repo>/frontend/    ← フロントエンドの Storybook
-#   https://<org>.github.io/<repo>/             ← 両者への索引
+# Pages は 1 リポジトリ 1 サイトなので、両 Storybook を 1 回のデプロイで
+# /extension/ と /frontend/ に置く。Pages のソースを GitHub Actions にしておくこと。
 name: Storybook/Deploy
 
 on:
@@ -15,6 +8,8 @@ on:
     paths:
       - "extension/**"
       - "frontend/**"
+      # 両 Storybook は packages/ui の story も取り込む。
+      - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -22,11 +17,10 @@ on:
       - ".github/workflows/storybook-deploy.yml"
   workflow_dispatch:
 
-# Allow the workflow to publish to GitHub Pages.
+# 既定は読み取りのみ。Pages への書き込みは deploy ジョブにだけ与える
+# （build ジョブは pnpm install でサードパーティのコードを実行するため）。
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # Only one concurrent Pages deployment; don't cancel an in-progress one.
 concurrency:
@@ -49,19 +43,14 @@ jobs:
           node-version: 26
           cache: pnpm
 
-      # Turborepo のローカルキャッシュ（.turbo/cache）を実行間で持ち越す。
-      # キーの主軸は **pnpm-lock.yaml のハッシュ**: ロックファイルが変われば
-      # 依存が変わりタスクのハッシュも総入れ替えになるので、キャッシュも分ける。
-      # 同じロックファイルのあいだは restore-keys で直前の実行結果を引き継ぎ、
-      # 変更のないパッケージのタスクは丸ごとスキップされる。
       - name: Restore the Turborepo cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          key: turbo-${{ runner.os }}-${{ github.workflow }}-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-            turbo-${{ runner.os }}-
+            turbo-${{ runner.os }}-${{ github.workflow }}-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            turbo-${{ runner.os }}-${{ github.workflow }}-${{ github.job }}-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -107,6 +96,10 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

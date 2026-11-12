@@ -4,11 +4,6 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { USER_ICON_KEYS } from "@/components/userIcons";
 import { cn } from "@d-party/ui";
 
-/**
- * Grid of selectable avatar icons (curated react-icons / FA6 set). The selected
- * key is highlighted; clicking one calls {@link onChange} with its key. The
- * parent persists the choice to settings (`userIcon`).
- */
 export function IconPicker({
   value,
   onChange,

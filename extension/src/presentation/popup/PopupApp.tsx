@@ -53,15 +53,10 @@ interface Toggle {
   label: string;
   description: string;
   icon: LucideIcon;
-  /**
-   * When true, the switch shows the inverse of the stored value so that
-   * "ON = feature enabled" holds even for negatively-named storage keys
-   * (e.g. `hideReaction`). The storage keys stay backward-compatible.
-   */
+  /** Show the inverse, so ON means "enabled" even for keys like `hideReaction`. */
   invert?: boolean;
 }
 
-/** Watch-party settings: reactions and operation notifications. */
 const SYNC_TOGGLES: Toggle[] = [
   {
     key: "hideReaction",
@@ -86,7 +81,6 @@ const SYNC_TOGGLES: Toggle[] = [
   },
 ];
 
-/** Utility settings independent of the watch party. */
 const UTILITY_TOGGLES: Toggle[] = [
   {
     key: "autoAnotherTab",
@@ -102,7 +96,6 @@ const UTILITY_TOGGLES: Toggle[] = [
   },
 ];
 
-/** リアクションの表示方法の選択肢（設定タブ）。 */
 const REACTION_DISPLAY_OPTIONS: {
   value: ReactionDisplayMode;
   label: string;
@@ -133,17 +126,12 @@ function appVersion(): string {
   }
 }
 
-/**
- * Inactive panels stay laid out but invisible, so the popup never jumps when
- * switching tabs.
- */
+/** Inactive panels stay laid out, so the popup does not jump when switching tabs. */
 const HIDDEN_WHEN_INACTIVE =
   "data-[state=inactive]:invisible data-[state=inactive]:pointer-events-none";
 
 /**
- * The 統計 panel stays in normal flow and fixes the popup's height (a stable
- * reference). The other panels overlay it absolutely and scroll internally when
- * their content is taller — e.g. when every 設定 toggle section is expanded —
+ * The 統計 panel sets the popup's height; the others overlay it and scroll
  * instead of stretching the window.
  */
 const REFERENCE_PANEL = HIDDEN_WHEN_INACTIVE;
@@ -154,12 +142,8 @@ export function PopupApp(): React.JSX.Element {
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [saved, setSaved] = useState(false);
-  // The active tab drives which trigger shows its text label (the others stay
-  // icon-only so four tabs fit the 360px popup).
   const [tab, setTab] = useState("settings");
   const inputRef = useRef<HTMLInputElement>(null);
-  // Only one settings section is expanded at a time (accordion); opening one
-  // collapses any other that is already open.
   const [openSection, setOpenSection] = useState<string | null>(null);
   const toggleSection = (id: string): void =>
     setOpenSection((current) => (current === id ? null : id));
@@ -170,7 +154,6 @@ export function PopupApp(): React.JSX.Element {
     setEditing(true);
   };
 
-  // Focus the field as soon as editing starts.
   useEffect(() => {
     if (editing) {
       inputRef.current?.focus();
@@ -279,8 +262,7 @@ export function PopupApp(): React.JSX.Element {
                   <h2 className="text-sm font-semibold">ユーザー設定</h2>
                 </div>
                 {editing ? (
-                  // 編集モード: 鉛筆ボタンから入り、表示名とアイコンをまとめて編集する。
-                  // 名前は ✓ で確定、アイコンは選択した時点で即保存する。
+                  // 名前は ✓ で確定、アイコンは選んだ時点で保存する。
                   <form className="flex flex-col gap-3" onSubmit={submitName}>
                     <div className="flex flex-col gap-1.5">
                       <Label
@@ -415,11 +397,8 @@ export function PopupApp(): React.JSX.Element {
 }
 
 /**
- * A tab trigger that shows the label only while active so four tabs fit the
- * 360px popup without crowding: inactive tabs collapse to their icon, the
- * active one expands to icon + label. Inactive tabs surface the label as a
- * tooltip on hover/focus; the active tab already shows it, so it needs no
- * tooltip. The label stays available to assistive tech via aria-label.
+ * Shows the label only while active so four tabs fit the 360px popup. Inactive
+ * tabs show it as a tooltip.
  */
 function IconTab({
   value,
@@ -433,14 +412,8 @@ function IconTab({
   active: boolean;
 }): React.JSX.Element {
   const reduce = useReducedMotion();
-  // Keep the tree structure identical whether or not the tab is active: always
-  // render the same Tooltip wrapper so React never remounts the subtree (a
-  // remount would discard AnimatePresence and kill the label transition). The
-  // active tab already shows its label, so its tooltip is forced closed.
-  //
-  // The tooltip stays *controlled* for the component's whole lifetime (open is
-  // always a boolean) to avoid React's controlled/uncontrolled switch warning:
-  // when active we pin it closed, otherwise we follow hover/focus ourselves.
+  // Always render the Tooltip so the subtree is not remounted (that would cut the
+  // label transition). `open` is always a boolean to keep it controlled.
   const [open, setOpen] = useState(false);
   return (
     <Tooltip open={active ? false : open} onOpenChange={setOpen}>
@@ -482,11 +455,7 @@ function IconTab({
   );
 }
 
-/**
- * A settings section that expands on click. Open state is controlled by the
- * parent so the sections behave as an accordion — opening one collapses any
- * other that is already open.
- */
+/** Open state lives in the parent so only one section is open at a time. */
 function ToggleSection({
   title,
   icon: Icon,
@@ -502,7 +471,7 @@ function ToggleSection({
   renderToggle: (toggle: Toggle) => React.JSX.Element;
   open: boolean;
   onToggle: () => void;
-  /** トグル群の下に差し込む追加コンテンツ（例: リアクション表示方法セレクタ）。 */
+  /** トグルの下に置くもの。 */
   extra?: React.ReactNode;
 }): React.JSX.Element {
   const reduce = useReducedMotion();
@@ -544,10 +513,6 @@ function ToggleSection({
   );
 }
 
-/**
- * リアクションの表示方法を選ぶコントロール（同時視聴設定の中に置く）。ボタンを押す
- * と選択肢が開き、選ぶと閉じる。
- */
 function ReactionDisplaySelect({
   value,
   onChange,

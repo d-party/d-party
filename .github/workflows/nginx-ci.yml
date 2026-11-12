@@ -1,10 +1,7 @@
 name: Nginx/CI
 
-# nginx 設定は envsubst テンプレート（dev: templates/, prod: templates-prod/）で、
-# 変数を展開してからでないと nginx -t にかけられない。dev はそのまま、prod は
-# TLS 証明書ファイル（letsencrypt）を include するためダミーの自己署名証明書・
-# dhparam・空 conf を生成してから検証する。展開先は本番 nginx イメージと同じ
-# nginx:1.27-alpine を docker run して構文チェックする。
+# テンプレートを envsubst で展開してから nginx -t にかける。prod は証明書を読むので
+# ダミーの自己署名証明書と dhparam を作る。
 on:
   pull_request:
     paths:
@@ -16,22 +13,30 @@ on:
       - "nginx/**"
       - ".github/workflows/nginx-ci.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 # envsubst で展開する変数は明示する（無指定だと $host 等の nginx 変数まで潰れる）。
 env:
   MY_DOMAIN: localhost
   DJANGO_UPSTREAM: 127.0.0.1:8000
   FRONTEND_UPSTREAM: 127.0.0.1:3000
-  NGINX_IMAGE: nginx:1.27-alpine
+  NGINX_IMAGE: nginx:1.31-alpine
 
 jobs:
   syntax:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
-      # prod テンプレートが参照する letsencrypt 一式をダミーで用意する。
-      # nginx -t は ssl_certificate / ssl_dhparam を実際に読み込むため、中身が
-      # 正しい PEM である必要がある（自己署名 + dhparam を生成する）。
+      # nginx -t は証明書を実際に読むので、正しい PEM が要る。
       - name: Prepare dummy TLS assets (prod template)
         run: |
           mkdir -p certs/live/"${MY_DOMAIN}"

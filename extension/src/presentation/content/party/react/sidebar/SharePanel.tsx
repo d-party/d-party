@@ -19,7 +19,6 @@ import { FACEBOOK_APP_ID } from "@/infrastructure/env";
 
 import type { SidebarState } from "../sidebarStore";
 
-/** タイマー画面はロビー URL に `?timer=true` を付けたもの（新規 URL は発行しない）。 */
 function timerUrl(shareUrl: string): string {
   if (!shareUrl) return "";
   return shareUrl.includes("?") ? `${shareUrl}&timer=true` : `${shareUrl}?timer=true`;
@@ -68,7 +67,6 @@ export function SharePanel({ state }: { state: SidebarState }): React.JSX.Elemen
         </TooltipContent>
       </Tooltip>
 
-      {/* 共有 URL の下に「タイマーのみのURL」を折りたたみで用意する。押下で URL 欄を表示。 */}
       <TimerUrlAccordion url={timerUrl(url)} />
 
       <div className="flex items-center justify-center gap-3">
@@ -134,11 +132,8 @@ export function SharePanel({ state }: { state: SidebarState }): React.JSX.Elemen
   );
 }
 
-/**
- * 「タイマーのみのURL」アコーディオン。展開するとタイマー画面の URL 欄（コピー可）を表示する。
- * 拡張機能・dアニメストア不要で、ロビー URL に `?timer=true` を付けるだけで人力同期の
- * タイマー画面を開ける（新規 URL は発行しない）。
- */
+/** タイマー画面の URL（ロビー URL + `?timer=true`）。拡張機能が無くても開ける。 */
+
 function TimerUrlAccordion({ url }: { url: string }): React.JSX.Element {
   const [copied, setCopied] = useState(false);
   const copy = async () => {

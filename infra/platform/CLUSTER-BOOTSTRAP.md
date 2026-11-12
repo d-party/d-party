@@ -128,7 +128,6 @@ sudo timedatectl set-timezone Asia/Tokyo
 ```bash
 git clone https://github.com/d-party/d-party.git
 cd d-party
-# monorepo なのでクローンすればすべて揃う（サブモジュールは無い）。
 ```
 
 > 外向きポート開放は不要です。公開は Cloudflare Tunnel（cloudflared）が *outbound* で

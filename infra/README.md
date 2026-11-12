@@ -17,7 +17,8 @@
   同居する他サービスからも共用される singleton です（理想は別リポジトリへ切り出し）。
 - DB/Redis は **NetworkPolicy で同 release 内からのみ到達可能**にし、stateful には
   **PriorityClass** を当てて、同居サービスのメモリ逼迫時にも DB が evict されにくくします。
-- WebSocket を切らさないために **グレースフルなローリング更新**を前提に組んでいます。
+- 更新中も新規接続を受けられるよう **新 Pod を先に Ready にするローリング更新**を前提に組んでいます
+  （既存の WebSocket は旧 Pod の停止時に切れる。後述）。
 - **CD は Argo CD（GitOps）**。運用リポジトリの `Application` がこの chart を参照します。
 
 ```
@@ -98,13 +99,13 @@ flowchart TB
 ```mermaid
 flowchart LR
     NGINX[nginx<br/>Deployment x2<br/>HTTP ルーティング] -->|/| FE[frontend<br/>Next.js x2]
-    NGINX -->|/api /admin /metrics<br/>/anime-store/party WS| DJ[django<br/>ASGI/Channels x1]
+    NGINX -->|/api /admin<br/>/anime-store/party WS| DJ[django<br/>ASGI/Channels x1]
     DJ --> PG[(postgres<br/>StatefulSet)]
     DJ --> RD[(redis<br/>Channels レイヤ)]
     NGINX -. initContainer .-> ST[collectstatic→emptyDir]
 ```
 
-- **postgres / redis は公式イメージ（`postgres:16` / `redis:7.4`）+ 自前 StatefulSet**。
+- **postgres / redis は公式イメージ（`postgres:16` / `redis:8.10`）+ 自前 StatefulSet**。
   > Bitnami の Helm chart は採用しません。Bitnami は 2025-08〜09 で公開カタログ
   > (`docker.io/bitnami`) を Legacy 化／削除し、無償の versioned イメージが
   > 廃止されました（出典: bitnami/charts#35164）。公式イメージなら ARM64 提供・
@@ -114,11 +115,18 @@ flowchart LR
 
 ---
 
-## 2. グレースフル更新（WebSocket を切らさない）
+## 2. ローリング更新と WebSocket
 
 同時視聴の WebSocket セッション状態は **Django プロセス内**に保持されます
 （`streamer/consumers.py`。room/user の生死は Redis ではなくプロセスが持つ）。
-そのため更新時は「新 Pod を先に Ready にしてから旧 Pod を見送る」方式を取ります。
+更新時は「新 Pod を先に Ready にしてから旧 Pod を止める」方式で、新規接続を
+受けられない時間を作りません。
+
+**既存の WebSocket は旧 Pod の停止時に切れます。** uvicorn は SIGTERM を受けると開いている
+WebSocket をすぐに close code `1012`（service restart）で閉じ、各接続の `disconnect` →
+`leave_party` が DB を後始末します。拡張機能は自動で再接続しないので、利用者は
+「サーバーとの通信が終了」の表示のあと、共有リンクからルームに入り直します
+（ルームは DB に残っているので同じ URL で入れる）。
 
 ```mermaid
 sequenceDiagram
@@ -134,9 +142,9 @@ sequenceDiagram
     New-->>K8s: Readiness OK
     K8s->>Old: SIGTERM + preStop(sleep)
     Note over Old,NX: preStop 中に Endpoints から除外<br/>→ 新規 WS は New へ
-    Old->>Old: gunicorn graceful-timeout で既存接続を見送り
-    Cli-->>Old: 切断検知
-    Cli->>New: 自動再接続 → 同じ room に再 join
+    Old-->>Cli: WebSocket を 1012 で close（disconnect → leave_party）
+    Note over Cli: 自動再接続はしない
+    Cli->>New: 利用者が共有リンクから入り直す（join）
 ```
 
 実装上の効かせどころ（`values.yaml`）:
@@ -146,7 +154,7 @@ sequenceDiagram
 | 先出し起動 | `*.strategy.maxSurge=1` / `maxUnavailable=0` | 有効 |
 | 終了猶予 | `django.terminationGracePeriodSeconds` | 120s |
 | Endpoints 除外の伝播待ち | `django.preStopSleepSeconds` | 5s |
-| gunicorn graceful | `django.gunicornGracefulTimeout`（`GUNICORN_CMD_ARGS` で注入） | 110s |
+| gunicorn graceful（処理中の HTTP の完了待ち。WebSocket は待たない） | `django.gunicornGracefulTimeout`（`GUNICORN_CMD_ARGS` で注入） | 110s |
 | nginx graceful | preStop `nginx -s quit` + `nginx.terminationGracePeriodSeconds` | 60s |
 | WS 長時間タイムアウト | nginx `proxy_read/send_timeout 3600s` | 有効 |
 
@@ -285,8 +293,8 @@ kubectl -n d-party port-forward svc/d-party-nginx 8080:80
 | クラスタ内ビルド | **moby/buildkit（rootless）** | Moby/CNCF 系、活発。daemonless で K8s Job 向き |
 | ローカルレジストリ | **registry:2（CNCF Distribution）** | CNCF プロジェクト、ARM64 提供、業界標準 |
 | DB | **postgres:16（公式）** | Docker 公式、ARM64 提供、長期メンテ |
-| キャッシュ/レイヤ | **redis:7.4（公式）** | Docker 公式、ARM64 提供 |
-| リバースプロキシ | **nginx:1.27（公式）** | Docker 公式 |
+| キャッシュ/レイヤ | **redis:8.10（公式）** | Docker 公式、ARM64 提供 |
+| リバースプロキシ | **nginx:1.31（公式）** | Docker 公式 |
 | 永続化 | **local-path-provisioner** | k3s 同梱の既定 StorageClass |
 | 機微情報 | **SealedSecrets / SOPS**（運用リポジトリ） | 業界標準。Sealed Secrets は Bitnami の方針変更の影響を受けない |
 
@@ -424,18 +432,18 @@ npx -y wscat -c "${URL/https/wss}/anime-store/party/?room_id=test"
 # 接続後、streamer/format.py の create_room ペイロードを送って疎通
 
 # (d) 拡張機能から繋ぐ（実ブラウザで体験確認）
-#   extension/src/infrastructure/env.ts を一時的に書き換える:
-#     D_PARTY_BACKEND_HOST     = "<random>.trycloudflare.com"
-#     D_PARTY_BACKEND_PROTOCOL = "https://"
-#     D_PARTY_WEBSOCKET_PROTOCOL = "wss://"
+#   extension/src/infrastructure/env.ts の接続先を一時的に書き換える:
+#     BACKEND_HOST       = "<random>.trycloudflare.com/"
+#     BACKEND_PROTOCOL   = "https://"
+#     WEBSOCKET_PROTOCOL = "wss://"
 #   → ルートで `pnpm --filter d-party-chrome-extension run build`
 #   → chrome://extensions で extension/dist/ を再読込
 ```
 
 ### 5.6 グレースフル更新の検証（核心）
 
-Quick Tunnel 越しに WebSocket を張ったまま、django をローリング更新して **既存接続が
-切れずに見送られる／切れても自動再接続される**かを観察します。
+Quick Tunnel 越しに WebSocket を張ったまま、django をローリング更新して **新規接続が
+途切れないこと・既存接続が 1012 で閉じられ、ルームに入り直せること**を観察します。
 
 ```bash
 # (1) 並行 N 本の WS を張りっぱなしにする簡易 soak（Python）
@@ -618,7 +626,6 @@ kubectl delete ns argocd
 
 | 事象 | 原因 | 回避 |
 |---|---|---|
-| `ComparisonError: Permission denied (publickey)` / `clone of git@github.com:d-party/backend.git failed` | **モノレポ化で解消済み。** 以前はこのリポジトリが backend / chrome-extension / frontend を SSH のサブモジュールで持っており、repo-server がその clone に失敗していた | サブモジュールは無くなったので対処不要。古い repo-server に `ARGOCD_GIT_MODULES_ENABLED=false` が残っていても害はない |
 | `waiting for healthy state of networking.k8s.io/Ingress/d-party` から進まない | k3d を `--disable=servicelb` で起動しているため `LoadBalancer` Service が pending、Ingress に IP が付かず Argo CD が Unhealthy 判定 | `ingress.enabled=false` のまま検証する（HTTP 検証は `kubectl port-forward svc/d-party-nginx 8080:80` で代替）。本番 Pi では `--disable=servicelb` を外す |
 | `valuesObject` を patch しても古い render が残り `OutOfSync` が振動する | 進行中の sync 操作が古い snapshot で動いている | `kubectl -n argocd patch application d-party --type merge -p '{"operation":null}'` で in-flight op をクリア → `argocd.argoproj.io/refresh: hard` で再 sync |
 | `applicationsets.argoproj.io` CRD 適用時に `Too long: may not be more than 262144 bytes` の警告 | `kubectl apply` の annotation 上限に当たるだけ。`Application` CRD は別物で問題なし | 単一 `Application` 運用では無視可。`ApplicationSet` を使う場合は `kubectl apply --server-side -f ...` |

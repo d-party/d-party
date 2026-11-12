@@ -8,6 +8,7 @@ from django.core.cache import cache
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -25,6 +26,16 @@ from streamer.models import (
     ReactionType,
 )
 
+from .serializers import (
+    ApiMessageSerializer,
+    CountResultSerializer,
+    LobbyRedirectSerializer,
+    PerDayResultSerializer,
+    ReactionTypeCountResultSerializer,
+    ShieldsBadgeSerializer,
+    VersionCheckResultSerializer,
+)
+
 # 統計はサービス（dアニメ / DMM）を横断した d-party 全体の利用状況を表す。各集計は
 # 下のモデル群すべてを合算する（サービスを増やしてもここに追加すれば統計へ反映される）。
 ROOM_MODELS = (AnimeRoom, DmmRoom)
@@ -32,15 +43,38 @@ USER_MODELS = (AnimeUser, DmmUser)
 # (生リアクション, 畳み込み集計) のペア。生は稼働中ルーム分、集計は終了ルーム分。
 REACTION_SOURCES = ((AnimeReaction, ReactionStat), (DmmReaction, DmmReactionStat))
 
-# Matches the previous ``distutils.version.StrictVersion`` accepted form: a
-# strict ``major.minor.patch`` triple. ``distutils`` was removed in Python 3.12.
+# A strict ``major.minor.patch`` triple.
 _STRICT_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
-# 統計の集計期間（``?days=N``）。未指定は 1 年、上限も 1 年。
+# 統計 API は公開（認証不要）。``?days=N`` の既定と上限は 1 年。
 DEFAULT_STATS_DAYS = 365
 MAX_STATS_DAYS = 365
-# 統計レスポンスをキャッシュする秒数。毎リクエストの DB 集計を避けるための TTL。
+# 統計レスポンスのキャッシュ秒数。
 STATS_CACHE_SECONDS = int(os.getenv("STATS_CACHE_SECONDS", "300"))
+
+# OpenAPI スキーマ（``backend/openapi.json``）に載せる ``?days=N`` の定義。
+_DAYS_PARAMETER = OpenApiParameter(
+    name="days",
+    type={
+        "type": "integer",
+        "minimum": 1,
+        "maximum": MAX_STATS_DAYS,
+        "default": DEFAULT_STATS_DAYS,
+    },
+    description="集計する日数。",
+)
+
+
+def _stats_schema(operation_id: str, response, *, days: bool = True):
+    """統計 API の ``get`` に付けるスキーマ。``operation_id`` が TypeScript の関数名になる。"""
+    responses = {200: response}
+    if days:
+        responses[400] = ApiMessageSerializer
+    return extend_schema(
+        operation_id=operation_id,
+        parameters=[_DAYS_PARAMETER] if days else [],
+        responses=responses,
+    )
 
 
 def _parse_days(request) -> int | None:
@@ -53,7 +87,7 @@ def _parse_days(request) -> int | None:
         return DEFAULT_STATS_DAYS
     try:
         days = int(raw)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
     if days < 1 or days > MAX_STATS_DAYS:
         return None
@@ -70,9 +104,7 @@ def _bad_days() -> Response:
 def _since(days: int) -> datetime.date:
     """Inclusive start date of a ``days``-long window ending today.
 
-    ``timezone.localdate()`` を使い、集計側の ``TruncDate``（settings の TIME_ZONE で
-    日付を切る）と同じ基準に揃える。``date.today()`` はプロセスのローカル時刻を見るため、
-    TZ 環境変数が設定されていない実行環境では 1 日ずれる。
+    ``TruncDate`` と同じく settings の TIME_ZONE で日付を切る（``date.today()`` は使わない）。
     """
     return timezone.localdate() - datetime.timedelta(days=days - 1)
 
@@ -82,31 +114,27 @@ def _cached(key: str, producer):
     return cache.get_or_set(key, producer, STATS_CACHE_SECONDS)
 
 
-def _reaction_counts_by_type(since: datetime.date) -> dict[str, int]:
+def _reaction_counts_by_type(since: datetime.date | None = None) -> dict[str, int]:
     """Per-type reaction counts in ``[since, today]`` across all services.
 
-    Historical reactions live in the folded stat tables (``ReactionStat`` /
-    ``DmmReactionStat``, folded on room end); reactions of still-alive rooms
-    remain in the raw tables (``AnimeReaction`` / ``DmmReaction``) and are added
-    on top so the total reflects in-progress rooms too. Keyed by the stored
-    ``reaction_type`` value (e.g. ``"S"``).
+    ``since=None`` counts every reaction ever recorded.
+
+    Ended rooms are in the folded stat tables (``ReactionStat`` /
+    ``DmmReactionStat``); alive rooms are still in the raw tables
+    (``AnimeReaction`` / ``DmmReaction``). Keyed by the stored ``reaction_type``
+    value (e.g. ``"S"``).
     """
     merged: dict[str, int] = defaultdict(int)
     for reaction_model, stat_model in REACTION_SOURCES:
-        folded = (
-            stat_model.objects.filter(date__gte=since)
-            .values("reaction_type")
-            .annotate(total=Sum("count"))
-        )
+        folded_qs = stat_model.objects.all()
+        live_qs = reaction_model.objects.filter(room_id__deleted_at__isnull=True)
+        if since is not None:
+            folded_qs = folded_qs.filter(date__gte=since)
+            live_qs = live_qs.filter(created_at__date__gte=since)
+        folded = folded_qs.values("reaction_type").annotate(total=Sum("count"))
         for row in folded:
             merged[row["reaction_type"]] += row["total"]
-        live = (
-            reaction_model.objects.filter(
-                room_id__deleted_at__isnull=True, created_at__date__gte=since
-            )
-            .values("reaction_type")
-            .annotate(total=Count("reaction_id"))
-        )
+        live = live_qs.values("reaction_type").annotate(total=Count("reaction_id"))
         for row in live:
             merged[row["reaction_type"]] += row["total"]
     return merged
@@ -123,9 +151,7 @@ def _parse_strict_version(value: str) -> tuple[int, int, int] | None:
 def _per_day_counts(model, since: datetime.date | None = None) -> list[dict]:
     """Return ``[{"day": date, "count": n}, ...]`` grouped by creation day.
 
-    When ``since`` is given, only rows created on/after it are counted. Uses
-    ``TruncDate`` so the query works across database backends (the previous
-    ``.extra(select={"day": "date(created_at)"})`` was MySQL-specific).
+    When ``since`` is given, only rows created on/after it are counted.
     """
     qs = model.objects
     if since is not None:
@@ -143,16 +169,8 @@ def _resample_per_day(
 ) -> list[dict]:
     """Fill gaps so every calendar day has a count.
 
-    Returns ``[{"day": date, "count": int}, ...]`` for every calendar day in the
-    window, in ascending order, padding missing days with ``0``. The series
-    always extends to today; when ``since`` is given it also starts exactly at
-    ``since`` so the window has a fixed length regardless of when the first
-    event happened.
-
-    A plain loop replaces the former ``pandas.DataFrame.asfreq`` round-trip,
-    which pulled in the heavy pandas dependency only to forward-fill zero days.
+    The series runs up to today, and starts at ``since`` when given.
     """
-    # 集計側の TruncDate と同じく settings の TIME_ZONE で「今日」を決める。
     today = timezone.localdate()
     counts = {row["day"]: int(row["count"]) for row in rows}
     if since is not None:
@@ -161,7 +179,6 @@ def _resample_per_day(
         start = rows[0]["day"]
     else:
         start = today
-    # 終端は常に今日まで伸ばす（最後のイベント日が今日より前でも 0 埋めで今日まで含める）。
     end = max(today, start)
     result: list[dict] = []
     day = start
@@ -172,7 +189,7 @@ def _resample_per_day(
 
 
 def _mean_per_day(rows: list[dict]) -> float:
-    """Mean of the daily counts over the window (matches pandas ``Series.mean``)."""
+    """Mean of the daily counts over the window."""
     return sum(row["count"] for row in rows) / len(rows) if rows else 0.0
 
 
@@ -209,6 +226,7 @@ class HealthCheckAPI(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(operation_id="health", responses={200: None})
     def get(self, request, format=None) -> Response:
         return Response(status=status.HTTP_200_OK)
 
@@ -218,6 +236,22 @@ class ChromeExtensionVersionCheckAPI(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        operation_id="versionCheck",
+        parameters=[
+            OpenApiParameter(
+                name="extension-version",
+                type=str,
+                required=True,
+                description="拡張機能のバージョン（x.y.z）。",
+            )
+        ],
+        responses={
+            200: VersionCheckResultSerializer,
+            400: ApiMessageSerializer,
+            406: ApiMessageSerializer,
+        },
+    )
     def get(self, request, format=None) -> Response:
         if "extension-version" not in request.GET:
             return Response(
@@ -246,9 +280,9 @@ class ChromeExtensionVersionCheckAPI(APIView):
 class AnimeActiveUserPerDayAPI(APIView):
     """Daily count of users that have ever been in a room."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsActiveUserPerDay", PerDayResultSerializer)
     def get(self, request, format=None) -> Response:
         days = _parse_days(request)
         if days is None:
@@ -264,9 +298,9 @@ class AnimeActiveUserPerDayAPI(APIView):
 class AnimeActiveRoomPerDayAPI(APIView):
     """Daily count of rooms created by users."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsActiveRoomPerDay", PerDayResultSerializer)
     def get(self, request, format=None) -> Response:
         days = _parse_days(request)
         if days is None:
@@ -282,9 +316,9 @@ class AnimeActiveRoomPerDayAPI(APIView):
 class AnimeRoomReactionCountAPI(APIView):
     """Per-type reaction counts."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsReactionCount", ReactionTypeCountResultSerializer)
     def get(self, request, format=None) -> Response:
         days = _parse_days(request)
         if days is None:
@@ -304,9 +338,9 @@ class AnimeRoomReactionCountAPI(APIView):
 class AnimeRoomReactionAllCountAPI(APIView):
     """Total reaction count."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsReactionAllCount", CountResultSerializer)
     def get(self, request, format=None) -> Response:
         days = _parse_days(request)
         if days is None:
@@ -323,9 +357,9 @@ class AnimeRoomReactionAllCountAPI(APIView):
 class AnimeUserAllCountAPI(APIView):
     """User count within the requested period (by creation date)."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsUserAllCount", CountResultSerializer)
     def get(self, request, format=None) -> Response:
         days = _parse_days(request)
         if days is None:
@@ -342,9 +376,9 @@ class AnimeUserAllCountAPI(APIView):
 class AnimeRoomAllCountAPI(APIView):
     """Room count within the requested period (by creation date)."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsRoomAllCount", CountResultSerializer)
     def get(self, request, format=None) -> Response:
         days = _parse_days(request)
         if days is None:
@@ -361,9 +395,9 @@ class AnimeRoomAllCountAPI(APIView):
 class AnimeUserAliveCountAPI(APIView):
     """Currently connected user count."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsUserAliveCount", CountResultSerializer, days=False)
     def get(self, request, format=None) -> Response:
         return Response({"data": {"count": _sum_alive(USER_MODELS)}})
 
@@ -371,25 +405,22 @@ class AnimeUserAliveCountAPI(APIView):
 class AnimeRoomAliveCountAPI(APIView):
     """Currently active room count."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
+    @_stats_schema("statsRoomAliveCount", CountResultSerializer, days=False)
     def get(self, request, format=None) -> Response:
         return Response({"data": {"count": _sum_alive(ROOM_MODELS)}})
 
 
 class _ShieldsView(APIView):
-    """Base view returning a shields.io endpoint badge payload.
-
-    Replaces the unmaintained ``django-dynamic-shields`` dependency while
-    keeping the public badge JSON contract (``schemaVersion`` 1).
-    """
+    """Base view returning a shields.io endpoint badge payload (``schemaVersion`` 1)."""
 
     permission_classes = [AllowAny]
 
     def shields_data(self) -> dict:
         raise NotImplementedError
 
+    @extend_schema(responses={200: ShieldsBadgeSerializer})
     def get(self, request, format=None) -> Response:
         return Response({"schemaVersion": 1, **self.shields_data()})
 
@@ -430,25 +461,23 @@ class UserCountParDayShieldsAPI(_ShieldsView):
 
 class ReactionCountShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
-        return {
-            "label": "TotalReaction",
-            "message": str(sum(m.objects.all().count() for m, _ in REACTION_SOURCES)),
-        }
+        total = sum(_reaction_counts_by_type().values())
+        return {"label": "TotalReaction", "message": str(total)}
 
 
 class AnimeStoreLobbyResolveAPI(APIView):
     """Resolve a room id to the dアニメストア redirect URL.
 
-    Server-side replacement for the old ``web.views.AnimeRoomLobby`` template
-    view: the React frontend's room-transition page (``/anime-store/lobby/
-    <room_id>``) calls this to learn where to redirect the user once the
-    extension has confirmed it is installed and compatible.
+    Called by the frontend's lobby page (``/anime-store/lobby/<room_id>``).
     """
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        operation_id="lobbyResolve",
+        responses={200: LobbyRedirectSerializer, 404: ApiMessageSerializer},
+    )
     def get(self, request, room_id, format=None) -> Response:
-        # 旧 anime.dmkt-sp.jp から animestore.docomo.ne.jp へ移行済み。
         anime_store_domain = os.environ.get(
             "D_ANIME_STORE_DOMAIN", "animestore.docomo.ne.jp"
         )
@@ -500,6 +529,10 @@ class DmmTvLobbyResolveAPI(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        operation_id="dmmLobbyResolve",
+        responses={200: LobbyRedirectSerializer, 404: ApiMessageSerializer},
+    )
     def get(self, request, room_id, format=None) -> Response:
         dmm_tv_domain = os.environ.get("DMM_TV_DOMAIN", "tv.dmm.com")
         try:

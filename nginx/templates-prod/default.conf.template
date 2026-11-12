@@ -1,8 +1,4 @@
-# 本番 server ブロック（TLS 終端 + HTTP→HTTPS リダイレクト + ACME http-01 チャレンジ）。
-# nginx 公式イメージの envsubst（/etc/nginx/templates-prod/*.template）で
-#   ${MY_DOMAIN} ${DJANGO_UPSTREAM} ${FRONTEND_UPSTREAM}
-# を .env.global から差し込み、conf.prod.d/default.conf として展開する。
-# nginx の $host / $uri 等は同名の環境変数が無いため置換されない。
+# envsubst で ${MY_DOMAIN} ${DJANGO_UPSTREAM} ${FRONTEND_UPSTREAM} を埋める。
 
 upstream app_server {
     server ${DJANGO_UPSTREAM} fail_timeout=0;
@@ -16,14 +12,11 @@ server {
     listen 80 default;
     server_name ${MY_DOMAIN} www.${MY_DOMAIN};
 
-    # certbot(webroot) が書き出すチャレンジファイルを配信する。
-    # certbot コンテナと同じ ./certbot/www を /var/www/certbot にマウントしている。
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
         default_type "text/plain";
     }
 
-    # それ以外はすべて HTTPS へ。
     location / {
         return 301 https://$host$request_uri;
     }
@@ -34,7 +27,6 @@ server {
     listen 443 ssl;
     http2 on;
     server_name ${MY_DOMAIN} www.${MY_DOMAIN};
-    client_max_body_size 4G;
     keepalive_timeout 10;
 
     ssl_certificate     /etc/letsencrypt/live/${MY_DOMAIN}/fullchain.pem;
@@ -47,7 +39,7 @@ server {
     }
 
 
-    # ── Django (ASGI): REST API・管理画面・統計・メトリクス・WebSocket ──
+    # ── Django (ASGI): REST API・管理画面・WebSocket ──
     location /api/ {
         add_header Access-Control-Allow-Origin "*" always;
         add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
@@ -69,15 +61,11 @@ server {
         proxy_redirect off;
         proxy_pass http://app_server;
     }
-    # /admin（末尾スラッシュなし）はこの prefix にマッチせず location / へ落ちて
-    # フロントの 404 になるため、Django admin の /admin/ へ明示的にリダイレクトする。
+    # /admin は上の prefix に合わずフロントの 404 になるので、/admin/ へ飛ばす。
     location = /admin {
         return 301 /admin/;
     }
     location /admin/ {
-        try_files $uri @proxy_to_app;
-    }
-    location = /metrics {
         try_files $uri @proxy_to_app;
     }
     # WebSocket（同時視聴の同期）。party/ は Django、/anime-store/lobby/ はフロント。
@@ -118,8 +106,8 @@ server {
         proxy_pass http://frontend_server;
     }
 
-    error_page 500 502 503 504 /500.html;
-    location = /500.html {
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
         root /usr/share/nginx/html;
     }
 }
