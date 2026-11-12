@@ -259,8 +259,8 @@ kubectl apply -n argocd -f infra/argocd/application.example.yaml
 
 ```bash
 # 構文・テンプレート検証（クラスタ不要）
-helm lint   infra/helm/d-party
-helm template d-party infra/helm/d-party | less
+helm lint   infra/helm/d-party --set secret.existingSecret=d-party-secret
+helm template d-party infra/helm/d-party --set secret.existingSecret=d-party-secret | less
 
 # クラスタへ直接入れる場合（GitOps を使わない暫定確認）
 helm upgrade --install d-party infra/helm/d-party \

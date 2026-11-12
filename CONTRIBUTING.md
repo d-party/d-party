@@ -97,7 +97,7 @@ uv run mypy .
 uv run pytest
 
 # インフラ（chart を触ったとき）
-helm lint infra/helm/d-party
+helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret
 ```
 
 `pre-commit install` を一度しておくと、backend の ruff と基本的な整形が
