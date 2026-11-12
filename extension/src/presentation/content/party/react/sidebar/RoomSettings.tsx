@@ -4,13 +4,8 @@ import { Label } from "@d-party/ui";
 import { Switch } from "@d-party/ui";
 import type { RoomSettings as RoomSettingsValue } from "@/domain/roomSettings";
 
-/**
- * ルーム詳細設定のトグル群（単一の再利用コンポーネント）。
- *
- * ルーム作成時（`CreatePanel` のアコーディオン内）と、入室後の操作タブ
- * （`ControlPanel`、オーナーのみ編集可）の両方でこのコンポーネントを使う。
- * `disabled` のとき read-only 表示になり、値は変更できない。
- */
+/** 作成時（`CreatePanel`）と入室後（`ControlPanel`）で共用する。 */
+
 export function RoomSettings({
   value,
   onChange,

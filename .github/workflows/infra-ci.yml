@@ -1,7 +1,4 @@
-# infra/（k3s / Helm）の CI。
-#
-# chart が壊れると Raspberry Pi へのリリースがそのまま止まるため、クラスタ無しで
-# できる静的検証（helm lint / helm template）をここで回す。
+# Helm chart の静的検証（クラスタ不要）。
 name: Infra/CI
 
 on:

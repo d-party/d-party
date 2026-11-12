@@ -9,18 +9,23 @@ description: Review, verify and merge the open Dependabot PRs on the d-party mon
 実際に使っている import / API を照合し、ローカルで動かして**から初めてマージする。
 
 このリポジトリは monorepo。Dependabot PR は**すべて `d-party/d-party` に立つ**
-（`.github/dependabot.yml` に 4 つの ecosystem が定義されている）:
+（`.github/dependabot.yml` に 5 つの ecosystem が定義されている）:
 
 | ecosystem | 対象 | 主なゲート |
 | --- | --- | --- |
 | `uv` (`/backend`) | backend の Python 依存 | pytest · mypy · ruff · makemigrations --check |
 | `npm` (`/`) | extension + frontend（**ロックファイルは 1 本**） | typecheck · lint · rspack build · next build · build-storybook · Docker smoke |
 | `docker` (`/backend`, `/frontend`) | ベースイメージ | hadolint · dockle · Docker smoke |
+| `docker-compose` (`/`) | compose のイメージ（nginx · postgres · redis · certbot · k6） | `docker compose config` · nginx の構文チェック · 起動確認 |
 | `github-actions` (`/`) | ワークフロー | actionlint |
 
 > **npm の PR は 1 本で両パッケージを動かしうる。** ロックファイルがルートに 1 本
 > しかないため、`extension/package.json` だけを触る PR でも `pnpm-lock.yaml` の
 > 解決結果が frontend に波及することがある。**必ず両方のゲートを回す。**
+
+対話セッションでは、§2 · §3 の調査は `.claude/skills/maintenance/investigation.md` の手順
+（ライブラリの差分と供給元の確認まで）で行い、§4 の検証は
+`.claude/skills/maintenance/scripts/gates.sh` で回す。
 
 ## 非対話モード（GitHub Actions の定期実行）
 
@@ -29,8 +34,8 @@ description: Review, verify and merge the open Dependabot PRs on the d-party mon
 
 **環境（ワークフローが用意済み）**
 
-- postgres / redis はジョブの `services` で `localhost:5432` / `localhost:6379` に
-  立っている。`docker compose up -d postgres redis` は**しない**（ポートが衝突する）。
+- postgres はジョブの `services` で `localhost:5432` に立っている（テストは Redis を使わない）。
+  `docker compose up -d postgres` は**しない**（ポートが衝突する）。
 - §4 の backend 用 env はジョブの `env` に入っている。`export` し直さなくてよい。
 - uv · pnpm · Node 26 · gh · docker はインストール済み。`GH_TOKEN` は GITHUB_TOKEN。
 
@@ -125,11 +130,11 @@ CI は **PR 単体**しか見ていない。付加価値は「**全部入れた�
 
 ### backend
 
-postgres / redis を立て、CI と同じ env を用意する（`CHROME_EXTENSION_REQUIRED_VERSION`
+postgres を立て、CI と同じ env を用意する（`CHROME_EXTENSION_REQUIRED_VERSION`
 が無いと version-check テストが 406 で落ちるので必ず入れる）:
 
 ```bash
-docker compose up -d postgres redis     # リポジトリルートで
+docker compose up -d postgres           # リポジトリルートで（テストは Redis 不要）
 
 cd backend
 export SECRET_KEY=django-insecure-local-test DEBUG=1 MY_DOMAIN=localhost \
@@ -183,7 +188,8 @@ for p in / /usage /qa /privacy /stats /anime-store/lobby/test-room-123 /nope; do
   curl -s -o /dev/null -w "$p %{http_code}\n" "http://127.0.0.1:3111$p"
 done
 # 拡張機能との DOM 契約が生きているか（これが壊れるとルーム遷移が死ぬ）
-curl -s http://127.0.0.1:3111/anime-store/lobby/test/ | grep -o chrome_extension_field
+#   末尾に / を付けると 308 が返り、本文が空になる
+curl -s http://127.0.0.1:3111/anime-store/lobby/test | grep -o chrome_extension_field
 # OG 画像（Satori + 日本語フォント）が実際に PNG を返すか
 curl -s -o /dev/null -w "%{http_code} %{content_type}\n" \
   http://127.0.0.1:3111/anime-store/lobby/test/opengraph-image

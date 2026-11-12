@@ -19,9 +19,8 @@ import type { SidebarStore } from "@/presentation/content/party/react/sidebarSto
 interface ToastItemData {
   id: number;
   variant: ToastVariant;
-  /** Pre-rendered HTML. Existing call sites pass small fragments like
-   * `<i class='fas...'></i>` mixed with text, so we render as innerHTML. */
-  html: string;
+  /** 他人の表示名を含むので、HTML として解釈しない。 */
+  message: string;
 }
 
 const DEFAULT_DURATION_MS = 3000;
@@ -39,9 +38,9 @@ class ToastStore {
 
   getSnapshot = (): ToastItemData[] => this.toasts;
 
-  push(variant: ToastVariant, html: string): number {
+  push(variant: ToastVariant, message: string): number {
     const id = ++this.seq;
-    this.toasts = [...this.toasts, { id, variant, html }];
+    this.toasts = [...this.toasts, { id, variant, message }];
     this.emit();
     return id;
   }
@@ -82,7 +81,7 @@ function ToastItem({
       className={leaving ? "translate-x-2 opacity-0" : "translate-x-0 opacity-100"}
     >
       <ToastIcon variant={toast.variant} />
-      <ToastBody dangerouslySetInnerHTML={{ __html: toast.html }} />
+      <ToastBody>{toast.message}</ToastBody>
       <ToastClose onClick={() => setLeaving(true)} />
     </Toast>
   );
@@ -96,8 +95,6 @@ function Toaster({
   sidebarStore?: SidebarStore;
 }): React.JSX.Element {
   const toasts = useSyncExternalStore(store.subscribe, store.getSnapshot);
-  // Offset the viewport right edge to align with the sidebar's left edge so
-  // toasts appear over the player area, not on top of the sidebar.
   const sbState = useSyncExternalStore(
     sidebarStore?.subscribe ?? (() => () => {}),
     sidebarStore?.getSnapshot ?? (() => null),
@@ -112,12 +109,8 @@ function Toaster({
   );
 }
 
-/** Notifier backed by a shadcn-style React toast viewport mounted in its own
- * Shadow DOM. Replaces awesome-notifications. Keeps the same HTML-string API
- * so existing call sites (which embed Font Awesome `<i>` icons) keep working.
- *
- * Pass `sidebarStore` so the viewport offsets itself by the current sidebar
- * width and the toasts land on the player area to the left of the sidebar. */
+/** Toasts in their own Shadow DOM. With `sidebarStore`, they stay left of the sidebar. */
+
 export class ReactNotifier implements Notifier {
   private readonly store = new ToastStore();
 
@@ -126,16 +119,16 @@ export class ReactNotifier implements Notifier {
     this.mount();
   }
 
-  success(html: string): void {
-    this.store.push("success", html);
+  success(message: string): void {
+    this.store.push("success", message);
   }
 
-  info(html: string): void {
-    this.store.push("info", html);
+  info(message: string): void {
+    this.store.push("info", message);
   }
 
-  alert(html: string): void {
-    this.store.push("alert", html);
+  alert(message: string): void {
+    this.store.push("alert", message);
   }
 
   private mount(): void {

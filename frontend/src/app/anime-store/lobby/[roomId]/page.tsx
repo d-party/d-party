@@ -12,33 +12,22 @@ import { lobbyResolve } from "@/infrastructure/api/generated/d-party";
 import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
 
 /**
- * Room-transition lobby — faithful port of web/templates/lobby_redirect.html.
- *
- * The Chrome extension's `content-version` script matches
- * `https://d-party.net/anime-store/lobby/*` and writes the backend's version
- * compatibility verdict ("true" / "false") into the `.chrome_extension_field`
- * element below. We poll that element once per second:
- *   - "true"   → redirect to the dアニメストア player URL (resolved from the
- *                `GET /api/v1/anime-store/lobby/{room_id}` backend endpoint).
- *   - "false"  → extension too old → offer "view timer" or "update".
- *   - 30s pass with neither verdict → extension not installed → offer
- *                "view timer" or "install".
- *
- * タイマー機能: 拡張機能なし・dアニメストア不要のユーザー向けに、`?timer=true` を付けた
- * 同じロビー URL で「タイマー画面」を表示する（新規 URL は発行しない）。拡張機能が無い/
- * 非対応のときは、従来のウェブストア自動遷移に代えて「タイマーを見る or インストール/
- * アップデート」の選択を提示する。
+ * The extension's `content-version` writes "true" / "false" into
+ * `.chrome_extension_field`; we poll it every second.
+ *   - "true"  → redirect to the dアニメストア player
+ *   - "false" → offer the timer or an update
+ *   - nothing for 30s → offer the timer or an install
+ * `?timer=true` shows the timer instead.
  */
 
 const POLL_INTERVAL_MS = 1000;
-const MAX_POLLS = 29; // checks fire at t=1s..29s; gives a slow backend more time
-// to write its verdict before we give up and assume the extension is missing.
+const MAX_POLLS = 29;
 const NOTICE_FADE_MS = 2000;
 
 type Phase = "checking" | "incompatible" | "uninstalled" | "not-found";
 
 export default function LobbyPage(): React.JSX.Element {
-  // useSearchParams は Suspense 境界を要求する（Next のビルド要件）。
+  // useSearchParams needs a Suspense boundary.
   return (
     <Suspense fallback={<LobbyFallback />}>
       <LobbyContent />
@@ -62,20 +51,15 @@ function LobbyContent(): React.JSX.Element {
   const { roomId } = useParams<{ roomId: string }>();
   const searchParams = useSearchParams();
   const isTimer = searchParams.get("timer") === "true";
-  // ポップアップ小窓で開いたタイマー（Header/Footer を覆う全面表示にする）。
   const isPopup = searchParams.get("popup") === "1";
 
   const [phase, setPhase] = useState<Phase>("checking");
   const [loaderText, setLoaderText] = useState("ルームに接続しています");
-  // タイマー画面の初期タイトル（lobbyResolve から。以後は WS の video_operation で更新）。
   const [title, setTitle] = useState("");
 
-  // The resolved dアニメストア redirect URL; null until the backend responds.
   const redirectUrlRef = useRef<string | null>(null);
-  // Set when the extension reported "true" before the URL had resolved.
   const redirectPendingRef = useRef(false);
 
-  // Resolve room_id → dアニメストア redirect URL (and capture the title) via the backend.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -85,9 +69,7 @@ function LobbyContent(): React.JSX.Element {
         if (res.status === 200) {
           setTitle(res.data.title ?? "");
           redirectUrlRef.current = res.data.redirect_url;
-          // タイマー表示のときはリダイレクトしない（タイトル取得のみ）。
           if (isTimer) return;
-          // The extension may have already approved while we were waiting.
           if (redirectPendingRef.current) {
             window.location.href = res.data.redirect_url;
           }
@@ -95,7 +77,7 @@ function LobbyContent(): React.JSX.Element {
           setPhase("not-found");
         }
       } catch {
-        // タイマー表示ではルームの有無を WS(spectate) 側で判定するため無視。
+        // タイマーはルームの有無を spectate で判定する。
         if (!cancelled && !isTimer) setPhase("not-found");
       }
     })();
@@ -104,9 +86,7 @@ function LobbyContent(): React.JSX.Element {
     };
   }, [roomId, isTimer]);
 
-  // Poll the extension-written field and drive the redirect state machine.
   useEffect(() => {
-    // タイマー表示では拡張機能の検出・遷移を行わない。
     if (isTimer) return;
 
     let polls = 0;
@@ -129,7 +109,6 @@ function LobbyContent(): React.JSX.Element {
         if (redirectUrlRef.current) {
           window.location.href = redirectUrlRef.current;
         } else {
-          // URL not resolved yet — redirect as soon as the fetch completes.
           redirectPendingRef.current = true;
           setLoaderText("ルーム情報を取得しています");
         }
@@ -149,7 +128,6 @@ function LobbyContent(): React.JSX.Element {
       }
     }, POLL_INTERVAL_MS);
 
-    // After 30s with no verdict, treat the extension as not installed.
     const notInstalledTimer = window.setTimeout(
       () => {
         if (settled) return;
@@ -166,18 +144,14 @@ function LobbyContent(): React.JSX.Element {
     };
   }, [isTimer]);
 
-  // タイマー表示: 拡張機能の検出をスキップして再生状況を表示する。
   if (isTimer) {
     return <TimerView roomId={roomId} initialTitle={title} popup={isPopup} />;
   }
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 text-center">
-      {/*
-        Extension contract: the content-version script locates this element by
-        class name and writes "true"/"false" into it. Must stay present and keep
-        this exact class. Visually hidden but not display:none so innerText works.
-      */}
+      {/* 拡張機能との契約。クラス名を変えない。display:none だと innerText が使えない。 */}
+
       <div className="chrome_extension_field sr-only" aria-hidden />
 
       <AnimatePresence mode="wait">

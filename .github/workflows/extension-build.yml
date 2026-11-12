@@ -1,7 +1,4 @@
-# extension/ の成果物が実際に組み上がるかを見る。
-#
-# Extension/CI は lint と型検査だけを見るので、バンドラや Dockerfile が壊れていても
-# 気づけない。ここでは**出荷するもの**を作って中身を確認する。
+# 出荷する拡張機能を作り、中身を確かめる。
 name: Extension/Build
 
 on:
@@ -10,6 +7,7 @@ on:
       - main
     paths:
       - "extension/**"
+      - "backend/openapi.json"
       - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -19,6 +17,7 @@ on:
   pull_request:
     paths:
       - "extension/**"
+      - "backend/openapi.json"
       - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -55,33 +54,21 @@ jobs:
           node-version: 26
           cache: pnpm
 
-      - name: Restore the Turborepo cache
-        uses: actions/cache@v6
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-            turbo-${{ runner.os }}-
-
+      # build:prod は turbo を通さないので Turborepo のキャッシュは復元しない。
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --filter d-party-chrome-extension...
 
-      # Chrome Web Store へ上げるのと同じ本番ビルド（D_PARTY_ENV=production）。
-      # リリースまで通らないと気づけない壊れ方を、ここで拾う。
       - name: Build the production bundle
         run: pnpm --filter d-party-chrome-extension run build:prod
 
-      # rspack が黙って空の出力を吐く事故があるので、manifest が参照する
-      # エントリが実在することまで確認する。
+      # rspack が黙って空の出力を出すことがある。
       - name: Verify the bundle contents
         run: |
           set -euo pipefail
           cd extension/dist
           test -f manifest.json || { echo "manifest.json がない"; exit 1; }
           # shellcheck disable=SC2016
-          # ここはシェルではなく node に渡す JS。${...} は JS の
-          # テンプレートリテラルなので、シェルで展開してはいけない。
+          # node に渡す JS。${...} はシェルで展開しない。
           node -e '
             const fs = require("fs");
             const m = JSON.parse(fs.readFileSync("manifest.json", "utf8"));
@@ -98,11 +85,14 @@ jobs:
               if (!ok) bad++;
             }
             if (bad) { console.error(`${bad} 個の参照先が空か存在しない`); process.exit(1); }
+            // 本番パッケージに開発用バックエンドの権限・match を残さない。
+            if (/localhost/.test(JSON.stringify(m))) {
+              console.error("manifest に localhost が残っている"); process.exit(1);
+            }
             console.log(`manifest version: ${m.version}`);
           '
 
-      # Chrome Web Store へ上げる zip と同じ形にして、サイズも見ておく
-      # （CWS の上限は 2GB だが、肥大化に気づけるよう数値をログへ残す）。
+      # 肥大化に気づけるよう、サイズをログに残す。
       - name: Package as the store would
         run: |
           set -euo pipefail
@@ -133,15 +123,14 @@ jobs:
         uses: actions/cache@v6
         with:
           path: .turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          key: turbo-${{ runner.os }}-${{ github.workflow }}-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-            turbo-${{ runner.os }}-
+            turbo-${{ runner.os }}-${{ github.workflow }}-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            turbo-${{ runner.os }}-${{ github.workflow }}-${{ github.job }}-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --filter d-party-chrome-extension...
 
-      # storybook-deploy.yml は main でしかビルドしない（Pages へ公開するため）。
-      # ここでも建てて、壊れた story が main に入って公開を落とすのを防ぐ。
+      # 壊れた story が main に入って公開を落とさないように。
       - name: Build Storybook
         run: pnpm exec turbo run build-storybook --filter=d-party-chrome-extension

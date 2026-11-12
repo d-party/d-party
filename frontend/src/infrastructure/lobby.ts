@@ -1,27 +1,18 @@
 import { lobbyResolve } from "@/infrastructure/api/generated/d-party";
 
 export interface ResolvedRoom {
-  /** Anime title saved at room creation. Empty when unknown or room not found. */
+  /** Empty when unknown. */
   title: string;
-  /** Whether the room exists (and is still alive) on the backend. */
   found: boolean;
 }
 
-/**
- * Server-side room lookup used by the lobby route's metadata and OG image.
- *
- * Reuses the generated `lobbyResolve` REST client. Never throws: an unknown or
- * missing room (and any network error) resolves to an empty title so OGP/meta
- * fall back to generic copy. `title` may be empty for rooms created by older
- * extension versions that did not send a title.
- */
+/** For the lobby's metadata and OG image. Never throws; failures give an empty title. */
 export async function resolveRoom(roomId: string): Promise<ResolvedRoom> {
   try {
     const res = await lobbyResolve(roomId, {
       next: { revalidate: 600 },
-      // Safety net: resolveRoom is awaited in generateMetadata, so a slow or
-      // hanging backend would block the whole lobby page from rendering. Fail
-      // fast and fall back to generic copy instead.
+      // generateMetadata awaits this, so a hanging backend would block the page.
+
       signal: AbortSignal.timeout(1500),
     });
     if (res.status === 200) {

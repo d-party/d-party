@@ -1,18 +1,5 @@
-// d-party 一方通行(アクセラレーター)モードの WebSocket 負荷 + 挙動シナリオ。
-//
-// モデル: 1 VU = 1 ルーム。host が create → 詳細設定で一方通行モードを有効化 →
-//   guest (ROOM_SIZE-1) が join。一方通行モードでは:
-//     - host の video_operation は全 guest へブロードキャストされる（O(N) fanout）
-//     - guest の video_operation はサーバでブロックされ、誰にも届かない
-//   通常の ws_party.js が「全員が送信元」なのに対し、こちらは「送信元は host のみ」で
-//   配信増幅の負荷プロファイルが異なる（配信者 1 + 視聴者多数の配信型ルーム）。
-//
-// 実行（リポジトリルートで、スタックを起動済みのこと）:
-//   docker compose up -d
-//   docker compose -f docker-compose.yml -f docker-compose.override.yml \
-//     -f docker-compose.loadtest.yml --profile loadtest run --rm \
-//     -e LOADTEST_SCENARIO=scenarios/ws_oneway.js k6
-// （k6 サービスが実行スクリプトを LOADTEST_SCENARIO で切替可能な場合。既定は ws_party.js）
+// 一方通行モード。1 VU = 1 ルームで、host だけが配信し、guest の操作はブロックされることも確かめる。
+// LOADTEST_SCENARIO=ws_oneway.js で実行する。
 
 import { sleep } from 'k6';
 import { Trend, Counter, Rate } from 'k6/metrics';
@@ -132,9 +119,8 @@ async function runRoom() {
     await delay(ROOM_LOAD_MS);
     stop();
 
-    // 5) 後片付け: 一方通行モード単体では host 退室でルームは自動削除されない
-    //    （owner_leave_delete は含意しない）。host が抜けると viewer の 1 人が
-    //    ホストへ昇格し、finally の close で全員が切断されるとルームが回収される。
+    // 5) 後片付け。one_way だけではルームは消えない。全員が切れたら回収される。
+
     host.send(leaveMsg());
     await delay(200);
   } catch (e) {

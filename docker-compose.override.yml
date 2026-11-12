@@ -1,16 +1,20 @@
-# 開発用オーバーレイ。`docker compose up` で自動的に読み込まれる（dev が既定）。
-#
-#   - frontend: node イメージで `pnpm dev`（Turbopack HMR）。ソースをマウントして
-#               ホットリロードする。NEXT_PUBLIC_* は実行時に .env.dev から参照する。
-#   - 環境固有値（DEBUG / MY_DOMAIN / 接続先）は .env.dev を後勝ちで注入する。
-#
-# 本番起動時はこのファイルを読み込ませない（-f を明示する）:
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile letsencrypt up -d
+# 開発用（`docker compose up` が自動で読む）。frontend は `pnpm dev`、
+# django / postgres / redis のポートは loopback にだけ公開する。
 
 services:
   django:
     env_file:
       - ./.env.dev
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"
 
   nginx:
     env_file:
@@ -18,37 +22,28 @@ services:
 
   frontend:
     image: node:26-alpine
-    # pnpm workspace のロックファイルと workspace 定義はリポジトリのルートにあるので、
-    # コンテナにもリポジトリ全体をマウントし、frontend パッケージの中で作業する。
+    # ロックファイルがルートにあるので、リポジトリ全体をマウントする。
     working_dir: /app/frontend
     env_file:
       - ./.env.dev
     environment:
       NEXT_TELEMETRY_DISABLED: "1"
     volumes:
-      # ソースをマウントして HMR を効かせる。node_modules はコンテナ内に隔離
-      # （musl ビルドの turbopack ネイティブバイナリをホストと混ぜない）。
-      # workspace では仮想ストア（.pnpm）がルートの node_modules に載るため、
-      # ルートとパッケージの両方を名前付きボリュームで覆う。
+      # node_modules はホストと混ぜない（musl 用のネイティブバイナリがある）。
       - ./:/app
       - frontend_root_node_modules:/app/node_modules
       - frontend_node_modules:/app/frontend/node_modules
-      # .next（dev ビルドキャッシュ）もコンテナ内に隔離する。ホストのバインド
-      # マウント（WSL2/9p）上だと Next.js の `_buildManifest.js.tmp.*` の
-      # write→rename が ENOENT で失敗し続け、static/development が生成できず
-      # 全ページ 500 になる。加えてホスト側に残る本番ビルド（next build）成果物と
-      # 衝突するため、ここで分離しておく。
+      # .next もボリュームへ。WSL2 のバインドマウント上では rename が ENOENT で失敗し、
+      # 全ページ 500 になる。
       - frontend_next:/app/frontend/.next
-      # turbo のローカルキャッシュもホストと混ぜない。
       - frontend_turbo:/app/.turbo
     command:
       - sh
       - -c
-      # node:26-alpine 以降、corepack はイメージに同梱されない。npm から入れて
-      # 有効化する（frontend の Dockerfile と同じ扱い）。
-      # --filter で frontend とその依存だけを入れる（extension の storybook 等は入れない）。
+      # node:26-alpine は corepack を同梱しない。
       - npm install --global corepack@latest && corepack enable && pnpm install --frozen-lockfile --filter d-party-frontend... && exec pnpm dev -p 3000 -H 0.0.0.0
-    # 初回は pnpm install + 初回コンパイルがあるため起動猶予を長めにとる。
+    # 初回は install とコンパイルで時間がかかる。
+
     healthcheck:
       start_period: 180s
 

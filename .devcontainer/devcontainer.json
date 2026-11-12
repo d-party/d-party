@@ -2,10 +2,10 @@
   "name": "d-party Dev Container",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config graphviz && sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*",
-  "postCreateCommand": "(cd backend && uv sync) && pre-commit install --install-hooks && pnpm install --frozen-lockfile",
+  "postCreateCommand": "(cd backend && uv sync) && pre-commit install --install-hooks && pnpm install --frozen-lockfile && pnpm exec playwright install --with-deps --only-shell chromium",
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
-      "version": "3.14"
+      "version": "3.15"
     },
     "ghcr.io/va-h/devcontainers-features/uv:1": {},
     "ghcr.io/devcontainers/features/git:1": {},
@@ -33,7 +33,7 @@
     "ghcr.io/devcontainers-extra/features/cloudflared:1": {},
     "ghcr.io/rio/features/k3d:1": {},
     "ghcr.io/devcontainers-extra/features/k6:1": {
-      "version": "0.55.0"
+      "version": "2.3.0"
     }
   },
   "remoteEnv": {
@@ -45,7 +45,11 @@
         "ms-python.python",
         "ms-python.vscode-pylance",
         "charliermarsh.ruff",
-        "ms-python.mypy-type-checker",
+        // 同梱の typing_extensions 4.12.2 が Python 3.15 で import に失敗し、起動時に落ちる。
+        // autopep8 は python feature が自動で入れるので "-" で除外する（整形は ruff）。
+        // mypy は上流が直るまで外し、`uv run mypy` と Pylance で見る。
+        "-ms-python.autopep8",
+        "-ms-python.mypy-type-checker",
         "ms-azuretools.vscode-docker",
         "redhat.vscode-yaml",
         "ms-kubernetes-tools.vscode-kubernetes-tools",
@@ -78,11 +82,10 @@
         ],
         "sqltools.autoOpenSession": false,
         "sqltools.useNodeRuntime": true,
+        // 任意のコードを実行できるインタプリタ（python / pip）と、-exec / -delete を持つ find は
+        // 自動承認しない。下の rm 等の拒否指定を `python -c` などで迂回できてしまうため。
         "chat.tools.terminal.autoApprove": {
           "uv": true,
-          "python": true,
-          "python3": true,
-          "pip": true,
           "pytest": true,
           "ruff": true,
           "pnpm": true,
@@ -105,7 +108,6 @@
           "wc": true,
           "tree": true,
           "which": true,
-          "find": true,
           "grep": true,
           "rg": true,
           "/^git (status|log|diff|branch|show|fetch|remote|rev-parse)\\b/": true,

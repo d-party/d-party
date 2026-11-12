@@ -1,7 +1,4 @@
-/**
- * Reaction kinds. Values mirror the backend `streamer.models.ReactionType`
- * names and the strings exchanged over the WebSocket.
- */
+/** Mirrors the backend's `ReactionType` names. */
 export const REACTION_TYPES = [
   "fav",
   "middle_finger",
@@ -12,7 +9,6 @@ export const REACTION_TYPES = [
 
 export type ReactionType = (typeof REACTION_TYPES)[number];
 
-/** Display label and emoji for each reaction kind (used by the popup stats). */
 export const REACTION_META: Record<
   ReactionType,
   { label: string; emoji: string }
@@ -24,11 +20,7 @@ export const REACTION_META: Record<
   middle_finger: { label: "ブーイング", emoji: "🖕" },
 };
 
-/**
- * デフォルトリアクション（変更不可・統計対象）。`id` は WS の `reaction_type`、
- * `reactIcon` は {@link REACTION_ICONS} のキー（プレイヤーのバー／ポップアップの
- * 静的アイコン）。並びは表示順。Lottie は同梱の既定アニメ（`reactions/lottie/`）。
- */
+/** 既定のリアクション（統計の対象）。並びは表示順。 */
 export interface ReactionDef {
   id: string;
   label: string;
@@ -51,10 +43,6 @@ export const DEFAULT_REACTIONS: ReactionDef[] = [
   },
 ];
 
-/**
- * `id` がデフォルトリアクション（＝統計対象）かを判定する。エクストラ
- * リアクションの id（Noto コードポイント）はここで false になり、統計に含めない。
- */
 export function isDefaultReaction(id: string): id is ReactionType {
   return (REACTION_TYPES as readonly string[]).includes(id);
 }
