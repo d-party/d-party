@@ -45,6 +45,8 @@ Actions のキャッシュは同じキーへ上書きできない。turbo のキ
    push する。`manifest` ジョブが `imagetools create` で 1 つのタグ
    （`ghcr.io/d-party/{backend,frontend}:vX.Y.Z`）にまとめる。k3s では argocd-image-updater が拾う。
 4. 拡張機能の zip を Release に添付し、Chrome Web Store へ upload する（`publish` が true なら公開まで）。
+   ビルド（`extension-build`）と公開（`extension-publish`）はジョブを分ける。Chrome Web Store の
+   secrets と `contents: write` は、pnpm を動かさない `extension-publish` にだけ渡す。
 
 ## リポジトリ側で 1 度だけ要る設定
 
