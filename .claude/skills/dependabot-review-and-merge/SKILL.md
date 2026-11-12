@@ -23,6 +23,10 @@ description: Review, verify and merge the open Dependabot PRs on the d-party mon
 > しかないため、`extension/package.json` だけを触る PR でも `pnpm-lock.yaml` の
 > 解決結果が frontend に波及することがある。**必ず両方のゲートを回す。**
 
+対話セッションでは、§2 · §3 の調査は `.claude/skills/maintenance/investigation.md` の手順
+（ライブラリの差分と供給元の確認まで）で行い、§4 の検証は
+`.claude/skills/maintenance/scripts/gates.sh` で回す。
+
 ## 非対話モード（GitHub Actions の定期実行）
 
 `.github/workflows/maintenance.yml` が週 1 回この skill を無人で動かす。そのときは
@@ -184,7 +188,8 @@ for p in / /usage /qa /privacy /stats /anime-store/lobby/test-room-123 /nope; do
   curl -s -o /dev/null -w "$p %{http_code}\n" "http://127.0.0.1:3111$p"
 done
 # 拡張機能との DOM 契約が生きているか（これが壊れるとルーム遷移が死ぬ）
-curl -s http://127.0.0.1:3111/anime-store/lobby/test/ | grep -o chrome_extension_field
+#   末尾に / を付けると 308 が返り、本文が空になる
+curl -s http://127.0.0.1:3111/anime-store/lobby/test | grep -o chrome_extension_field
 # OG 画像（Satori + 日本語フォント）が実際に PNG を返すか
 curl -s -o /dev/null -w "%{http_code} %{content_type}\n" \
   http://127.0.0.1:3111/anime-store/lobby/test/opengraph-image
