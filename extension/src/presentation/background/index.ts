@@ -3,14 +3,13 @@
  * and update, hence the stored flag), and runs the sidebar's health check,
  * which content scripts cannot fetch under Local Network Access.
  */
-import { HEALTH_CHECK_ENDPOINT } from "@/infrastructure/env";
+import { HEALTH_CHECK_ENDPOINT, USAGE_URL } from "@/infrastructure/env";
 import type {
   HealthCheckRequest,
   HealthCheckResponse,
 } from "@/infrastructure/messages";
 
 const USAGE_OPENED_KEY = "usagePageOpened";
-const USAGE_URL = "https://d-party.net/usage";
 
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason !== chrome.runtime.OnInstalledReason.INSTALL) return;
