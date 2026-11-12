@@ -14,7 +14,7 @@
 | streamer/\_\_init\_\_.py                                |        0 |        0 |    100% |           |
 | streamer/admin.py                                       |       54 |        6 |     89% |18, 26, 38, 55, 60, 65 |
 | streamer/apps.py                                        |        4 |        0 |    100% |           |
-| streamer/consumers.py                                   |      312 |       40 |     87% |44-51, 58, 68, 192-193, 229, 258, 273-282, 289-300, 312, 332-336, 342, 369, 417-422, 530, 543 |
+| streamer/consumers.py                                   |      328 |       40 |     88% |66-73, 80, 90, 221-222, 258, 288, 303-312, 319-330, 342, 367-371, 377, 404, 452-457, 565, 578 |
 | streamer/cron.py                                        |       10 |        0 |    100% |           |
 | streamer/factories.py                                   |       25 |        0 |    100% |           |
 | streamer/fields.py                                      |       23 |        3 |     87% |33, 38, 43 |
@@ -25,7 +25,7 @@
 | streamer/mixins.py                                      |       38 |        7 |     82% |31, 34, 64, 70-71, 74, 77 |
 | streamer/models.py                                      |       62 |        1 |     98% |        96 |
 | streamer/util.py                                        |        9 |        0 |    100% |           |
-| **TOTAL**                                               |  **866** |   **97** | **89%** |           |
+| **TOTAL**                                               |  **882** |   **97** | **89%** |           |
 
 
 ## Setup coverage badge
