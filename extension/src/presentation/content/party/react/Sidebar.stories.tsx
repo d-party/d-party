@@ -50,6 +50,16 @@ export const CreateMode: Story = {
   },
 };
 
+/** Health check failed: the create button is disabled with a tooltip. */
+export const CreateModeMaintenance: Story = {
+  render: () => {
+    const store = new SidebarStore();
+    store.setMode("create");
+    store.setConnectionStatus("maintenance");
+    return frame(store);
+  },
+};
+
 /** Joined room, share tab with an invite link. */
 export const ShareTab: Story = {
   render: () => {

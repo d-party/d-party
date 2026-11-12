@@ -42,6 +42,10 @@ compose・nginx・env はルートが持ち、`backend/` は build context と�
 - **論理削除**: `objects.alive()` / `delete()`（論理）/ `delete(hard=True)`（物理）の意味を変えない。
 - **暗号化**: `AnimeUser.user_name` の鍵は `SECRET_KEY` から作る。`SECRET_KEY` を変えると既存行は復号できない。
 - **REST API**: `api/urls.py` のパスとレスポンスの形は外部から参照される（shields は `{"schemaVersion": 1, ...}`）。
+- **ヘルスチェック（`/api/v1/health`）**: PostgreSQL と Redis まで確かめ、どれかが落ちていれば 503
+  （本文は空）。拡張機能は 200 以外で「ルームを作成」ボタンを無効にする。コンテナの
+  liveness / readiness には使わない（DB の障害で django が再起動を繰り返すため。probe は TCP）。
+  pytest は Redis なしで走るので、200 を期待するテストでは `_redis_ok` を差し替える。
 - **観覧専用（`spectate`）**: `AnimeUser` を作らずにグループへ読み取り参加する（人数・一覧・
   ホスト委譲・自動削除に影響しない）。フロントのタイマー画面が使う。`host_send` / `user_send` は
   `anime_user is None` を必ずガードする。フロントのオリジンから張るので `asgi.py` で `MY_DOMAIN` を許可している。

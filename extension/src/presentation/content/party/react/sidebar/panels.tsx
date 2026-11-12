@@ -37,10 +37,13 @@ function OwnerBadge(): React.JSX.Element {
 
 export function CreatePanel({
   onCreateRoom,
+  maintenance = false,
   draftSettings,
   onChangeDraftSettings,
 }: {
   onCreateRoom: () => void;
+  /** ヘルスチェックが通っていない間は作成させない。 */
+  maintenance?: boolean;
   draftSettings: RoomSettingsValue;
   onChangeDraftSettings: (next: RoomSettingsValue) => void;
 }): React.JSX.Element {
@@ -77,9 +80,23 @@ export function CreatePanel({
           </AccordionItem>
         </Accordion>
 
-        <Button onClick={onCreateRoom} className="w-full">
-          ルームを作成
-        </Button>
+        {maintenance ? (
+          <Tooltip>
+            {/* disabled のボタンは hover を拾わないので、外側の span をトリガにする。 */}
+            <TooltipTrigger asChild>
+              <span tabIndex={0} className="block w-full cursor-not-allowed">
+                <Button disabled className="w-full">
+                  ルームを作成
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>メンテナンス中です</TooltipContent>
+          </Tooltip>
+        ) : (
+          <Button onClick={onCreateRoom} className="w-full">
+            ルームを作成
+          </Button>
+        )}
       </div>
     </div>
   );

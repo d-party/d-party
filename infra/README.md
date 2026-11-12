@@ -630,3 +630,62 @@ kubectl delete ns argocd
 | `valuesObject` を patch しても古い render が残り `OutOfSync` が振動する | 進行中の sync 操作が古い snapshot で動いている | `kubectl -n argocd patch application d-party --type merge -p '{"operation":null}'` で in-flight op をクリア → `argocd.argoproj.io/refresh: hard` で再 sync |
 | `applicationsets.argoproj.io` CRD 適用時に `Too long: may not be more than 262144 bytes` の警告 | `kubectl apply` の annotation 上限に当たるだけ。`Application` CRD は別物で問題なし | 単一 `Application` 運用では無視可。`ApplicationSet` を使う場合は `kubectl apply --server-side -f ...` |
 | `helm uninstall` で Argo CD 管理下の release を消すと再生成される | `syncPolicy.automated.selfHeal: true` のため。意図的に止めるには Application 自体を delete | 一時的に止めたければ `kubectl -n argocd patch application d-party --type merge -p '{"spec":{"syncPolicy":{"automated":null}}}'` |
+
+---
+
+## 7. メンテナンスページ
+
+障害やメンテナンスのときは、Cloudflare や nginx の素のエラーページの代わりに静的ページ
+（[`helm/d-party/files/maintenance.html`](helm/d-party/files/maintenance.html)）を 503 で返す。
+ページは 1 ファイルで完結させ（外部の CSS・画像を読まない）、helm chart・本番 compose・
+Cloudflare Worker の 3 か所が同じファイルを使う。
+
+| 状況 | 返す層 | 仕組み |
+| --- | --- | --- |
+| django / frontend が落ちている | nginx | `error_page 502 503 504` |
+| 計画メンテナンス | nginx | helm は `nginx.maintenance.enabled=true`、本番 compose は `touch nginx/maintenance.on` |
+| nginx・Pi・トンネルごと落ちている | Cloudflare Worker | [`cloudflare/maintenance-worker/`](cloudflare/maintenance-worker/) |
+
+どの場合も `/api/v1/health` は 200 以外になるので、拡張機能は「ルームを作成」ボタンを
+無効にする。django が生きていて PostgreSQL か Redis だけ落ちている場合は、django 自身が
+`/api/v1/health` に 503 を返す（nginx はそのまま通す）。
+
+### 7.1 計画メンテナンス
+
+```bash
+# k3s: /healthz 以外の全リクエストがメンテナンスページ（503）になる
+helm upgrade d-party infra/helm/d-party --reuse-values --set nginx.maintenance.enabled=true
+helm upgrade d-party infra/helm/d-party --reuse-values --set nginx.maintenance.enabled=false
+
+# 本番 compose: reload は要らない
+touch nginx/maintenance.on
+rm nginx/maintenance.on
+```
+
+Argo CD で運用しているなら、運用リポジトリの values で `nginx.maintenance.enabled` を切り替える。
+
+### 7.2 Cloudflare Worker（オリジンに届かないとき）
+
+Cloudflare の Custom Error Pages は有料プランの機能なので、Free プランでは Worker で代用する。
+Worker はオリジンの応答が 502 / 504 / 520〜530（530 はトンネル切断の Error 1033）のときだけ
+メンテナンスページに差し替え、それ以外と WebSocket はそのまま通す。
+
+```bash
+cd infra/cloudflare/maintenance-worker
+pnpm dlx wrangler login
+pnpm dlx wrangler deploy --env stg          # stg.d-party.net/*
+pnpm dlx wrangler deploy --env production   # d-party.net/*
+```
+
+デプロイ後に確認すること（まず stg で行う）:
+
+1. 通常時にページ・REST API・WebSocket（ルーム作成と同期）が今まで通り動く。
+2. cloudflared を止める（`kubectl scale deploy cloudflared --replicas=0`）と、Error 1033 の
+   代わりにメンテナンスページが 503 で返る。
+3. Cloudflare ダッシュボードで Worker のルートの失敗時の挙動を **Fail open** にする。
+   Free プランは 1 日 10 万リクエストまでで、既定の Fail closed だと上限を超えた時点で
+   サイト全体がエラーになる。
+4. リクエスト数が上限に近いなら、`d-party.net/_next/static/*` などに「Worker なし」のルートを
+   足して静的アセットを Worker の対象から外す。
+
+ページの文面を変えたら、helm のデプロイに加えて Worker も再デプロイする。
