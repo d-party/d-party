@@ -120,5 +120,28 @@ pnpm run typecheck && pnpm run lint && pnpm run build
 act pull_request -W .github/workflows/frontend-ci.yml
 ```
 
+## 画面の確認とスクリーンショット
+
+Dev Container にはヘッドレスの Chromium が入っている（ルートの devDependency `playwright` と、
+`postCreateCommand` の `playwright install`）。画面を変えたら実際に描画して確かめる。
+
+```bash
+pnpm exec playwright screenshot --viewport-size=1280,720 http://localhost/ out.png
+# 拡張機能のサイドバーなどは Storybook を静的ビルドして撮る
+pnpm --filter d-party-chrome-extension run build-storybook
+python3 -m http.server 6006 -d extension/storybook-static
+pnpm exec playwright screenshot 'http://localhost:6006/iframe.html?id=<story-id>&viewMode=story' out.png
+```
+
+hover やクリックが要るときは `import { chromium } from "playwright"` のスクリプトで操作する。
+
+**画面が変わる PR には、変更後のスクリーンショットを PR 本文に貼る。** 画像は作業ブランチに
+コミットせず、置き場の `pr-screenshots` ブランチ（main とは無関係の履歴。マージしない）へ
+`<作業ブランチ名>/` のディレクトリで push し、コミット SHA 入りの URL で参照する。
+
+```
+![説明](https://raw.githubusercontent.com/d-party/d-party/<pr-screenshots のコミット SHA>/<作業ブランチ名>/<file>.png)
+```
+
 外部サイトは bot 検出でブロックされることがある。調べものは WebSearch / WebFetch を使い、
 ブラウザでの確認は localhost に絞る。
