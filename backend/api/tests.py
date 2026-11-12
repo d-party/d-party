@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
+from api import serializers
 from streamer.factories import AnimeRoomFactory, AnimeUserFactory
 from streamer.models import AnimeReaction, ReactionStat
 
@@ -231,3 +232,63 @@ class TestReactionCountShieldsAPI(APITestCase):
         assert response.status_code == status.HTTP_200_OK
         assert response.data["schemaVersion"] == 1
         assert response.data["message"] == "6"
+
+
+class TestResponsesMatchSchema(APITestCase):
+    """実際のレスポンスが ``serializers.py`` の宣言（= OpenAPI スキーマ）と一致すること。
+
+    view は serializer を通さずに dict を返すので、宣言だけがずれても気付けない。
+    """
+
+    def assert_matches(self, url: str, serializer_class) -> None:
+        response = self.client.get(url)
+        assert response.status_code == status.HTTP_200_OK, url
+        body = response.json()
+        serializer = serializer_class(data=body)
+        assert serializer.is_valid(), (url, serializer.errors)
+        # 宣言に無いキーを返していないこと（必須キーの欠落は is_valid が見る）。
+        assert set(body) <= set(serializer.fields), url
+
+    @pytest.mark.django_db
+    def test_responses_match_schema(self):
+        room = AnimeRoomFactory(part_id="654321", title="title")
+        AnimeUserFactory(room_id=room)
+        stats = "/api/v1/statistics/anime-store"
+        cases = [
+            (
+                "/api/v1/chrome-extension/version-check?extension-version=1.0.0",
+                serializers.VersionCheckResultSerializer,
+            ),
+            (
+                f"/api/v1/anime-store/lobby/{room.room_id}",
+                serializers.LobbyRedirectSerializer,
+            ),
+            (f"{stats}/active-user-per-day", serializers.PerDayResultSerializer),
+            (f"{stats}/active-room-per-day", serializers.PerDayResultSerializer),
+            (
+                f"{stats}/anime-reaction-count",
+                serializers.ReactionTypeCountResultSerializer,
+            ),
+            (f"{stats}/anime-reaction-all-count", serializers.CountResultSerializer),
+            (f"{stats}/anime-room-all-count", serializers.CountResultSerializer),
+            (f"{stats}/anime-user-all-count", serializers.CountResultSerializer),
+            (f"{stats}/anime-room-alive-count", serializers.CountResultSerializer),
+            (f"{stats}/anime-user-alive-count", serializers.CountResultSerializer),
+            ("/api/shields/total-room", serializers.ShieldsBadgeSerializer),
+            ("/api/shields/room-par-day", serializers.ShieldsBadgeSerializer),
+            ("/api/shields/total-user", serializers.ShieldsBadgeSerializer),
+            ("/api/shields/user-par-day", serializers.ShieldsBadgeSerializer),
+            ("/api/shields/total-reaction", serializers.ShieldsBadgeSerializer),
+        ]
+        for url, serializer_class in cases:
+            self.assert_matches(url, serializer_class)
+
+    @pytest.mark.django_db
+    def test_error_responses_match_schema(self):
+        for url in [
+            "/api/v1/chrome-extension/version-check",
+            "/api/v1/statistics/anime-store/anime-user-all-count?days=0",
+            "/api/v1/anime-store/lobby/00000000-0000-0000-0000-000000000000",
+        ]:
+            body = self.client.get(url).json()
+            assert serializers.ApiMessageSerializer(data=body).is_valid(), url

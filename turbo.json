@@ -5,7 +5,7 @@
   "tasks": {
     "api:generate": {
       "inputs": [
-        "openapi/**",
+        "$TURBO_ROOT$/backend/openapi.json",
         "orval.config.ts",
         "src/infrastructure/api/fetcher.ts"
       ],

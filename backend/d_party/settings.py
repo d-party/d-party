@@ -43,10 +43,25 @@ INSTALLED_APPS = [
     "django_extensions",
     "channels",
     "rest_framework",
+    "drf_spectacular",
     "axes",
     "streamer",
     "api",
 ]
+
+# OpenAPI スキーマは `manage.py spectacular` でファイル（backend/openapi.json）に書き出す。
+# スキーマを配信する URL は持たない。
+REST_FRAMEWORK = {
+    # REST API はすべて公開（認証なし）。スキーマにも認証を載せない。
+    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "d-party backend API",
+    # パス（/api/v1/）の版。リリースの版とは連動させない。
+    "VERSION": "1.0.0",
+}
 
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesBackend",
