@@ -1,21 +1,7 @@
-# 週次の定期保守。Claude Code（anthropics/claude-code-action）に
-# リポジトリの skill を無人で実行させる。
+# 週次保守。Claude Code が skill を無人で実行する（dependabot-review-and-merge → release）。
+# 無人実行のルールは各 SKILL.md の「非対話モード」節。
 #
-#   1. dependabot: `.claude/skills/dependabot-review-and-merge` で
-#      Dependabot PR を調査・検証し、条件を満たすものだけマージする。
-#   2. release:    `.claude/skills/release` で release.yml を dispatch する。
-#      dependabot の後に走らせ、その週のマージを含めてリリースする。
-#
-# どちらの skill も対話前提の手順を持つので、無人実行時のルールは各 SKILL.md の
-# 「非対話モード」節に書いてある。ここのプロンプトはそれを指すだけにする。
-#
-# 必要な設定:
-#
-#   ★ CLAUDE_CODE_OAUTH_TOKEN（Actions secret）
-#     Claude の Pro / Max プランで `claude setup-token` を実行して得たトークン。
-#     消費はプランの利用枠から引かれ、手元の Claude Code と枠を共有する。
-#
-# GITHUB_TOKEN で動かすことによる制約（SKILL.md の非対話モード節もこれに合わせてある）:
+# GITHUB_TOKEN の制約:
 #   - GITHUB_TOKEN による push / マージは後続のワークフローを起動しない。
 #     Dependabot ブランチへ push すると PR の CI が回らず検証できないので、push はしない。
 #     マージ後の main で走る push トリガのワークフロー（storybook-deploy など）も起動しない。
@@ -55,7 +41,7 @@ jobs:
       issues: write
       actions: read
       checks: read
-    # backend のゲート（pytest）用。backend-ci.yml と同じ構成。
+    # backend の pytest 用。
     services:
       postgres:
         image: postgres:16
@@ -69,15 +55,6 @@ jobs:
           --health-cmd "pg_isready -U d_party -d d_party"
           --health-interval 5s
           --health-timeout 5s
-          --health-retries 10
-      redis:
-        image: redis:7.4
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
           --health-retries 10
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -102,12 +79,12 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      # skill のゲートが使うツールチェーンは先に入れておく（Claude に入れさせない）。
+      # ゲートのツールは先に入れておく（Claude に入れさせない）。
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           working-directory: backend
-          cache-dependency-glob: "backend/uv.lock"
+          cache-dependency-glob: "uv.lock"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6

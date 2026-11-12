@@ -29,9 +29,7 @@ export const metadata: Metadata = {
     ],
     apple: "/favicon/apple-touch-icon.png",
   },
-  // Defaults for any route that does not set its own (see lib/metadata.ts).
-  // The card images come from the `opengraph-image` / `twitter-image` file
-  // conventions: the site-wide card at the app root, a per-room card in the lobby.
+  // Defaults; pages override them through lib/metadata.ts.
   openGraph: {
     title: "d-party",
     description:
@@ -53,10 +51,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>): React.JSX.Element {
   return (
-    // Next.js 16 はナビゲーション時に scroll-behavior を上書きしなくなった。
-    // globals.css で html に scroll-behavior: smooth を当てているため、この属性が
-    // 無いとページ遷移のたびにトップへ滑らかスクロールしてしまう。属性を付けると
-    // 15 以前と同じ「遷移は即座、ページ内リンクは滑らか」に戻る。
+    // html は scroll-behavior: smooth。この属性が無いと遷移のたびに滑らかにスクロールする。
+
     <html lang="ja" data-scroll-behavior="smooth">
       <body className="flex min-h-dvh flex-col">
         <Header />

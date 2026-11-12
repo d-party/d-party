@@ -1,25 +1,13 @@
-/**
- * Personal usage statistics, accumulated entirely on the client.
- *
- * These are private, per-account figures (stored in `chrome.storage.sync`, so
- * they follow the signed-in Chrome profile) and are **independent of the
- * backend** — nothing here is reported to or fetched from the server. They
- * mirror, on a personal scale, the aggregate figures the frontend `/stats`
- * dashboard shows for the whole service.
- */
+/** Personal usage stats, kept in `chrome.storage.sync` and never sent to the server. */
 
 import { REACTION_TYPES, type ReactionType } from "./reactions";
 
 export interface PersonalStats {
-  /** Number of rooms the user has hosted (created). */
   roomsCreated: number;
-  /** Number of rooms the user has joined as a guest. */
   roomsJoined: number;
-  /** Reactions the user has sent, broken down by kind. */
   reactionsByType: Record<ReactionType, number>;
-  /** Total time spent connected to a room, in milliseconds. */
+  /** Milliseconds. */
   connectionMs: number;
-  /** Epoch ms of the first recorded activity, or null before any. */
   since: number | null;
 }
 
@@ -40,7 +28,6 @@ export function emptyStats(): PersonalStats {
   };
 }
 
-/** Total reactions sent across all kinds. */
 export function totalReactions(stats: PersonalStats): number {
   return REACTION_TYPES.reduce(
     (sum, t) => sum + (stats.reactionsByType[t] ?? 0),
@@ -48,10 +35,8 @@ export function totalReactions(stats: PersonalStats): number {
   );
 }
 
-/**
- * Coerce an unknown stored value into a valid {@link PersonalStats}, filling in
- * any missing/invalid fields with zeros. Keeps old stored data forward-compatible.
- */
+/** Missing or invalid fields become zero. */
+
 export function normalizeStats(value: unknown): PersonalStats {
   const base = emptyStats();
   if (!value || typeof value !== "object") return base;

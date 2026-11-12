@@ -15,25 +15,20 @@ export interface HistoryEntry extends HistoryEntryInput {
 }
 
 export interface SidebarState {
-  /** Whether the sidebar is shown at all (hidden in "normal" mode / fullscreen). */
+  /** Hidden outside a party and in fullscreen. */
   visible: boolean;
-  /** Collapsed (minimised) to a thin handle. */
   collapsed: boolean;
   mode: "create" | "join" | "normal";
-  /** True once a room has been created/joined (switches the create CTA to tabs). */
   joined: boolean;
-  /** WebSocket connection status (drives the header badge). */
   connectionStatus: ConnectionStatus;
   activeTab: SidebarTab;
   shareUrl: string;
   shareTitle: string;
   users: User[];
-  /** user_id of the local user, used to mark them as "you" in the list. */
   selfUserId: string;
   history: HistoryEntry[];
-  /** サーバから通知された現在のルーム詳細設定（入室後の操作タブで表示・編集）。 */
   roomSettings: RoomSettings;
-  /** ルーム作成前に「詳細設定」アコーディオンで組み立てる初期設定の下書き。 */
+  /** ルーム作成前に選んでいる設定。 */
   draftRoomSettings: RoomSettings;
 }
 
@@ -53,12 +48,7 @@ const INITIAL_STATE: SidebarState = {
   draftRoomSettings: DEFAULT_ROOM_SETTINGS,
 };
 
-/**
- * Framework-agnostic external store for the sidebar. React subscribes via
- * `useSyncExternalStore`; the application layer mutates it through
- * {@link SidebarController}. Snapshots are immutable, so getSnapshot returns a
- * stable reference between changes.
- */
+/** External store read with `useSyncExternalStore`. Snapshots are immutable. */
 export class SidebarStore {
   private state: SidebarState = INITIAL_STATE;
   private seq = 0;
@@ -120,10 +110,6 @@ export class SidebarStore {
   toggleCollapsed(): void {
     this.patch({ collapsed: !this.state.collapsed });
   }
-  /**
-   * ルーム削除などで一連のセッションが終了したとき、サイドバーを「ルーム作成」
-   * 段階へ戻す。参加者・履歴・共有リンク等のセッション状態をクリアする。
-   */
   resetToCreate(): void {
     this.patch({
       mode: "create",
@@ -150,10 +136,6 @@ export class SidebarStore {
   }
 }
 
-/**
- * Adapts the {@link SidebarView} application port onto a {@link SidebarStore},
- * so RoomSession stays unaware of React.
- */
 export class SidebarController implements SidebarView {
   constructor(private readonly store: SidebarStore) {}
 

@@ -1,17 +1,12 @@
 #!/bin/sh
 set -e
 
-# Reap any rooms/users left "alive" by an ungraceful shutdown of a *previous*
-# process. WebSocket session state lives only in the Django process, so a hard
-# crash leaves ghost rows that would keep inflating the /api/.../alive counts.
-# This only closes rows whose updated_at is older than the staleness threshold,
-# so it never touches sessions currently being served by another replica —
-# safe to run on every start even with multiple replicas.
+# 前のプロセスが落ちて残った alive の行を回収する（他レプリカの稼働中セッションは触らない）。
 python manage.py close_active_sessions || true
 
+# exec しないと sh が PID 1 に残って SIGTERM が届かず、graceful 停止しない。
 if [ "$DEBUG" = "1" ]; then
-    python manage.py runserver 0.0.0.0:8000
+    exec python manage.py runserver 0.0.0.0:8000
 else
-    # ASGI app served by gunicorn with the uvicorn worker (see gunicorn.conf.py).
-    gunicorn
+    exec gunicorn
 fi

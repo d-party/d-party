@@ -1,18 +1,5 @@
-// d-party 同時視聴（WebSocket）負荷シナリオ。
-//
-// モデル: 1 VU = 1 ルーム。VU 内で host 1 接続 + guest (ROOM_SIZE-1) 接続を張り、
-//   create → guest が join → 各参加者が video_operation(ping)/reaction を生成、
-//   という実プロトコルの流れを再現する。VU 数 = 同時ルーム数、総接続数 = VUS × ROOM_SIZE。
-//
-// 計測の主眼はブロードキャスト増幅: 1 人の操作が group_send で N-1 接続へ配信される。
-// ping の option.src に送信時刻を載せ、他参加者の受信時刻との差を broadcast_latency に記録する
-// （送信元→daphne→Redis channel layer→他接続 の end-to-end 遅延）。
-//
-// 実行（リポジトリルートで、スタックを起動済みのこと）:
-//   docker compose up -d
-//   docker compose --profile loadtest run --rm k6
-// 主なパラメータは環境変数（compose の k6 サービス参照）:
-//   TARGET / ROOM_SIZE / VUS / DURATION / PING_INTERVAL_MS / REACTION_INTERVAL_MS
+// 既定シナリオ。1 VU = 1 ルーム（host 1 + guest ROOM_SIZE-1）で、全員が ping と reaction を送る。
+// ping の送信時刻と他の参加者の受信時刻の差を broadcast_latency に記録する。
 
 import { sleep } from 'k6';
 import { Trend, Counter, Rate } from 'k6/metrics';
@@ -20,7 +7,6 @@ import { setTimeout, clearTimeout } from 'k6/timers';
 import { Participant } from '../lib/participant.js';
 import { createMsg, joinMsg, videoPingMsg, reactionMsg, leaveMsg } from '../lib/protocol.js';
 
-// ── パラメータ ────────────────────────────────────────────────────────────────
 const TARGET = __ENV.TARGET || 'ws://nginx/anime-store/party/';
 const ROOM_SIZE = Number(__ENV.ROOM_SIZE || 3); // 1 ルームあたりの参加者数（host 含む）
 const VUS = Number(__ENV.VUS || 1); // 同時ルーム数
@@ -28,14 +14,12 @@ const DURATION = __ENV.DURATION || '30s';
 const PING_INTERVAL_MS = Number(__ENV.PING_INTERVAL_MS || 1000);
 const REACTION_INTERVAL_MS = Number(__ENV.REACTION_INTERVAL_MS || 1500);
 const ROOM_LOAD_MS = Number(__ENV.ROOM_LOAD_MS || 8000); // 1 ルームの負荷フェーズ長
-// 本番相当（DEBUG=0）では OriginValidator が D_ANIME_STORE_DOMAIN 由来 Origin のみ許可するため、
-// 拡張機能と同じ Origin を付ける。dev（全 Origin 許可）では未指定で良い。
+// DEBUG=0 では拡張機能と同じ Origin が要る。
 const ORIGIN = __ENV.ORIGIN || '';
 const HEADERS = ORIGIN ? { Origin: ORIGIN } : null;
-// part_id は AnimeRoom.part_id（varchar(16)）に保存されるため 16 文字以内に収める。
+// AnimeRoom.part_id は varchar(16)。
 const PART_ID = __ENV.PART_ID || 'loadtest-0001';
 
-// ── カスタムメトリクス ──────────────────────────────────────────────────────────
 const metrics = {
   connectTime: new Trend('ws_connect_time', true),
   broadcastLatency: new Trend('broadcast_latency', true),

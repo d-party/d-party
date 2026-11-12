@@ -6,10 +6,6 @@ import {
   type Settings,
 } from "@/domain/settings";
 
-/**
- * Reads/writes {@link Settings} from `chrome.storage.sync`, translating between
- * the domain shape and the stored snake_case keys.
- */
 export class ChromeStorageSettingsRepository {
   async getAll(): Promise<Settings> {
     const stored = await chrome.storage.sync.get(Object.values(STORAGE_KEYS));
@@ -58,7 +54,6 @@ export class ChromeStorageSettingsRepository {
     await chrome.storage.sync.set({ [STORAGE_KEYS[key]]: value });
   }
 
-  /** Subscribe to changes; returns an unsubscribe function. */
   onChange(listener: (settings: Settings) => void): () => void {
     const handler = () => {
       void this.getAll().then(listener);

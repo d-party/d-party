@@ -1,18 +1,5 @@
-// d-party タイマー（観覧専用 / spectator）の WebSocket 負荷シナリオ。
-//
-// モデル: 1 VU = 1 ルーム。host が create し、以後 host だけが video_operation(ping) を
-//   定期送信する。SPECTATORS 人の観覧専用接続が `spectate` で参加し、host の ping を
-//   ブロードキャストで受信する。タイマーURL 機能（拡張機能なしのユーザーが再生状況だけを
-//   見る）の負荷プロファイル = **配信者 1 + タイマー視聴者多数**。
-//
-// 観覧者は AnimeUser を作らないため人数・一覧・ホスト委譲・自動削除に影響しないが、
-// group_send のファンアウト対象にはなる（1 操作 → SPECTATORS 接続へ配信）。ここでは
-// その配信増幅（host ping → 各 spectator 受信）の end-to-end 遅延を測る。
-//
-// 実行（ルートでスタック起動後）:
-//   LOADTEST_SCENARIO=ws_timer.js docker compose -f docker-compose.yml \
-//     -f docker-compose.override.yml -f docker-compose.loadtest.yml \
-//     --profile loadtest run --rm k6
+// タイマー。1 VU = 1 ルームで host だけが ping を送り、spectate の SPECTATORS 接続へ配信する。
+// LOADTEST_SCENARIO=ws_timer.js で実行する。
 
 import { sleep } from 'k6';
 import { Trend, Counter, Rate } from 'k6/metrics';
@@ -104,7 +91,8 @@ async function runRoom() {
     await delay(ROOM_LOAD_MS);
     stop();
 
-    // 4) 後片付け: host が退室（観覧者は AnimeUser を持たないため grace 削除に影響しない）。
+    // 4) 後片付け。
+
     host.send(leaveMsg());
     await delay(200);
   } catch (e) {

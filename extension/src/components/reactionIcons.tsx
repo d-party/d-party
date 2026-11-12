@@ -1,11 +1,4 @@
-/**
- * リアクション用の静的アイコン（react-icons）解決マップ。
- *
- * {@link src/components/userIcons.ts} の `USER_ICONS` と同じ方針で、カタログ
- * （デフォルト＋エクストラ）が使う react-icons だけを import して 1 つの map に
- * 束ねる。これによりバンドルは必要な subset だけを取り込む。`reactIcon` キー
- * （例 `"FaThumbsUp"`）から map ルックアップで解決する。
- */
+/** リアクションの静的アイコン。使うものだけを import して、バンドルを小さく保つ。 */
 
 import type { IconType } from "react-icons/lib";
 import {
@@ -181,10 +174,8 @@ import {
 } from "react-icons/fa6";
 import { GiSharkFin } from "react-icons/gi";
 
-/** 未知キーのフォールバック（必ず import 済みのアイコンを指す）。 */
 const FALLBACK_REACTION_ICON = "FaQuestion";
 
-/** react-icons キー → コンポーネント。 */
 export const REACTION_ICONS: Record<string, IconType> = {
   FaAppleWhole,
   FaBaby,
@@ -358,11 +349,6 @@ export const REACTION_ICONS: Record<string, IconType> = {
   GiSharkFin,
 };
 
-/**
- * 保存済みの react-icons キーからリアクションアイコンを描画する。未知/未指定は
- * フォールバックする。`UserAvatar` と同様、レンダー中の動的コンポーネント生成を
- * 避けるため map ルックアップ（安定参照）で解決する。
- */
 export function ReactionIcon({
   iconKey,
   className,

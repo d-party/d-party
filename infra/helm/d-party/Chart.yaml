@@ -11,8 +11,9 @@ type: application
 # chart 自体のバージョン。テンプレート/values 構造を変えたら上げる。
 version: 0.1.0
 
-# 内包するアプリ(d-party)の代表バージョン。イメージ tag とは独立。
-appVersion: "1.0.0"
+# appVersion は持たない。アプリのバージョンはイメージ tag（argocd-image-updater が
+# django.image.tag / frontend.image.tag を書き換える）そのものなので、chart 側で二重に
+# 管理するとずれる。ラベルの app.kubernetes.io/version は django のイメージ tag を使う。
 
 keywords:
   - d-party

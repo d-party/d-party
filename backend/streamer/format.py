@@ -71,9 +71,8 @@ class Option(BaseModel):
     @field_validator("paused", "rate", mode="before")
     @classmethod
     def _coerce_to_str(cls, value):
-        # The extension sends `paused` as a bool and `rate` as a number; pydantic
-        # v1 stringified these (e.g. False -> "False"), and the client relies on
-        # that exact form (`option["paused"] === "False"`). Preserve it under v2.
+        # The extension compares the Python repr (`option["paused"] === "False"`),
+        # so bools and numbers are stringified with str().
         if value is None or isinstance(value, str):
             return value
         return str(value)
@@ -85,8 +84,7 @@ class VideoOperation(ResponseBaseFormat):
     operation: str
     user: User
     option: Option
-    # 現在視聴中のエピソードタイトル（拡張機能がページ DOM から取得して同梱）。タイマー画面が
-    # エピソード切替に追従して表示するために使う。旧クライアントは送らないため任意（None）。
+    # タイマー画面がエピソードの切り替えに追従するために使う。
     title: str | None = None
 
 
@@ -100,8 +98,7 @@ class OperationNotification(ResponseBaseFormat):
 class Reaction(ResponseBaseFormat):
     action: str = "reaction"
     reaction_type: str
-    # 送信者。拡張機能の「バッジ表示」等で「ユーザー名 : リアクション」を出すため
-    # に同梱する。旧クライアントは無視する。
+    # 拡張機能が「ユーザー名 : リアクション」を表示するために使う。
     user: User
 
 
@@ -131,11 +128,7 @@ class UserList(ResponseBaseFormat):
 
 
 class SpectateAck(ResponseBaseFormat):
-    """観覧専用（spectator）参加の受理応答。
-
-    タイマー画面（拡張機能なしのユーザー）が最初の video_operation ブロードキャストを
-    受け取る前に、現在の視聴対象（part_id / title）を把握できるよう初期状態を返す。
-    """
+    """spectate への応答。最初の video_operation より前に現在の作品を伝える。"""
 
     action: str = "spectate"
     room_id: UUID
@@ -144,12 +137,7 @@ class SpectateAck(ResponseBaseFormat):
 
 
 class RoomSetting(ResponseBaseFormat):
-    """ルームの詳細設定を通知するメッセージ。
-
-    ルーム作成/参加時に当該クライアントへ push され、オーナーが更新した際は
-    ルーム全員へブロードキャストされる。旧クライアントは未知の ``action`` として
-    無視するため後方互換。フィールドはすべて既定 ``False``。
-    """
+    """ルーム設定。create / join のときは本人へ、更新されたら全員へ送る。"""
 
     action: str = "room_setting"
     one_way: bool = False
@@ -181,10 +169,6 @@ class UserSend(BaseGroupSend):
 
 
 class SettingSend(BaseGroupSend):
-    """詳細設定の変更を全員（送信者含む）へ配信するグループ送信。
-
-    ``room_send`` と同様に全員へ届けるが、各 consumer が一方通行モード等の判定に使う
-    ローカルキャッシュを更新できるよう、専用ハンドラ（``setting_send``）へ振り分ける。
-    """
+    """全員へ送る。各 consumer が設定のキャッシュを更新できるよう専用ハンドラへ振り分ける。"""
 
     type: str = "setting_send"

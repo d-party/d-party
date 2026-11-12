@@ -1,6 +1,6 @@
 # プライバシーポリシー / Privacy Policy
 
-最終更新日: 2026-06-21
+最終更新日: 2026-10-12
 
 本ポリシーは、Chrome 拡張機能 **d-party**（以下「本拡張機能」）および
 これに付随するウェブサイト `https://d-party.net`、ならびにバックエンドサービス
@@ -30,8 +30,11 @@
 
 | 項目 | 内容 | 目的 |
 |---|---|---|
-| 表示名 | ルーム内で表示するニックネーム | 同時視聴ルームでの識別 |
-| 接続先ホスト / プロトコル設定 | バックエンドの URL 設定（開発者向け） | 接続先の切り替え |
+| 表示名・表示アイコン | ルーム内で表示するニックネームとアイコンの種類 | 同時視聴ルームでの識別 |
+| 表示・動作の設定 | リアクションの表示方法、追加したエクストラリアクション、通知・別タブ・ピクチャーインピクチャー等の設定 | 拡張機能の動作の切り替え |
+| 個人の利用統計 | 作成・参加したルーム数、送信したリアクション数、接続時間の合計 | ポップアップでの表示（サーバには送信しません） |
+
+このほか、初回インストール時に使い方ページを開いたかどうかのフラグを `chrome.storage.local` に保存します。
 
 ### 2.2 ルーム参加時にサーバへ送信される情報
 
@@ -44,10 +47,16 @@
 | 視聴中作品の `part_id` | dアニメストアのエピソード識別子 | 平文 |
 | ユーザー ID | サーバが生成するランダム UUID（アカウントではない） | 平文 |
 | 表示名 | 上記 2.1 の表示名 | **暗号化して保存**（Fernet / `cryptography`） |
+| 表示アイコン | 上記 2.1 のアイコンの種類 | 平文 |
+| 作品タイトル | ルーム作成時に開いていたエピソードのタイトル（ページの表示から取得） | 平文。ルームのリンクの OGP 画像・タイマー画面の表示に使用 |
 | ホスト権限フラグ | ルーム作成者かどうか | 平文 |
-| プレイヤー操作イベント | 再生 / 一時停止 / シーク位置 / 再生速度 | 同期のため一時的にメモリ上で配信。永続化されない |
-| リアクション種別 | 5 種類の絵文字リアクション（cry / smile / thumbs_up / fav / middle_finger） | 統計目的で集計 |
-| 入退室イベント | ルーム ID と種別（join / leave） | 統計目的 |
+| ルームの詳細設定 | 一方通行モード・オーナー退室時の自動削除・リアクション禁止 | 平文 |
+| 参加・退室の日時 | ユーザー情報の作成日時・退室日時 | 平文。参加人数と統計に使用 |
+| プレイヤー操作イベント | 再生 / 一時停止 / シーク位置 / 再生速度 / 視聴中のエピソードタイトル | 同期のため一時的にメモリ上で配信。永続化されない |
+| リアクション | 5 種類のデフォルトリアクション（cry / smile / thumbs_up / fav / middle_finger）とエクストラリアクション | デフォルトリアクションは統計目的で保存し、ルーム終了時に日別・種類別の件数へ集計。エクストラリアクションは配信のみで保存しない |
+
+ルームの共有リンクを知っている人は、拡張機能が無くてもタイマー画面（`?timer=true`）から
+そのルームの作品タイトルと再生状況（再生中かどうか・再生位置）を閲覧できます。
 
 **本サービスは以下の情報を取得しません。**
 
@@ -93,14 +102,19 @@
   dアニメストアの提供者ではありません。
 - **Google Chrome / Chrome Web Store**（Google LLC）: 本拡張機能の配布基盤。
 - **GitHub**（GitHub, Inc.）: ソースコードのホスティング。
+- **Google Fonts**（Google LLC）: dアニメストアの一覧ページで拡張機能が追加するボタンのアイコン
+  （Material Icons）を `fonts.googleapis.com` から読み込みます。このとき利用者のブラウザから
+  Google へリクエストが送られます。
+- **Cloudflare**（Cloudflare, Inc.）: 本番環境では、ウェブサイトとバックエンドへの通信が
+  Cloudflare を経由します。
 
 ## 6. データの保存期間
 
-- **ルーム関連データ**（ルーム、参加ユーザー、リアクション、入退室履歴）:
-  使用されなくなったルームは定期実行されるクリーンアップ処理により自動的に
-  削除されます。
-- **表示名**: 上記ルームデータの削除と同時に削除されます。暗号化して
-  保存されており、復号鍵を失った場合は読み出し不能となります。
+- **ルームと参加ユーザー**（表示名・表示アイコン・作品タイトルを含む）:
+  退室やルームの終了で無効化（論理削除）されますが、現在のところデータベースからの
+  物理削除は行っていません。表示名は暗号化して保存されており、復号鍵を失った場合は
+  読み出し不能となります。
+- **リアクション**: ルームの終了時に日別・種類別の件数へ集計され、個々の記録は削除されます。
 - **公開統計**: 集計値（参加人数、リアクション数等）は匿名化された集計
   情報として保持される場合があります。
 
@@ -128,8 +142,8 @@
 利用者は、本サービスに保存されている自身に関する情報について、以下のことが
 可能です。
 
-- **削除**: ルームから退室することで、参加ユーザー情報は論理削除されます。
-  ルーム自体が無人になれば、ルームおよび関連データは自動的に削除されます。
+- **削除**: ルームから退室することで、参加ユーザー情報は無効化（論理削除）されます。
+  ルーム自体が無人になれば、ルームも無効化されます（上記 6 のとおり物理削除はしていません）。
 - **設定の消去**: Chrome の拡張機能管理画面から本拡張機能を削除することで、
   `chrome.storage` 上の設定情報が消去されます。
 - **問い合わせ**: その他の照会・削除依頼は GitHub Issue にてご連絡ください。
@@ -175,11 +189,16 @@ d-party is an unofficial, non-commercial, open-source project.
 **Data we collect**
 
 - Locally (in `chrome.storage.sync`, never sent to our servers): your
-  display name and developer-only backend URL settings.
-- On our servers when you join a room: a random room UUID, a random user
-  UUID, the dアニメストア episode identifier (`part_id`), your display
-  name (stored encrypted with Fernet), host flag, real-time player events
-  (play/pause/seek — not persisted), reactions, and join/leave events.
+  display name and icon, display/behaviour settings, and personal usage
+  statistics (rooms created/joined, reactions sent, time connected).
+- On our servers when you create or join a room: a random room UUID, a random
+  user UUID, the dアニメストア episode identifier (`part_id`) and episode
+  title, your display name (stored encrypted with Fernet) and icon, host flag,
+  room settings, join/leave timestamps, real-time player events (not
+  persisted), and the five default reactions (aggregated into daily counts
+  when the room ends; extra reactions are relayed but not stored).
+- Anyone with a room's share link can see its episode title and playback
+  state on the timer page, without the extension.
 
 **What we do NOT collect**
 
@@ -189,14 +208,15 @@ d-party is an unofficial, non-commercial, open-source project.
 - Cross-site tracking data, advertising identifiers
 - Per-user viewing history beyond the lifetime of a room
 
-**Retention.** Room data is deleted automatically by a scheduled cleanup
-job once a room is no longer in use. Removing the extension clears all
-locally-stored settings.
+**Retention.** Rooms and participants are deactivated (soft-deleted) when
+people leave or the room ends, but are not currently purged from the
+database. Reactions are reduced to daily counts when a room ends. Removing
+the extension clears all locally-stored settings.
 
 **Third parties.** d-party does not sell or share user data with third
-parties. Related services (dアニメストア, Google Chrome Web Store, GitHub)
-are operated by their respective providers under their own privacy
-policies.
+parties. Related services (dアニメストア, Google Chrome Web Store, GitHub,
+Google Fonts, Cloudflare) are operated by their respective providers under
+their own privacy policies.
 
 **Contact.** Please open an issue at
 <https://github.com/d-party/d-party/issues>.

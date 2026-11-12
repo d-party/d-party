@@ -1,26 +1,14 @@
 /**
- * エクストラリアクションのカタログ（最大200種）。
+ * エクストラリアクション（最大 200 種、統計の対象外）。`id` は Noto のコードポイントで、
+ * WS の `reaction_type` と `reactions/lottie/extra/<id>.json` のキーを兼ねる。
  *
- * 各エントリは Noto Animated Emoji（黄色＝肌色 modifier なし）と react-icons の
- * 静的アイコンを 1 対 1 で対応させたもの。`id` は Noto のコードポイント文字列で、
- * WebSocket の `reaction_type` および同梱 Lottie（`reactions/lottie/extra/<id>.json`）
- * のキーを兼ねる。`reactIcon` は {@link REACTION_ICONS}（react-icons）のキー。
- *
- * デフォルトリアクション（{@link DEFAULT_REACTIONS}）はここには含めない。統計は
- * デフォルトのみが対象で、エクストラは集計しない。
- *
- * 採用基準: dアニメストアの CSP 下で確実に再生できるよう、expression（実行時 eval）・
- * 非対応 effects・テキストレイヤを含まない Lottie のみを選定している。
- *
- * アニメーション素材は Google Noto Emoji（Apache License 2.0）。
+ * dアニメストアの CSP 下で再生できるよう、expression（eval）・非対応の effects・
+ * テキストレイヤを含まない Lottie だけを選んでいる。素材は Google Noto Emoji（Apache-2.0）。
  */
 
 export interface ExtraReaction {
-  /** Noto コードポイント。WS `reaction_type` と Lottie キーを兼ねる。 */
   id: string;
-  /** 日本語表示名（ツールチップ等）。 */
   label: string;
-  /** {@link REACTION_ICONS} のキー（react-icons）。 */
   reactIcon: string;
 }
 
@@ -227,6 +215,5 @@ export const EXTRA_REACTIONS: ExtraReaction[] = [
   { id: "1f988", label: "サメ", reactIcon: "GiSharkFin" },
 ];
 
-/** id 索引（エクストラのみ）。 */
 export const EXTRA_REACTION_BY_ID: Record<string, ExtraReaction> =
   Object.fromEntries(EXTRA_REACTIONS.map((r) => [r.id, r]));
