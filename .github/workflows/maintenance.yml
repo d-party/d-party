@@ -81,10 +81,10 @@ jobs:
 
       # ゲートのツールは先に入れておく（Claude に入れさせない）。
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           working-directory: backend
-          cache-dependency-glob: "backend/uv.lock"
+          cache-dependency-glob: "uv.lock"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
