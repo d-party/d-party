@@ -7,10 +7,11 @@ aggregates. Despite the module name this is *not* a scheduled job: it runs from
 ``consumers.py`` (and ``close_active_sessions``) when a room ends.
 """
 
+from django.db import transaction
 from django.db.models import Count, F
 from django.db.models.functions import TruncDate
 
-from .models import AnimeReaction, ReactionStat
+from .models import AnimeReaction, AnimeRoom, ReactionStat
 
 
 def fold_room_reactions(room_id) -> None:
@@ -20,21 +21,27 @@ def fold_room_reactions(room_id) -> None:
     are aggregated per ``(creation day, reaction_type)`` and added to the
     matching ``ReactionStat`` row (created if missing), so the raw
     ``AnimeReaction`` rows can be removed for good — only aggregates remain.
+
+    The room row is locked for the duration so two concurrent endings of the
+    same room (e.g. host delete racing the grace-period delete) cannot both
+    count the same reactions, and the increment and the delete commit together.
     """
-    rows = (
-        AnimeReaction.objects.filter(room_id=room_id)
-        .annotate(day=TruncDate("created_at"))
-        .values("day", "reaction_type")
-        .annotate(n=Count("reaction_id"))
-    )
-    for row in rows:
-        _, created = ReactionStat.objects.get_or_create(
-            date=row["day"],
-            reaction_type=row["reaction_type"],
-            defaults={"count": row["n"]},
+    with transaction.atomic():
+        list(AnimeRoom.objects.select_for_update().filter(room_id=room_id))
+        rows = (
+            AnimeReaction.objects.filter(room_id=room_id)
+            .annotate(day=TruncDate("created_at"))
+            .values("day", "reaction_type")
+            .annotate(n=Count("reaction_id"))
         )
-        if not created:
-            ReactionStat.objects.filter(
-                date=row["day"], reaction_type=row["reaction_type"]
-            ).update(count=F("count") + row["n"])
-    AnimeReaction.objects.filter(room_id=room_id).delete(hard=True)
+        for row in rows:
+            _, created = ReactionStat.objects.get_or_create(
+                date=row["day"],
+                reaction_type=row["reaction_type"],
+                defaults={"count": row["n"]},
+            )
+            if not created:
+                ReactionStat.objects.filter(
+                    date=row["day"], reaction_type=row["reaction_type"]
+                ).update(count=F("count") + row["n"])
+        AnimeReaction.objects.filter(room_id=room_id).delete(hard=True)
