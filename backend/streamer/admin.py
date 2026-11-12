@@ -10,12 +10,18 @@ from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationFo
 from .models import AnimeReaction, AnimeRoom, AnimeUser, Setting
 
 
-@admin.action(description="Logically delete selected items")
+@admin.action(
+    description="Logically delete selected items",
+    permissions=["change", "delete"],
+)
 def logically_delete(modeladmin, request, queryset):
     queryset.update(deleted_at=now())
 
 
-@admin.action(description="Revive selected items")
+@admin.action(
+    description="Revive selected items",
+    permissions=["change", "delete"],
+)
 def revive(modeladmin, request, queryset):
     queryset.update(deleted_at=None)
 
