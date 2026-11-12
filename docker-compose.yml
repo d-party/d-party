@@ -3,7 +3,7 @@ x-env_file: &env_file ./.env.global
 services:
   nginx:
     container_name: nginx
-    image: nginx:1.27
+    image: nginx:1.31
     ports:
       - "80:80"
       - "443:443"
@@ -19,14 +19,11 @@ services:
     env_file: *env_file
   django:
     container_name: django
-    # Pin the built image name so it does not depend on the compose project
-    # (checkout-directory) name; dockle/trivy in CI scan `backend-django`.
+    # Fixed name; CI scans `backend-django`.
     image: backend-django
     build:
       context: ./backend
       dockerfile: Dockerfile
-    ports:
-      - 8000:8000
     volumes:
       - ./backend/:/usr/src/app/
       - ./backend/.env.django:/env_files/.env.django
@@ -49,9 +46,8 @@ services:
       retries: 12
       start_period: 60s
   frontend:
-    # frontend の実体は環境ごとにオーバーレイで与える:
-    #   dev  (docker-compose.override.yml): node イメージで `pnpm dev`（HMR）
-    #   prod (docker-compose.prod.yml)    : Dockerfile で standalone ビルドを配信
+    # 中身は override.yml（dev）と prod.yml が与える。
+
     container_name: frontend
     expose:
       - "3000"
@@ -67,8 +63,6 @@ services:
   postgres:
     image: postgres:16
     container_name: postgres
-    ports:
-      - 5432:5432
     volumes:
       - "./postgres/data:/var/lib/postgresql/data"
     env_file:
@@ -80,10 +74,8 @@ services:
       timeout: 5s
       retries: 10
   redis:
-    image: redis:7.4
+    image: redis:8.10
     container_name: redis
-    ports:
-      - 6379:6379
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

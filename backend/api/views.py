@@ -21,14 +21,13 @@ from streamer.models import (
     ReactionType,
 )
 
-# Matches the previous ``distutils.version.StrictVersion`` accepted form: a
-# strict ``major.minor.patch`` triple. ``distutils`` was removed in Python 3.12.
+# A strict ``major.minor.patch`` triple.
 _STRICT_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
-# 統計の集計期間（``?days=N``）。未指定は 1 年、上限も 1 年。
+# 統計 API は公開（認証不要）。``?days=N`` の既定と上限は 1 年。
 DEFAULT_STATS_DAYS = 365
 MAX_STATS_DAYS = 365
-# 統計レスポンスをキャッシュする秒数。毎リクエストの DB 集計を避けるための TTL。
+# 統計レスポンスのキャッシュ秒数。
 STATS_CACHE_SECONDS = int(os.getenv("STATS_CACHE_SECONDS", "300"))
 
 
@@ -42,7 +41,7 @@ def _parse_days(request) -> int | None:
         return DEFAULT_STATS_DAYS
     try:
         days = int(raw)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
     if days < 1 or days > MAX_STATS_DAYS:
         return None
@@ -59,9 +58,7 @@ def _bad_days() -> Response:
 def _since(days: int) -> datetime.date:
     """Inclusive start date of a ``days``-long window ending today.
 
-    ``timezone.localdate()`` を使い、集計側の ``TruncDate``（settings の TIME_ZONE で
-    日付を切る）と同じ基準に揃える。``date.today()`` はプロセスのローカル時刻を見るため、
-    TZ 環境変数が設定されていない実行環境では 1 日ずれる。
+    ``TruncDate`` と同じく settings の TIME_ZONE で日付を切る（``date.today()`` は使わない）。
     """
     return timezone.localdate() - datetime.timedelta(days=days - 1)
 
@@ -71,29 +68,24 @@ def _cached(key: str, producer):
     return cache.get_or_set(key, producer, STATS_CACHE_SECONDS)
 
 
-def _reaction_counts_by_type(since: datetime.date) -> dict[str, int]:
+def _reaction_counts_by_type(since: datetime.date | None = None) -> dict[str, int]:
     """Per-type reaction counts in ``[since, today]`` (folded + live rooms).
 
-    Historical reactions live in ``ReactionStat`` (folded on room end); reactions
-    of still-alive rooms remain in ``AnimeReaction`` and are added on top so the
-    total reflects in-progress rooms too. Keyed by the stored ``reaction_type``
-    value (e.g. ``"S"``).
+    ``since=None`` counts every reaction ever recorded.
+
+    Ended rooms are in ``ReactionStat``; alive rooms are still in ``AnimeReaction``.
+    Keyed by the stored ``reaction_type`` value (e.g. ``"S"``).
     """
     merged: dict[str, int] = defaultdict(int)
-    folded = (
-        ReactionStat.objects.filter(date__gte=since)
-        .values("reaction_type")
-        .annotate(total=Sum("count"))
-    )
+    folded_qs = ReactionStat.objects.all()
+    live_qs = AnimeReaction.objects.filter(room_id__deleted_at__isnull=True)
+    if since is not None:
+        folded_qs = folded_qs.filter(date__gte=since)
+        live_qs = live_qs.filter(created_at__date__gte=since)
+    folded = folded_qs.values("reaction_type").annotate(total=Sum("count"))
     for row in folded:
         merged[row["reaction_type"]] += row["total"]
-    live = (
-        AnimeReaction.objects.filter(
-            room_id__deleted_at__isnull=True, created_at__date__gte=since
-        )
-        .values("reaction_type")
-        .annotate(total=Count("reaction_id"))
-    )
+    live = live_qs.values("reaction_type").annotate(total=Count("reaction_id"))
     for row in live:
         merged[row["reaction_type"]] += row["total"]
     return merged
@@ -110,9 +102,7 @@ def _parse_strict_version(value: str) -> tuple[int, int, int] | None:
 def _per_day_counts(model, since: datetime.date | None = None) -> list[dict]:
     """Return ``[{"day": date, "count": n}, ...]`` grouped by creation day.
 
-    When ``since`` is given, only rows created on/after it are counted. Uses
-    ``TruncDate`` so the query works across database backends (the previous
-    ``.extra(select={"day": "date(created_at)"})`` was MySQL-specific).
+    When ``since`` is given, only rows created on/after it are counted.
     """
     qs = model.objects
     if since is not None:
@@ -130,16 +120,8 @@ def _resample_per_day(
 ) -> list[dict]:
     """Fill gaps so every calendar day has a count.
 
-    Returns ``[{"day": date, "count": int}, ...]`` for every calendar day in the
-    window, in ascending order, padding missing days with ``0``. The series
-    always extends to today; when ``since`` is given it also starts exactly at
-    ``since`` so the window has a fixed length regardless of when the first
-    event happened.
-
-    A plain loop replaces the former ``pandas.DataFrame.asfreq`` round-trip,
-    which pulled in the heavy pandas dependency only to forward-fill zero days.
+    The series runs up to today, and starts at ``since`` when given.
     """
-    # 集計側の TruncDate と同じく settings の TIME_ZONE で「今日」を決める。
     today = timezone.localdate()
     counts = {row["day"]: int(row["count"]) for row in rows}
     if since is not None:
@@ -148,7 +130,6 @@ def _resample_per_day(
         start = rows[0]["day"]
     else:
         start = today
-    # 終端は常に今日まで伸ばす（最後のイベント日が今日より前でも 0 埋めで今日まで含める）。
     end = max(today, start)
     result: list[dict] = []
     day = start
@@ -159,7 +140,7 @@ def _resample_per_day(
 
 
 def _mean_per_day(rows: list[dict]) -> float:
-    """Mean of the daily counts over the window (matches pandas ``Series.mean``)."""
+    """Mean of the daily counts over the window."""
     return sum(row["count"] for row in rows) / len(rows) if rows else 0.0
 
 
@@ -205,7 +186,6 @@ class ChromeExtensionVersionCheckAPI(APIView):
 class AnimeActiveUserPerDayAPI(APIView):
     """Daily count of users that have ever been in a room."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -223,7 +203,6 @@ class AnimeActiveUserPerDayAPI(APIView):
 class AnimeActiveRoomPerDayAPI(APIView):
     """Daily count of rooms created by users."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -241,7 +220,6 @@ class AnimeActiveRoomPerDayAPI(APIView):
 class AnimeRoomReactionCountAPI(APIView):
     """Per-type reaction counts."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -263,7 +241,6 @@ class AnimeRoomReactionCountAPI(APIView):
 class AnimeRoomReactionAllCountAPI(APIView):
     """Total reaction count."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -282,7 +259,6 @@ class AnimeRoomReactionAllCountAPI(APIView):
 class AnimeUserAllCountAPI(APIView):
     """User count within the requested period (by creation date)."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -301,7 +277,6 @@ class AnimeUserAllCountAPI(APIView):
 class AnimeRoomAllCountAPI(APIView):
     """Room count within the requested period (by creation date)."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -320,7 +295,6 @@ class AnimeRoomAllCountAPI(APIView):
 class AnimeUserAliveCountAPI(APIView):
     """Currently connected user count."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -330,7 +304,6 @@ class AnimeUserAliveCountAPI(APIView):
 class AnimeRoomAliveCountAPI(APIView):
     """Currently active room count."""
 
-    # 統計ダッシュボードはフロントエンドから誰でも閲覧できるよう公開（認証不要）。
     permission_classes = [AllowAny]
 
     def get(self, request, format=None) -> Response:
@@ -338,11 +311,7 @@ class AnimeRoomAliveCountAPI(APIView):
 
 
 class _ShieldsView(APIView):
-    """Base view returning a shields.io endpoint badge payload.
-
-    Replaces the unmaintained ``django-dynamic-shields`` dependency while
-    keeping the public badge JSON contract (``schemaVersion`` 1).
-    """
+    """Base view returning a shields.io endpoint badge payload (``schemaVersion`` 1)."""
 
     permission_classes = [AllowAny]
 
@@ -389,25 +358,19 @@ class UserCountParDayShieldsAPI(_ShieldsView):
 
 class ReactionCountShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
-        return {
-            "label": "TotalReaction",
-            "message": str(AnimeReaction.objects.all().count()),
-        }
+        total = sum(_reaction_counts_by_type().values())
+        return {"label": "TotalReaction", "message": str(total)}
 
 
 class AnimeStoreLobbyResolveAPI(APIView):
     """Resolve a room id to the dアニメストア redirect URL.
 
-    Server-side replacement for the old ``web.views.AnimeRoomLobby`` template
-    view: the React frontend's room-transition page (``/anime-store/lobby/
-    <room_id>``) calls this to learn where to redirect the user once the
-    extension has confirmed it is installed and compatible.
+    Called by the frontend's lobby page (``/anime-store/lobby/<room_id>``).
     """
 
     permission_classes = [AllowAny]
 
     def get(self, request, room_id, format=None) -> Response:
-        # 旧 anime.dmkt-sp.jp から animestore.docomo.ne.jp へ移行済み。
         anime_store_domain = os.environ.get(
             "D_ANIME_STORE_DOMAIN", "animestore.docomo.ne.jp"
         )

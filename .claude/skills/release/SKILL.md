@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a unified d-party release by dispatching the root release.yml workflow with a patch / minor / major version bump. Always confirms the bump type with the user through explicit options before dispatching (in the scheduled GitHub Actions run it picks the bump by the rules in its non-interactive section instead), then watches the run through the version bump, the arm64 GHCR image builds and the Chrome Web Store upload. Use when asked to release, cut a version, publish, or tag d-party.
+description: Cut a unified d-party release by dispatching the root release.yml workflow with a patch / minor / major version bump. Confirms the bump type with the user through explicit options before dispatching (the scheduled GitHub Actions run and the maintenance skill decide it by their own rules instead), then watches the run through the version bump, the amd64 / arm64 GHCR image builds and the Chrome Web Store upload. Use when asked to release, cut a version, publish, or tag d-party.
 ---
 
 # Release (d-party)
@@ -11,12 +11,12 @@ d-party はモノレポで、リリースは **`release` ワークフロー 1 �
 ワークフローがやること:
 
 1. ルートの最新タグ `vX.Y.Z` と `bump_type` から次のバージョンを算出する
-2. 5 ファイルの version を書き換えて `main` へ 1 コミット、タグを打ち、GitHub Release を作る
+2. 6 ファイルの version を書き換えて `main` へ 1 コミット、タグを打ち、GitHub Release を作る
    - `backend/pyproject.toml`（+ `backend/uv.lock`）
    - `extension/package.json` · `extension/public/manifest.json`
-   - `frontend/package.json`
+   - `frontend/package.json` · `packages/ui/package.json`
    - ルートの `package.json`
-3. `backend` / `frontend` を **arm64 ネイティブ**でビルドし、
+3. `backend` / `frontend` を **amd64 / arm64 それぞれのネイティブランナー**でビルドし、
    `ghcr.io/d-party/backend:vX.Y.Z` / `ghcr.io/d-party/frontend:vX.Y.Z` へ push する
    （Raspberry Pi の k3s で argocd-image-updater がこの semver タグを拾う）
 4. 拡張機能をビルドして zip を Release に添付し、Chrome Web Store へ upload する
@@ -24,7 +24,11 @@ d-party はモノレポで、リリースは **`release` ワークフロー 1 �
 ## 1. バンプ種別を必ずユーザーに確認する
 
 **対話セッションでは省略禁止。** 勝手に patch を選ばない。`AskUserQuestion` で選択肢として提示する。
-唯一の例外は末尾の「非対話モード」（GitHub Actions の定期実行）で、そこでは決められた規則で選ぶ。
+例外は 2 つ。どちらも決められた規則で選ぶ。
+
+- 末尾の「非対話モード」（GitHub Actions の定期実行）
+- `maintenance` skill の最後の段階として呼ばれたとき。`bump_type` · `publish` · `release_note` は
+  `maintenance` の「リリース」節で決めた値を使い、この節の確認は行わない
 
 - **patch** — バグ修正・依存更新のみ。ユーザー向けの機能変更なし
 - **minor** — 後方互換のある機能追加
@@ -82,7 +86,7 @@ RUN=$(gh run list -R d-party/d-party --workflow release.yml --limit 1 --json dat
 gh run watch "$RUN" -R d-party/d-party --exit-status
 ```
 
-`images` ジョブは arm64 ランナーで 2 イメージを焼くので**数分以上かかる**。
+`images` ジョブは 2 イメージ × 2 アーキテクチャを焼くので**数分以上かかる**。
 
 ## 4. 完了確認
 
@@ -90,10 +94,10 @@ gh run watch "$RUN" -R d-party/d-party --exit-status
 git fetch --tags origin && git log --oneline origin/main -3
 gh release view -R d-party/d-party --json tagName,name,assets
 
-# 5 ファイルの version がタグと揃っていること
+# 6 ファイルの version がタグと揃っていること
 TAG=$(git tag --list 'v*.*.*' | sort -V | tail -n1)
 git show "${TAG}:backend/pyproject.toml" | grep -m1 '^version'
-for f in extension/package.json extension/public/manifest.json frontend/package.json package.json; do
+for f in extension/package.json extension/public/manifest.json frontend/package.json packages/ui/package.json package.json; do
   echo -n "$f: "; git show "${TAG}:$f" | grep -m1 '"version"'
 done
 ```
@@ -113,9 +117,12 @@ gh api "orgs/d-party/packages/container/frontend/versions" -q '.[0].metadata.con
     **Package settings → Manage Actions access → Add repository** で
     `d-party/d-party` に **Write** を付ける（1 回だけの手作業）。
 - **version ジョブは成功したが images / extension が落ちた**
-  → タグと Release はすでに存在する。修正後に同じバージョンで再実行すれば、
-    version ジョブは「already at vX.Y.Z」でコミットを飛ばし、タグを force-update
-    するだけで済む。バージョンを進め直す必要はない。
+  → タグと Release はすでに存在する。原因が一時的なもの（ランナー・レジストリ・
+    ストアの障害）なら、その run を **Re-run failed jobs** で再実行する（version ジョブは
+    再実行されず、同じタグで続きが走る）。`gh run rerun "$RUN" -R d-party/d-party --failed`
+  → 修正にコードの変更が要るなら、修正を main にマージしてから新しいバージョンで
+    リリースし直す。`release.yml` をもう一度 dispatch すると最新タグから次の版を計算するので、
+    同じバージョンにはならない。タグは上書きしない。
 - **Chrome Web Store で 400**
   → 同じバージョンを二重に上げている可能性。タグの最大値を確認する。
     レスポンスボディはログに出しているので `itemError[].error_code` を読む。

@@ -1,29 +1,5 @@
-# d-party 統一リリース。
-#
-# 全パッケージのバージョンを 1 つに揃え、タグと成果物をこのワークフローだけで作る。
-#
-# 流れ:
-#   1. bump_type と最新タグ (vX.Y.Z) から次のバージョンを算出する。
-#   2. 全パッケージの version を書き換えて main へ 1 コミット、タグを打つ。
-#        backend/pyproject.toml (+ uv.lock) · extension/package.json ·
-#        extension/public/manifest.json · frontend/package.json · package.json
-#   3. そのタグから成果物を作る:
-#        - backend / frontend: amd64 / arm64 をネイティブランナーで並列ビルドし、
-#          manifest list にまとめて GHCR へ push
-#          （Raspberry Pi の k3s へ argocd-image-updater が拾いに来る配信元）
-#        - extension: build して zip を Release に添付し、Chrome Web Store へ upload
-#
-# 必要な設定:
-#
-#   ★ GHCR パッケージへの書き込み許可
-#     ghcr.io/d-party/backend と ghcr.io/d-party/frontend には、このリポジトリの
-#     Actions からの write が紐づいている必要がある。各パッケージの
-#       Package settings → Manage Actions access → Add repository
-#     で `d-party/d-party` に **Write** を付ける（1 回だけの手作業）。
-#     これが無いと images ジョブが denied で落ちる。
-#
-#   ★ Chrome Web Store 用の secrets
-#     EXTENSION_ID / CLIENT_ID / CLIENT_SECRET / REFRESH_TOKEN
+# 統一リリース。流れと必要な設定は .github/AGENTS.md。
+# Chrome Web Store 用の secrets: EXTENSION_ID / CLIENT_ID / CLIENT_SECRET / REFRESH_TOKEN
 name: Release
 
 on:
@@ -72,10 +48,10 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           working-directory: backend
-          cache-dependency-glob: "backend/uv.lock"
+          cache-dependency-glob: "uv.lock"
 
       - name: Determine next version
         id: version
@@ -108,7 +84,7 @@ jobs:
           set -euo pipefail
 
           # version 行だけを差し替え、フォーマット差分を出さない。
-          # 対象は backend の pyproject.toml と、JSON 側 4 つ。
+          # 対象は backend の pyproject.toml と、JSON 側 5 つ。
           python3 - <<'EOF'
           import os, re
 
@@ -124,6 +100,7 @@ jobs:
               "extension/package.json",
               "extension/public/manifest.json",
               "frontend/package.json",
+              "packages/ui/package.json",
               "package.json",
           ):
               s = open(path, encoding="utf-8").read()
@@ -131,18 +108,17 @@ jobs:
               assert n == 1, f"version field not found in {path}"
               open(path, "w", encoding="utf-8").write(s)
 
-          print(f"applied v{v} to 5 files")
+          print(f"applied v{v} to 6 files")
           EOF
 
-          # uv.lock もプロジェクトの version を持つので、pyproject と乖離しないよう
-          # 引き直す（依存は変えないので version 行だけが動く）。
+          # uv.lock も version を持つ（依存は動かない）。
           (cd backend && uv lock)
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add backend/pyproject.toml backend/uv.lock \
                   extension/package.json extension/public/manifest.json \
-                  frontend/package.json package.json
+                  frontend/package.json packages/ui/package.json package.json
           if git diff --cached --quiet; then
             echo "already at v${VERSION}; skipping the bump commit"
           else
@@ -150,13 +126,15 @@ jobs:
             git push origin HEAD:main
           fi
 
-      - name: Force-update the release tag
+      # タグは不変として扱う（argocd-image-updater と GHCR のイメージタグが同じ値を指す）。
+      # 既に同名のタグがあれば上書きせずに失敗させる。
+      - name: Create the release tag
         env:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
-          git tag -f "${TAG}"
-          git push origin "refs/tags/${TAG}" --force
+          git tag "${TAG}"
+          git push origin "refs/tags/${TAG}"
 
       - name: Create the GitHub Release
         uses: softprops/action-gh-release@v3
@@ -167,21 +145,10 @@ jobs:
           generate_release_notes: true
           target_commitish: main
 
-  # ── 2. サーバ側のイメージを arm64 ネイティブでビルドして GHCR へ ──────────
-  #
-  # Raspberry Pi (arm64) の k3s が pull する配信元。QEMU を使わないよう
-  # arm64 ランナーで焼く。タグは git タグと完全一致させる（`v` 付き・不変）ので、
-  # argocd-image-updater が semver で拾って ops リポジトリの values を書き換える。
   # ── 2. サーバ側のイメージをビルドして GHCR へ ────────────────────────────
   #
-  # Raspberry Pi (arm64) の k3s が pull する配信元。amd64 も一緒に出しておくと、
-  # x86 のホストやローカルでも同じタグをそのまま使える。
-  #
-  # **アーキテクチャごとにネイティブランナーで並列ビルドする。** 片方のランナーで
-  # QEMU エミュレーションすると、backend の uv sync と frontend の next build が
-  # 数倍に伸びるため。各ジョブは**タグを付けずダイジェストだけを push**し、
-  # 後段の manifest ジョブがそれらを 1 つの manifest list にまとめる
-  # （docker/build-push-action の push-by-digest。マルチランナー分散の定石）。
+  # アーキテクチャごとにネイティブランナーで並列ビルドする（QEMU だと数倍遅い）。
+  # 各ジョブはダイジェストだけを push し、manifest ジョブが 1 つのタグにまとめる。
   images:
     name: Build ${{ matrix.image }} (${{ matrix.arch }})
     needs: version
@@ -220,11 +187,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # backend は自分のディレクトリがコンテキスト。frontend はリポジトリのルート
-      # （pnpm workspace のロックファイルがルートにあるため。frontend/Dockerfile 参照）。
-      # NEXT_PUBLIC_* は渡さない — prod-kube はブラウザの origin から接続先を導出する。
-      # compose-prod は引き続き build.args で焼くのでこのジョブの影響を受けない。
-      # backend も設定をすべて runtime env で読むため build-args は不要。
+      # NEXT_PUBLIC_* は渡さない。k3s ではブラウザの origin から接続先を決める。
       - id: build
         uses: docker/build-push-action@v7
         with:
@@ -242,8 +205,7 @@ jobs:
           outputs: >-
             type=image,name=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }},push-by-digest=true,name-canonical=true,push=true
 
-      # ダイジェストをファイル名だけの空ファイルとして artifact に載せ、
-      # manifest ジョブが集めて 1 本にまとめる。
+      # ダイジェストを空ファイルの名前として manifest ジョブへ渡す。
       - name: Export the digest
         run: |
           mkdir -p /tmp/digests
@@ -286,8 +248,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # タグは git タグと完全一致させる（`v` 付き・不変）ので、
-      # argocd-image-updater が semver で拾って ops リポジトリの values を書き換える。
+      # git タグと同じ（`v` 付き）。argocd-image-updater が semver で拾う。
       - name: Create the manifest list
         working-directory: /tmp/digests
         env:
@@ -296,8 +257,7 @@ jobs:
           SOURCE: ${{ github.server_url }}/${{ github.repository }}
         run: |
           set -euo pipefail
-          # ラベルは各アーキのイメージ config に載るが、pull 側がまず見るのは
-          # index なので、index にも同じ annotation を付けておく。
+          # pull 側が最初に見る index にも annotation を付ける。
           # shellcheck disable=SC2046
           # 各ダイジェストを引数へ展開したいので、ここは意図的にクォートしない。
           docker buildx imagetools create -t "${IMAGE}:${TAG}" \
@@ -315,13 +275,18 @@ jobs:
         run: docker buildx imagetools inspect "${IMAGE}:${TAG}"
 
   # ── 3. 拡張機能をビルドして Release に添付し、Chrome Web Store へ ─────────
-  extension:
-    name: Build & publish the extension
+  #
+  # ビルドと公開はジョブを分ける。ビルドは pnpm install / orval / rspack で
+  # サードパーティのコードを実行するので、Chrome Web Store の secrets と
+  # contents: write の GITHUB_TOKEN は、依存パッケージを動かさない publish ジョブにだけ渡す。
+  # 同じジョブだと、先のステップが残したプロセスが後のステップの env を読めてしまう。
+  extension-build:
+    name: Build the extension
     needs: version
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -353,17 +318,35 @@ jobs:
           set -euo pipefail
           (cd extension/dist && zip -r "${GITHUB_WORKSPACE}/d-party_${TAG}.zip" .)
 
+      - uses: actions/upload-artifact@v7
+        with:
+          name: extension-zip
+          path: d-party_${{ needs.version.outputs.tag }}.zip
+          if-no-files-found: error
+
+  # zip を受け取って Release と Chrome Web Store へ上げるだけ。checkout も
+  # pnpm も使わず、zip の中身も実行しない。
+  extension-publish:
+    name: Publish the extension
+    needs: [version, extension-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: extension-zip
+
       - name: Attach the zip to the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.version.outputs.tag }}
         run: gh release upload "${TAG}" "d-party_${TAG}.zip" --clobber
 
-      # Chrome Web Store API を curl で直接叩く。
-      # OAuth2 token exchange → upload(PUT) → publish(POST) を順に実行し、
-      # 障害切り分けのため各レスポンスを JSON のまま GitHub Actions ログへ出力する
-      # （`itemError[].error_code` / `uploadState` / `statusDetail` を見る）。
-      # 参考: https://developer.chrome.com/docs/webstore/using-api
+      # 切り分けのため各レスポンスをログへ出す。
+      # https://developer.chrome.com/docs/webstore/using-api
       - name: Upload to the Chrome Web Store
         env:
           EXTENSION_ID: ${{ secrets.EXTENSION_ID }}

@@ -1,14 +1,9 @@
-/**
- * User-configurable settings (managed in the popup, stored in
- * `chrome.storage.sync`). The storage keys are the original snake_case keys
- * so existing users' stored values keep working.
- */
+/** Popup settings in `chrome.storage.sync`. Do not rename the storage keys: users' values live there. */
 
 /**
- * リアクションの画面表示方法。
- * - `normal`: 現状どおり下から上へ浮上（ランダムX）。最上部で少し静止して消える。
- * - `badge`: プレイヤー右下に「ユーザー名 : リアクション」を小さく出す。新しいものが下。
- * - `left`: 左寄りに出し、sin カーブで揺れながら最下部→最上部へ移動。
+ * - `normal`: 下から浮上し、最上部で少し止まって消える
+ * - `badge`: 右下に「ユーザー名 : リアクション」を出す
+ * - `left`: 左側を揺れながら上る
  */
 export type ReactionDisplayMode = "normal" | "badge" | "left";
 
@@ -25,20 +20,11 @@ export interface Settings {
   hideReaction: boolean;
   hideReactionIcon: boolean;
   selfNotification: boolean;
-  /** リアクションの画面表示方法（既定 `normal`）。 */
   reactionDisplay: ReactionDisplayMode;
-  /**
-   * ユーザーが追加したエクストラリアクションの id 配列（`extraReactions.ts` の
-   * カタログ id ＝ Noto コードポイント）。プレイヤーのバーに表示され、送信できる。
-   * デフォルトリアクションはここに含めない（常に有効・変更不可）。
-   */
+  /** 追加したエクストラリアクションの id（既定の 5 種は含めない）。 */
   extraReactions: string[];
   userName: string;
-  /**
-   * 表示アイコン。react-icons (Font Awesome 6) のキー文字列（例: "FaCat"）。
-   * ルーム参加時に user_name と同様にバックエンドへ送る。未設定や未知のキーは
-   * 既定の素朴なユーザーアイコンにフォールバックする（UserAvatar が解決）。
-   */
+  /** react-icons (Font Awesome 6) のキー（例: "FaCat"）。 */
   userIcon: string;
 }
 
@@ -55,7 +41,6 @@ export const DEFAULT_SETTINGS: Settings = {
   userIcon: "FaRegUser",
 };
 
-/** Mapping between domain fields and `chrome.storage` keys. */
 export const STORAGE_KEYS = {
   autoAnotherTab: "auto_another_tab",
   autoUserNameDecision: "auto_user_name_decision",

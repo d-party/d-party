@@ -1,9 +1,5 @@
-/**
- * タイマーを小さな別窓（ポップアップ）として開く。常に手前へ浮かせて再生状況を見られる。
- * ポップアップがブロックされた場合は同じタブで開くフォールバック。
- *
- * ロビーの選択 UI と、タイマー画面（`TimerView`）の「別窓で開く」ボタンの両方から使う。
- */
+/** タイマーを小窓で開く。ブロックされたら同じタブで開く。 */
+
 export function openTimerPopup(roomId: string): void {
   const url = `/anime-store/lobby/${roomId}?timer=true&popup=1`;
   const width = 380;

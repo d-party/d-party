@@ -8,12 +8,6 @@ import { DEFAULT_REACTIONS } from "@/domain/reactions";
 
 import { ReactionPicker } from "./ReactionPicker";
 
-/**
- * リアクションタブの本体。デフォルトリアクション（変更不可）を 1 列で見せ、その下
- * に「追加」ボタンとユーザーが追加したエクストラリアクションの一覧を出す。追加分は
- * `extraReactions`（カタログ id 配列）として保存され、プレイヤーのバーに反映される。
- * 統計はデフォルトのみが対象で、ここでの追加は集計に影響しない。
- */
 export function ReactionsPanel({
   value,
   onChange,
@@ -29,7 +23,6 @@ export function ReactionsPanel({
     );
   };
 
-  // 未知 id（カタログ外）は無視する。
   const added = value
     .map((id) => EXTRA_REACTION_BY_ID[id])
     .filter((r) => r !== undefined);

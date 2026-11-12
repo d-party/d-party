@@ -13,10 +13,7 @@ import middleFingerData from "./lottie/middle_finger.json";
 import smileData from "./lottie/smile.json";
 import thumbsUpData from "./lottie/thumbs_up.json";
 
-/**
- * id → Lottie。デフォルト 5 種（キー＝リアクション名）に、エクストラ
- * （キー＝Noto コードポイント）を統合する。未知 id は {@link ReactionPush} で弾く。
- */
+/** id → Lottie。既定 5 種（リアクション名）とエクストラ（Noto コードポイント）。 */
 const ANIMATIONS: Record<string, object> = {
   fav: favData,
   middle_finger: middleFingerData,
@@ -26,7 +23,7 @@ const ANIMATIONS: Record<string, object> = {
   ...EXTRA_ANIMATIONS,
 };
 
-/** id → react-icons キー（デフォルト∪エクストラ）。バッジ表示で使う。 */
+/** id → react-icons キー。バッジ表示で使う。 */
 const REACT_ICON_BY_ID: Record<string, string> = {
   ...Object.fromEntries(DEFAULT_REACTIONS.map((r) => [r.id, r.reactIcon])),
   ...Object.fromEntries(
@@ -35,29 +32,22 @@ const REACT_ICON_BY_ID: Record<string, string> = {
 };
 
 const SIZE_PX = 72;
-/** 左寄り表示のアイコンサイズ（通常表示より小さめ）。 */
 const LEFT_SIZE_PX = 44;
-/** 通常表示: 上昇 → 最上部で静止 → フェアウト の各時間。 */
+/** 通常表示: 上昇 → 静止 → フェードアウトの各時間。 */
 const RISE_MS = 1500;
 const NORMAL_HOLD_MS = 900;
 const NORMAL_FADE_MS = 500;
 /** 左寄り表示が画面最下部→最上部を上りきるまでの時間。 */
 const LEFT_TRAVEL_MS = 5000;
-/** バッジ表示の表示時間。 */
 const BADGE_MS = 4000;
 
-/** play() 1 回分の入力（ReactionView 経由）。 */
 export interface ReactionPush {
-  /** デフォルト名 or エクストラ id。 */
   id: string;
-  /** 送信者名（バッジ表示用）。 */
   userName?: string;
-  /** 表示方法。 */
   mode: ReactionDisplayMode;
 }
 
 interface Entry extends ReactionPush {
-  /** 一意キー。 */
   key: number;
   /** 通常表示: 開始/終了の bottom(px)、左位置(%)。 */
   leftPct: number;
@@ -93,7 +83,6 @@ export function ReactionLayer({
     let seq = 0;
     register({
       push: (p) => {
-        // 未知 id（カタログ外）は描画素材が無いので無視する。
         if (!ANIMATIONS[p.id]) return;
         seq += 1;
         const start = 120 + randInt(-30, 30);
@@ -105,7 +94,6 @@ export function ReactionLayer({
             leftPct: randInt(5, 95),
             bottomStartPx: start,
             bottomEndPx: start + 240,
-            // 左寄り: 既定 12% を中心に少しだけランダム。揺れは控えめに。
             baseLeftPct: 12 + rand(-3, 3),
             ampPct: rand(1.5, 3),
             cycles: rand(1.5, 2.5),
@@ -163,25 +151,18 @@ export function ReactionLayer({
   );
 }
 
-/**
- * 通常表示: 下から上へ浮上し、最上部で少し静止してからフェードアウトする。
- * 上昇(bottom)は最初から、フェード(opacity)は静止後に始める。
- */
+/** 下から浮上し、最上部で少し止まってからフェードアウトする。 */
 function NormalItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
   const [bottom, setBottom] = useState(entry.bottomStartPx);
   const [opacity, setOpacity] = useState(1);
-  // onDone を ref で保持し、タイマーはマウント時1回だけ設定する。
-  // こうすると、他のリアクション追加で親が再レンダーしても
-  // タイマーがリセットされない。
+  // タイマーはマウント時に 1 回だけ張る。親が再レンダーしてもリセットしない。
   const onDoneRef = useRef(onDone);
   useEffect(() => {
     onDoneRef.current = onDone;
   });
 
   useEffect(() => {
-    // 上昇を開始（フェードはまだしない＝最上部で静止して見える）。
     const raf = requestAnimationFrame(() => setBottom(entry.bottomEndPx));
-    // 上昇しきって静止したあとにフェードアウトを開始。
     const fade = window.setTimeout(
       () => setOpacity(0),
       RISE_MS + NORMAL_HOLD_MS,
@@ -195,7 +176,7 @@ function NormalItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
       clearTimeout(fade);
       clearTimeout(done);
     };
-    // entry は追加後に変わらないため deps から除外して安全。
+    // entry は追加後に変わらない。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -218,18 +199,12 @@ function NormalItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
   );
 }
 
-/**
- * 左寄り表示: 画面左側を、最下部→最上部へゆっくり上りながら sin カーブで左右に
- * 揺れる。sin の連続更新が要るので rAF で毎フレーム位置を更新する。
- */
+/** 左寄り表示: 左側をゆっくり上りながら左右に揺れる（rAF で毎フレーム更新）。 */
 function LeftItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
 
-  // 位置・不透明度は ref で直接書き換える。これらを JSX の `style` に置くと、
-  // 別のリアクション追加で親が再レンダーするたびに React が style を再適用して
-  // 位置がリセットされてしまう（＝全アイコンが最下部に戻る）。JSX style には
-  // 静的プロパティだけを置き、アニメ対象は React に管理させない。
-  // onDone も ref 経由にして、追加時のマウントのみでタイマーを設定する。
+  // 位置と不透明度は ref で直接書く。JSX の style に置くと、親の再レンダーで
+  // 再適用されて全アイコンが最下部に戻る。
   const onDoneRef = useRef(onDone);
   useEffect(() => {
     onDoneRef.current = onDone;
@@ -263,7 +238,7 @@ function LeftItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-    // entry は追加後に変わらないため deps から除外して安全。
+    // entry は追加後に変わらない。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -286,9 +261,6 @@ function LeftItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
 /** バッジ表示: 「ユーザー名 : リアクション」を右下に小さく出す。 */
 function BadgeItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
   const [opacity, setOpacity] = useState(0);
-  // onDone を ref で保持してマウント時のみタイマーを設定する。
-  // これにより新バッジが追加されて親が再レンダーしても、既存バッジのタイマーが
-  // リセットされず、それぞれ独立して消えていく。
   const onDoneRef = useRef(onDone);
   useEffect(() => {
     onDoneRef.current = onDone;
@@ -303,7 +275,6 @@ function BadgeItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
       clearTimeout(fadeOut);
       clearTimeout(done);
     };
-    // マウント時1回のみ実行する（onDone は ref 経由で常に最新）。
 
   }, []);
 

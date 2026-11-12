@@ -6,9 +6,6 @@ metadata:
     {{- include "d-party.labels" . | nindent 4 }}
     app.kubernetes.io/component: django
 spec:
-  # replicas は >1 にできる（close_active_sessions が 1 日以上前の alive 行のみ
-  # 回収するため複数レプリカでも稼働中セッション統計を消さない）。既定は RPi 想定の 1。
-  # 詳細は values.django.replicaCount のコメント参照。
   replicas: {{ .Values.django.replicaCount }}
   strategy:
     type: RollingUpdate
@@ -25,8 +22,10 @@ spec:
         {{- include "d-party.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: django
       annotations:
-        # config/secret 変更時に Pod を確実に巻き直す。
+        # config / secret の変更時に Pod を確実に巻き直す（existingSecret の場合、Secret の
+        # 中身は chart の外にあるので、その更新では巻き直らない）。
         checksum/config: {{ include (print $.Template.BasePath "/configmap-env.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
       {{- with (include "d-party.priorityClassName.app" .) }}
       priorityClassName: {{ . }}
@@ -50,15 +49,15 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       # ── グレースフル更新の要 ──
-      # SIGTERM → preStop で readiness を落として nginx の振り分けから外し、
-      # gunicorn の graceful-timeout で既存 WebSocket を見送る猶予を確保する。
+      # preStop の間に Endpoints から外れて新規接続が新 Pod へ向き、その後の SIGTERM で
+      # gunicorn が停止する（WebSocket は uvicorn が 1012 で閉じ、leave_party が後始末する）。
       terminationGracePeriodSeconds: {{ .Values.django.terminationGracePeriodSeconds }}
       containers:
         - name: django
           image: "{{ .Values.django.image.repository }}:{{ .Values.django.image.tag }}"
           imagePullPolicy: {{ .Values.django.image.pullPolicy }}
-          # 既定 CMD(sh entrypoint.sh) をそのまま使う（close_active_sessions で
-          # >1日経過の ghost のみ回収 → gunicorn）。backend は改変しない。
+          securityContext:
+            {{- toYaml .Values.django.securityContext | nindent 12 }}
           ports:
             - name: http
               containerPort: 8000
@@ -69,9 +68,9 @@ spec:
                 name: {{ include "d-party.secretName" . }}
           env:
             {{- include "d-party.connectionEnv" . | nindent 12 }}
-            # gunicorn.conf.py を改変せず graceful-timeout / timeout / workers を上書きする。
             - name: GUNICORN_CMD_ARGS
               value: >-
+                --no-control-socket
                 --graceful-timeout {{ .Values.django.gunicornGracefulTimeout }}
                 --timeout {{ .Values.django.gunicornGracefulTimeout }}
                 {{- if gt (int .Values.django.gunicornWorkers) 0 }}
@@ -83,8 +82,8 @@ spec:
                 # readiness 失効を nginx/endpoints へ伝播させてから gunicorn に
                 # SIGTERM が届くまでの猶予。新規 WS を旧 Pod へ流さない。
                 command: ["sh", "-c", "sleep {{ .Values.django.preStopSleepSeconds }}"]
-          # ALLOWED_HOSTS を避けるため HTTP ではなく TCP で生死判定する
-          # （compose の healthcheck と同方針）。
+          # HTTP だと ALLOWED_HOSTS に弾かれるので TCP で見る。
+
           readinessProbe:
             tcpSocket:
               port: 8000
