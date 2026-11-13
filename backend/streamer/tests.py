@@ -811,6 +811,78 @@ class TestAnimePartyConsumer(TransactionTestCase):
 
         await guest.disconnect()
 
+    async def _open_room(self, user_name="host"):
+        communicator = WebsocketCommunicator(
+            AnimePartyConsumer.as_asgi(), "/anime-store/party/"
+        )
+        await communicator.connect()
+        await communicator.send_json_to(
+            {
+                "action": "create",
+                "user_name": user_name,
+                "part_id": "123456",
+                "request_id": 100,
+            }
+        )
+        created = await self._recv_until(communicator, "create")
+        await self._recv_until(communicator, "room_setting")
+        await self._drain(communicator)
+        return communicator, created
+
+    async def test_invalid_message_closes_and_cleans_up(self):
+        """壊れたメッセージで落ちても、在室者の行を alive のまま残さない。"""
+        host, created = await self._open_room()
+        room_id = created["room_id"]
+        assert await self.alive_user_count(room_id) == 1
+
+        # option が無い（検証エラー）。
+        await host.send_json_to(
+            {"action": "video_operation", "operation": "playing", "request_id": 1}
+        )
+        closed = await host.receive_output()
+        assert closed["type"] == "websocket.close"
+        assert closed["code"] == 1008
+        assert await self.alive_user_count(room_id) == 0
+        await host.disconnect()
+
+    async def test_promoted_host_leaving_silently_promotes_the_next(self):
+        """委譲されてから何も送らずに切断しても、次の人へホストが渡る。"""
+        host, created = await self._open_room()
+        room_id = created["room_id"]
+        guests = []
+        for name in ("guest1", "guest2"):
+            guest = WebsocketCommunicator(
+                AnimePartyConsumer.as_asgi(), "/anime-store/party/"
+            )
+            await guest.connect()
+            await guest.send_json_to(
+                {
+                    "action": "join",
+                    "user_name": name,
+                    "room_id": room_id,
+                    "request_id": 100,
+                }
+            )
+            await self._recv_until(guest, "room_setting")
+            guests.append(guest)
+
+        await host.disconnect()
+        changed = await self._recv_until(guests[0], "server_message")
+        assert changed["message_type"] == "host_change"
+
+        await guests[0].disconnect()
+        changed = await self._recv_until(guests[1], "server_message")
+        assert changed["message_type"] == "host_change"
+        assert await self.host_names(room_id) == ["guest2"]
+        await guests[1].disconnect()
+
+    @database_sync_to_async
+    def host_names(self, room_id):
+        return [
+            user.user_name
+            for user in AnimeUser.objects.alive().filter(room_id=room_id, is_host=True)
+        ]
+
     @database_sync_to_async
     def setting_exists(self, room_id):
         return Setting.objects.filter(room_id=room_id).exists()

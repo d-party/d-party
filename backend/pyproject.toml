@@ -129,13 +129,5 @@ exclude = [
 module = ["*.migrations.*"]
 ignore_errors = true
 
-# consumers:
-# - union-attr: None ガードの後でも await を挟むと mypy が narrowing を解除する。
-# - arg-type: format.py のモデルへ dict を渡して pydantic に変換させている。
-# - assignment: response_data を別の Send 型で使い回している。
-[[tool.mypy.overrides]]
-module = ["streamer.consumers"]
-disable_error_code = ["union-attr", "arg-type", "assignment"]
-
 [tool.django-stubs]
 django_settings_module = "d_party.settings"

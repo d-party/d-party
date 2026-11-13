@@ -2,7 +2,6 @@ from django.contrib import admin
 from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
-from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
@@ -15,7 +14,7 @@ from .models import AnimeReaction, AnimeRoom, AnimeUser, Setting
     permissions=["change", "delete"],
 )
 def logically_delete(modeladmin, request, queryset):
-    queryset.update(deleted_at=now())
+    queryset.delete()
 
 
 @admin.action(
@@ -23,7 +22,7 @@ def logically_delete(modeladmin, request, queryset):
     permissions=["change", "delete"],
 )
 def revive(modeladmin, request, queryset):
-    queryset.update(deleted_at=None)
+    queryset.revive()
 
 
 class LogicalDeletionModelAdmin(ModelAdmin):
