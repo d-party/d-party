@@ -2,7 +2,6 @@
 # Argo CD Application（参照例）
 #
 # 実体は運用リポジトリに置き、ドメインなどは values の上書きで与える。
-
 #
 # 適用:  kubectl apply -n argocd -f infra/argocd/application.example.yaml
 # 前提:  Argo CD 本体はクラスタにインストール済み（運用リポジトリで管理）。
