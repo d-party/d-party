@@ -2,9 +2,8 @@ import { Check } from "lucide-react";
 import { useState } from "react";
 
 import { ReactionIcon } from "@/components/reactionIcons";
-import { Input } from "@d-party/ui";
 import { EXTRA_REACTIONS } from "@/domain/extraReactions";
-import { cn } from "@d-party/ui";
+import { Input, cn } from "@d-party/ui";
 
 export function ReactionPicker({
   selected,

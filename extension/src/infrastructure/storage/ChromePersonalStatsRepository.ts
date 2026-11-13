@@ -1,30 +1,38 @@
 import {
+  PERSONAL_STATS_STORAGE_KEY,
   emptyStats,
   normalizeStats,
   type PersonalStats,
 } from "@/domain/personalStats";
 import type { ReactionType } from "@/domain/reactions";
 
-const STORAGE_KEY = "personal_stats";
+import { onSyncKeysChanged } from "./onSyncKeysChanged";
 
 /** Read-modify-write, serialized through a promise chain so quick increments do not clobber each other. */
 export class ChromePersonalStatsRepository {
   private queue: Promise<void> = Promise.resolve();
 
   async getAll(): Promise<PersonalStats> {
-    const stored = await chrome.storage.sync.get([STORAGE_KEY]);
-    return normalizeStats(stored[STORAGE_KEY]);
+    const stored = await chrome.storage.sync.get([PERSONAL_STATS_STORAGE_KEY]);
+    return normalizeStats(stored[PERSONAL_STATS_STORAGE_KEY]);
+  }
+
+  /**
+   * The queue itself never rejects: a failed write (sync quota, invalidated
+   * extension context) must not skip the tasks queued after it.
+   */
+  private enqueue(task: () => Promise<void>): Promise<void> {
+    this.queue = this.queue.then(task).catch(() => undefined);
+    return this.queue;
   }
 
   private mutate(fn: (stats: PersonalStats) => void): Promise<void> {
-    this.queue = this.queue.then(async () => {
+    return this.enqueue(async () => {
       const stats = await this.getAll();
       if (stats.since === null) stats.since = Date.now();
       fn(stats);
-      await chrome.storage.sync.set({ [STORAGE_KEY]: stats });
+      await chrome.storage.sync.set({ [PERSONAL_STATS_STORAGE_KEY]: stats });
     });
-    // Don't let one rejected write break the chain for later mutations.
-    return this.queue.catch(() => undefined);
   }
 
   incrementRoomsCreated(): Promise<void> {
@@ -44,18 +52,15 @@ export class ChromePersonalStatsRepository {
     return this.mutate((s) => (s.connectionMs += Math.round(ms)));
   }
 
-  async reset(): Promise<void> {
-    this.queue = this.queue.then(() =>
-      chrome.storage.sync.set({ [STORAGE_KEY]: emptyStats() }),
+  reset(): Promise<void> {
+    return this.enqueue(() =>
+      chrome.storage.sync.set({ [PERSONAL_STATS_STORAGE_KEY]: emptyStats() }),
     );
-    return this.queue.catch(() => undefined);
   }
 
   onChange(listener: (stats: PersonalStats) => void): () => void {
-    const handler = () => {
-      void this.getAll().then(listener);
-    };
-    chrome.storage.sync.onChanged.addListener(handler);
-    return () => chrome.storage.sync.onChanged.removeListener(handler);
+    return onSyncKeysChanged([PERSONAL_STATS_STORAGE_KEY], () =>
+      this.getAll().then(listener),
+    );
   }
 }

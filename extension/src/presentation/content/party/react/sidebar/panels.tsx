@@ -1,25 +1,25 @@
 import { Crown, LogOut, PartyPopper, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/UserAvatar";
+import type { RoomSettings as RoomSettingsValue } from "@/domain/roomSettings";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@d-party/ui";
-import { Button } from "@/components/ui/button";
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@d-party/ui";
-import type { RoomSettings as RoomSettingsValue } from "@/domain/roomSettings";
 
 import type { SidebarState } from "../sidebarStore";
 import { RoomSettings } from "./RoomSettings";
 
 const DELETE_HOLD_MS = 3000;
+const DELETE_HOLD_SECONDS = DELETE_HOLD_MS / 1000;
+const DELETE_LABEL = `ルームを削除（${DELETE_HOLD_SECONDS}秒長押し）`;
 
 function OwnerBadge(): React.JSX.Element {
   return (
@@ -58,7 +58,6 @@ export function CreatePanel({
           </div>
         </div>
 
-        {/* 入室時に設定する詳細設定。トリガはプラスアイコン付きの「詳細設定」。 */}
         <Accordion type="single" collapsible className="w-full">
           <AccordionItem value="advanced" className="border-b-0">
             <AccordionTrigger className="justify-center text-muted-foreground hover:text-foreground hover:no-underline">
@@ -171,15 +170,15 @@ export function ControlPanel({
               <OwnerBadge />
             </div>
             <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-              オーナーのみが実行できます。全員が退室になります。誤操作防止のため
-              3 秒間長押しで削除します。
+              オーナーのみが実行できます。全員が退室になります。誤操作防止のため{" "}
+              {DELETE_HOLD_SECONDS} 秒間長押しで削除します。
             </p>
           </div>
           <HoldToDeleteButton onConfirm={onDeleteRoom} />
         </div>
       )}
 
-      {/* 入室後の詳細設定。オーナーのみ編集可能。非オーナーには現在値を read-only 表示。 */}
+      {/* 非オーナーには現在値を read-only で見せる。 */}
       <div className="flex flex-col gap-3 border-t border-border pt-6">
         <div className="flex items-center gap-1.5">
           <p className="text-sm font-semibold">詳細設定</p>
@@ -254,7 +253,7 @@ function HoldToDeleteButton({
   }, []);
 
   const holding = progress > 0;
-  const remaining = Math.ceil((1 - progress) * (DELETE_HOLD_MS / 1000));
+  const remaining = Math.ceil((1 - progress) * DELETE_HOLD_SECONDS);
 
   return (
     <button
@@ -266,7 +265,7 @@ function HoldToDeleteButton({
       onPointerUp={cancelHold}
       onPointerLeave={cancelHold}
       onPointerCancel={cancelHold}
-      aria-label="ルームを削除（3秒長押し）"
+      aria-label={DELETE_LABEL}
       className="relative h-10 w-full cursor-pointer select-none overflow-hidden rounded-md border border-destructive/60 bg-destructive/10 px-3 text-sm font-semibold text-destructive transition-all duration-150 ease-out hover:bg-destructive/15 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 active:shadow-none"
     >
       <span
@@ -276,7 +275,7 @@ function HoldToDeleteButton({
       />
       <span className="relative z-10 flex items-center justify-center gap-1.5">
         <Trash2 className="size-4" aria-hidden />
-        {holding ? `押し続けて削除… ${remaining}` : "ルームを削除（3秒長押し）"}
+        {holding ? `押し続けて削除… ${remaining}` : DELETE_LABEL}
       </span>
     </button>
   );

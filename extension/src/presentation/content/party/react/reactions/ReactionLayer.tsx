@@ -1,10 +1,15 @@
 import { Lottie } from "lottie-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { ReactionIcon } from "@/components/reactionIcons";
-import { EXTRA_REACTION_BY_ID } from "@/domain/extraReactions";
+import { EXTRA_REACTIONS } from "@/domain/extraReactions";
 import { DEFAULT_REACTIONS } from "@/domain/reactions";
-import type { ReactionDisplayMode } from "@/domain/settings";
 
 import { EXTRA_ANIMATIONS } from "./extraAnimations";
 import cryData from "./lottie/cry.json";
@@ -12,9 +17,10 @@ import favData from "./lottie/fav.json";
 import middleFingerData from "./lottie/middle_finger.json";
 import smileData from "./lottie/smile.json";
 import thumbsUpData from "./lottie/thumbs_up.json";
+import type { ReactionEntry, ReactionStore } from "./reactionStore";
 
 /** id → Lottie。既定 5 種（リアクション名）とエクストラ（Noto コードポイント）。 */
-const ANIMATIONS: Record<string, object> = {
+const ANIMATIONS: Readonly<Record<string, object>> = {
   fav: favData,
   middle_finger: middleFingerData,
   thumbs_up: thumbsUpData,
@@ -24,12 +30,14 @@ const ANIMATIONS: Record<string, object> = {
 };
 
 /** id → react-icons キー。バッジ表示で使う。 */
-const REACT_ICON_BY_ID: Record<string, string> = {
-  ...Object.fromEntries(DEFAULT_REACTIONS.map((r) => [r.id, r.reactIcon])),
-  ...Object.fromEntries(
-    Object.values(EXTRA_REACTION_BY_ID).map((r) => [r.id, r.reactIcon]),
-  ),
-};
+const REACT_ICON_BY_ID: Readonly<Record<string, string>> = Object.fromEntries(
+  [...DEFAULT_REACTIONS, ...EXTRA_REACTIONS].map((r) => [r.id, r.reactIcon]),
+);
+
+/** `id` は他の参加者から届く。`constructor` などの継承プロパティを素材と見なさない。 */
+export function hasAnimation(id: string): boolean {
+  return Object.hasOwn(ANIMATIONS, id);
+}
 
 const SIZE_PX = 72;
 const LEFT_SIZE_PX = 44;
@@ -41,71 +49,14 @@ const NORMAL_FADE_MS = 500;
 const LEFT_TRAVEL_MS = 5000;
 const BADGE_MS = 4000;
 
-export interface ReactionPush {
-  id: string;
-  userName?: string;
-  mode: ReactionDisplayMode;
+interface ItemProps {
+  entry: ReactionEntry;
+  /** `ReactionStore.remove`。参照が変わらないので effect の依存に置ける。 */
+  onDone: (key: number) => void;
 }
 
-interface Entry extends ReactionPush {
-  key: number;
-  /** 通常表示: 開始/終了の bottom(px)、左位置(%)。 */
-  leftPct: number;
-  bottomStartPx: number;
-  bottomEndPx: number;
-  /** 左寄り表示: 基準左位置(%)・揺れ振幅(%)・周波数・位相。 */
-  baseLeftPct: number;
-  ampPct: number;
-  cycles: number;
-  phase: number;
-}
-
-export interface ReactionLayerHandle {
-  push: (p: ReactionPush) => void;
-}
-
-function rand(min: number, max: number): number {
-  return Math.random() * (max - min) + min;
-}
-
-function randInt(min: number, max: number): number {
-  return Math.floor(rand(min, max + 1));
-}
-
-export function ReactionLayer({
-  register,
-}: {
-  register: (handle: ReactionLayerHandle) => void;
-}) {
-  const [entries, setEntries] = useState<Entry[]>([]);
-
-  useEffect(() => {
-    let seq = 0;
-    register({
-      push: (p) => {
-        if (!ANIMATIONS[p.id]) return;
-        seq += 1;
-        const start = 120 + randInt(-30, 30);
-        setEntries((prev) => [
-          ...prev,
-          {
-            ...p,
-            key: seq,
-            leftPct: randInt(5, 95),
-            bottomStartPx: start,
-            bottomEndPx: start + 240,
-            baseLeftPct: 12 + rand(-3, 3),
-            ampPct: rand(1.5, 3),
-            cycles: rand(1.5, 2.5),
-            phase: rand(0, Math.PI * 2),
-          },
-        ]);
-      },
-    });
-  }, [register]);
-
-  const remove = (key: number) =>
-    setEntries((prev) => prev.filter((e) => e.key !== key));
+export function ReactionLayer({ store }: { store: ReactionStore }) {
+  const entries = useSyncExternalStore(store.subscribe, store.getSnapshot);
 
   const floating = entries.filter((e) => e.mode !== "badge");
   const badges = entries.filter((e) => e.mode === "badge");
@@ -122,15 +73,13 @@ export function ReactionLayer({
     >
       {floating.map((e) =>
         e.mode === "left" ? (
-          <LeftItem key={e.key} entry={e} onDone={() => remove(e.key)} />
+          <LeftItem key={e.key} entry={e} onDone={store.remove} />
         ) : (
-          <NormalItem key={e.key} entry={e} onDone={() => remove(e.key)} />
+          <NormalItem key={e.key} entry={e} onDone={store.remove} />
         ),
       )}
 
-      {/* バッジ表示: 右下に積み上げる。新しいものほど下に表示する（column 順 ＝
-          配列の末尾＝最新が一番下）。プレイヤーのコントロールバーに重ならないよう
-          少し上げる。各バッジは自前のタイマーで個別に消える（BadgeItem 参照）。 */}
+      {/* 右下に積み、新しいものほど下に出す。コントロールバーに重ならないよう少し上げる。 */}
       <div
         style={{
           position: "absolute",
@@ -144,7 +93,7 @@ export function ReactionLayer({
         }}
       >
         {badges.map((e) => (
-          <BadgeItem key={e.key} entry={e} onDone={() => remove(e.key)} />
+          <BadgeItem key={e.key} entry={e} onDone={store.remove} />
         ))}
       </div>
     </div>
@@ -152,15 +101,11 @@ export function ReactionLayer({
 }
 
 /** 下から浮上し、最上部で少し止まってからフェードアウトする。 */
-function NormalItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
+function NormalItem({ entry, onDone }: ItemProps) {
   const [bottom, setBottom] = useState(entry.bottomStartPx);
   const [opacity, setOpacity] = useState(1);
-  // タイマーはマウント時に 1 回だけ張る。親が再レンダーしてもリセットしない。
-  const onDoneRef = useRef(onDone);
-  useEffect(() => {
-    onDoneRef.current = onDone;
-  });
 
+  // entry も onDone も変わらないので、タイマーはマウント時に 1 回だけ張られる。
   useEffect(() => {
     const raf = requestAnimationFrame(() => setBottom(entry.bottomEndPx));
     const fade = window.setTimeout(
@@ -168,7 +113,7 @@ function NormalItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
       RISE_MS + NORMAL_HOLD_MS,
     );
     const done = window.setTimeout(
-      () => onDoneRef.current(),
+      () => onDone(entry.key),
       RISE_MS + NORMAL_HOLD_MS + NORMAL_FADE_MS,
     );
     return () => {
@@ -176,9 +121,7 @@ function NormalItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
       clearTimeout(fade);
       clearTimeout(done);
     };
-    // entry は追加後に変わらない。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [entry, onDone]);
 
   return (
     <div
@@ -200,16 +143,11 @@ function NormalItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
 }
 
 /** 左寄り表示: 左側をゆっくり上りながら左右に揺れる（rAF で毎フレーム更新）。 */
-function LeftItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
+function LeftItem({ entry, onDone }: ItemProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   // 位置と不透明度は ref で直接書く。JSX の style に置くと、親の再レンダーで
   // 再適用されて全アイコンが最下部に戻る。
-  const onDoneRef = useRef(onDone);
-  useEffect(() => {
-    onDoneRef.current = onDone;
-  });
-
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -230,7 +168,7 @@ function LeftItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
     const tick = (now: number): void => {
       const t = (now - startedAt) / LEFT_TRAVEL_MS; // 0 → 1
       if (t >= 1) {
-        onDoneRef.current();
+        onDone(entry.key);
         return;
       }
       apply(t);
@@ -238,9 +176,7 @@ function LeftItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-    // entry は追加後に変わらない。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [entry, onDone]);
 
   return (
     <div
@@ -259,24 +195,19 @@ function LeftItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
 }
 
 /** バッジ表示: 「ユーザー名 : リアクション」を右下に小さく出す。 */
-function BadgeItem({ entry, onDone }: { entry: Entry; onDone: () => void }) {
+function BadgeItem({ entry, onDone }: ItemProps) {
   const [opacity, setOpacity] = useState(0);
-  const onDoneRef = useRef(onDone);
-  useEffect(() => {
-    onDoneRef.current = onDone;
-  });
 
   useEffect(() => {
     const rafIn = requestAnimationFrame(() => setOpacity(1));
     const fadeOut = window.setTimeout(() => setOpacity(0), BADGE_MS - 400);
-    const done = window.setTimeout(() => onDoneRef.current(), BADGE_MS);
+    const done = window.setTimeout(() => onDone(entry.key), BADGE_MS);
     return () => {
       cancelAnimationFrame(rafIn);
       clearTimeout(fadeOut);
       clearTimeout(done);
     };
-
-  }, []);
+  }, [entry.key, onDone]);
 
   return (
     <div

@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { ReactionIcon } from "@/components/reactionIcons";
 import { Button } from "@/components/ui/button";
-import { EXTRA_REACTION_BY_ID } from "@/domain/extraReactions";
+import { findExtraReaction } from "@/domain/extraReactions";
 import { DEFAULT_REACTIONS } from "@/domain/reactions";
 
 import { ReactionPicker } from "./ReactionPicker";
@@ -23,13 +23,10 @@ export function ReactionsPanel({
     );
   };
 
-  const added = value
-    .map((id) => EXTRA_REACTION_BY_ID[id])
-    .filter((r) => r !== undefined);
+  const added = value.map(findExtraReaction).filter((r) => r !== undefined);
 
   return (
     <section className="rounded-xl border bg-card p-4 shadow-sm">
-      {/* デフォルト（変更不可） */}
       <div className="mb-1 flex items-center gap-1.5">
         <Lock className="size-3.5 text-muted-foreground" aria-hidden />
         <h2 className="text-sm font-semibold">デフォルト</h2>
@@ -47,7 +44,6 @@ export function ReactionsPanel({
         ))}
       </div>
 
-      {/* 追加分 */}
       <div className="mt-3 mb-1 flex items-center justify-between">
         <h2 className="text-sm font-semibold">追加したリアクション</h2>
         <Button

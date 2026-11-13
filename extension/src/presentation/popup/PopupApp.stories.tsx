@@ -3,45 +3,11 @@ import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
 import { STORAGE_KEYS } from "@/domain/settings";
 
 import { PopupApp } from "./PopupApp";
+import { installChromeMock } from "./storybookChromeMock";
 
-type StoredValue = string | boolean;
-
-/**
- * Provides an in-memory chrome.storage.sync / chrome.runtime so the popup can
- * render in Storybook (outside the extension context). Each story gets its own
- * isolated store seeded with `initial`.
- */
-function withChromeMock(initial: Record<string, StoredValue> = {}): Decorator {
+function withChromeMock(initial: Record<string, string | boolean> = {}): Decorator {
   return (Story) => {
-    const store: Record<string, StoredValue> = { ...initial };
-    const listeners: Array<() => void> = [];
-    const mock = {
-      storage: {
-        sync: {
-          get: (keys: string[]) => {
-            const result: Record<string, StoredValue> = {};
-            for (const key of keys) {
-              if (key in store) result[key] = store[key];
-            }
-            return Promise.resolve(result);
-          },
-          set: (items: Record<string, StoredValue>) => {
-            Object.assign(store, items);
-            listeners.forEach((listener) => listener());
-            return Promise.resolve();
-          },
-          onChanged: {
-            addListener: (cb: () => void) => listeners.push(cb),
-            removeListener: (cb: () => void) => {
-              const index = listeners.indexOf(cb);
-              if (index >= 0) listeners.splice(index, 1);
-            },
-          },
-        },
-      },
-      runtime: { getManifest: () => ({ version: "1.0.0" }) },
-    };
-    (globalThis as { chrome?: unknown }).chrome = mock;
+    installChromeMock(initial);
     return <Story />;
   };
 }

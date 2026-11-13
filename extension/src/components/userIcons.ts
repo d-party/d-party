@@ -1,7 +1,7 @@
 /**
  * Selectable avatar icons, keyed by react-icons name (e.g. `"FaCat"`). Everything
  * resolves through this map so bundles pull only this subset of `react-icons/fa6`.
- * Unknown keys fall back to {@link DEFAULT_USER_ICON}.
+ * Unknown keys fall back to `DEFAULT_USER_ICON` (see `UserAvatar`).
  */
 
 import type { IconType } from "react-icons/lib";
@@ -79,9 +79,6 @@ import {
   FaUserTie,
   FaWorm,
 } from "react-icons/fa6";
-
-/** Same as the backend's default. */
-export const DEFAULT_USER_ICON = "FaRegUser";
 
 /** Picker order. */
 export const USER_ICONS: Record<string, IconType> = {

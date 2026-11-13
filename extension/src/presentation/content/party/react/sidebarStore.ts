@@ -9,6 +9,9 @@ import {
 
 export type SidebarTab = "share" | "history" | "users" | "control";
 
+/** `?party=create|join`; `normal` is plain playback without a party. */
+export type PartyMode = "create" | "join" | "normal";
+
 export interface HistoryEntry extends HistoryEntryInput {
   id: number;
   time: string;
@@ -18,7 +21,7 @@ export interface SidebarState {
   /** Hidden outside a party and in fullscreen. */
   visible: boolean;
   collapsed: boolean;
-  mode: "create" | "join" | "normal";
+  mode: PartyMode;
   joined: boolean;
   connectionStatus: ConnectionStatus;
   activeTab: SidebarTab;
@@ -48,6 +51,17 @@ const INITIAL_STATE: SidebarState = {
   draftRoomSettings: DEFAULT_ROOM_SETTINGS,
 };
 
+const EXPANDED_WIDTH_PX = 320;
+const COLLAPSED_WIDTH_PX = 44;
+
+/** Width the sidebar takes from the player, in px. */
+export function sidebarWidth(
+  state: Pick<SidebarState, "visible" | "collapsed" | "mode">,
+): number {
+  if (!state.visible || state.mode === "normal") return 0;
+  return state.collapsed ? COLLAPSED_WIDTH_PX : EXPANDED_WIDTH_PX;
+}
+
 /** External store read with `useSyncExternalStore`. Snapshots are immutable. */
 export class SidebarStore {
   private state: SidebarState = INITIAL_STATE;
@@ -68,7 +82,7 @@ export class SidebarStore {
     this.listeners.forEach((listener) => listener());
   }
 
-  setMode(mode: SidebarState["mode"]): void {
+  setMode(mode: PartyMode): void {
     this.patch({ mode, visible: mode !== "normal" });
   }
   setJoined(joined: boolean): void {
@@ -107,22 +121,14 @@ export class SidebarStore {
   setCollapsed(collapsed: boolean): void {
     this.patch({ collapsed });
   }
-  toggleCollapsed(): void {
-    this.patch({ collapsed: !this.state.collapsed });
-  }
+  /** Back to the create screen; the collapsed state and the episode title survive. */
   resetToCreate(): void {
     this.patch({
+      ...INITIAL_STATE,
       mode: "create",
       visible: true,
-      joined: false,
-      connectionStatus: "idle",
-      activeTab: "share",
-      shareUrl: "",
-      users: [],
-      selfUserId: "",
-      history: [],
-      roomSettings: DEFAULT_ROOM_SETTINGS,
-      draftRoomSettings: DEFAULT_ROOM_SETTINGS,
+      collapsed: this.state.collapsed,
+      shareTitle: this.state.shareTitle,
     });
   }
 
@@ -170,6 +176,6 @@ export class SidebarController implements SidebarView {
 
 function formatTime(): string {
   const now = new Date();
-  const pad = (value: number) => ("0" + value).slice(-2);
+  const pad = (value: number) => String(value).padStart(2, "0");
   return `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 }

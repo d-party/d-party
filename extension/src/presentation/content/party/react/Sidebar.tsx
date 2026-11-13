@@ -10,15 +10,16 @@ import {
 import { useSyncExternalStore } from "react";
 
 import { Logo } from "@/components/Logo";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@d-party/ui";
-import { TooltipProvider } from "@d-party/ui";
 import type { RoomSettings as RoomSettingsValue } from "@/domain/roomSettings";
-
 import {
-  type SidebarState,
-  type SidebarStore,
-  type SidebarTab,
-} from "./sidebarStore";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  TooltipProvider,
+} from "@d-party/ui";
+
+import type { SidebarState, SidebarStore, SidebarTab } from "./sidebarStore";
 import { ConnectionBadge, UserCountBadge } from "./sidebar/badges";
 import { HistoryPanel } from "./sidebar/HistoryPanel";
 import { ControlPanel, CreatePanel, UsersPanel } from "./sidebar/panels";
@@ -30,7 +31,7 @@ export interface SidebarProps {
   onLeave: () => void;
   onDeleteRoom: () => void;
   onUpdateRoomSettings: (settings: RoomSettingsValue) => void;
-  onTabChange?: (tab: SidebarTab) => void;
+  onTabChange: (tab: SidebarTab) => void;
 }
 
 export function Sidebar({
@@ -149,7 +150,7 @@ function Panel({
           onValueChange={(value) => {
             const tab = value as SidebarTab;
             store.setActiveTab(tab);
-            onTabChange?.(tab);
+            onTabChange(tab);
           }}
           className="min-h-0 flex-1 gap-0 p-2"
         >

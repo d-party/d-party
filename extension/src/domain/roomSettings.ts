@@ -1,3 +1,5 @@
+import type { RoomSettingEvent } from "./protocol";
+
 /** ルーム設定（backend の `Setting`）。ワイヤの snake_case とは {@link fromWire} で変換する。 */
 export interface RoomSettings {
   /** オーナーだけが再生を操作できる。 */
@@ -14,17 +16,21 @@ export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
   disableReaction: false,
 };
 
-export function isDefaultRoomSettings(settings: RoomSettings): boolean {
-  return (
-    !settings.oneWay && !settings.ownerLeaveDelete && !settings.disableReaction
-  );
-}
-
 export const ROOM_SETTING_LABELS: Record<keyof RoomSettings, string> = {
   oneWay: "一方通行モード",
   ownerLeaveDelete: "オーナー退室時の自動削除",
   disableReaction: "リアクション禁止",
 };
+
+const ROOM_SETTING_KEYS = Object.keys(
+  ROOM_SETTING_LABELS,
+) as (keyof RoomSettings)[];
+
+export function isDefaultRoomSettings(settings: RoomSettings): boolean {
+  return ROOM_SETTING_KEYS.every(
+    (key) => settings[key] === DEFAULT_ROOM_SETTINGS[key],
+  );
+}
 
 export interface RoomSettingChange {
   key: keyof RoomSettings;
@@ -36,12 +42,7 @@ export function diffRoomSettings(
   previous: RoomSettings,
   next: RoomSettings,
 ): RoomSettingChange[] {
-  const keys: (keyof RoomSettings)[] = [
-    "oneWay",
-    "ownerLeaveDelete",
-    "disableReaction",
-  ];
-  return keys
+  return ROOM_SETTING_KEYS
     .filter((key) => previous[key] !== next[key])
     .map((key) => ({
       key,
@@ -50,11 +51,9 @@ export function diffRoomSettings(
     }));
 }
 
-export function fromWire(wire: {
-  one_way?: boolean;
-  owner_leave_delete?: boolean;
-  disable_reaction?: boolean;
-}): RoomSettings {
+export function fromWire(
+  wire: Omit<RoomSettingEvent, "action">,
+): RoomSettings {
   return {
     oneWay: wire.one_way ?? false,
     ownerLeaveDelete: wire.owner_leave_delete ?? false,

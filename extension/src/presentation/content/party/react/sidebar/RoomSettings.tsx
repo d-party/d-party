@@ -1,11 +1,9 @@
 import { Ban, Gauge, LogOut } from "lucide-react";
 
-import { Label } from "@d-party/ui";
-import { Switch } from "@d-party/ui";
 import type { RoomSettings as RoomSettingsValue } from "@/domain/roomSettings";
+import { Label, Switch } from "@d-party/ui";
 
 /** 作成時（`CreatePanel`）と入室後（`ControlPanel`）で共用する。 */
-
 export function RoomSettings({
   value,
   onChange,
