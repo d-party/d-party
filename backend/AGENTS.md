@@ -20,7 +20,7 @@ streamer/       同時視聴のコア
   consumers.py    AnimePartyConsumer（create / join / leave / video_operation / reaction …）
   format.py       pydantic のメッセージ定義（公開プロトコル。受信の検証と送信の形）
   repository.py   consumer が await で呼ぶ永続化（ルーム・参加者・設定）
-  reactions.py    fold_room_reactions（ルーム終了時にリアクションを ReactionStat へ畳み込む）
+  reactions.py    リアクションの集計（ルーム終了時の ReactionStat への畳み込み · 種別ごとの累計）
   models.py       AnimeRoom / AnimeUser / AnimeReaction / AnimeRoomHistory / Setting / ReactionStat
   mixins.py       LogicalDeletionMixin（論理削除）
   fields.py       EncryptedCharField（Fernet）
@@ -34,6 +34,7 @@ manage.py       /env_files/*.env があれば読む
 
 compose・nginx・env はルートが持ち、`backend/` は build context として参照される。
 ホストの解決先は env（`DATABASE_HOST` · `REDIS_HOST` など）で差し替える。
+env を読むのは `settings.py` だけにし、ほかは `django.conf.settings` から参照する。
 
 ## 壊してはいけないもの
 
@@ -73,7 +74,8 @@ docker compose exec django python manage.py close_active_sessions
 
 コンテナ外で要る env: `SECRET_KEY` `DEBUG` `MY_DOMAIN` `POSTGRES_DB` `POSTGRES_PASSWORD`
 `DATABASE_USER` `DATABASE_HOST` `DATABASE_PORT` `DATABASE_ENGINE` `REDIS_HOST` `REDIS_PORT`
-`LANGUAGE_CODE` `TIME_ZONE` `D_ANIME_STORE_DOMAIN` `CHROME_EXTENSION_REQUIRED_VERSION`。
+`LANGUAGE_CODE` `TIME_ZONE` `D_ANIME_STORE_DOMAIN` `CHROME_EXTENSION_REQUIRED_VERSION`
+（任意: `STATS_CACHE_SECONDS`）。
 
 migration はコミット済み。モデルを変えたときだけ `makemigrations` して生成物をコミットする。
 
