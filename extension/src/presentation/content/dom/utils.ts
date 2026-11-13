@@ -1,4 +1,3 @@
-
 /** `name` goes into a regular expression, so every metacharacter is escaped. */
 export function getParam(name: string, url: string = window.location.href): string | null {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -28,12 +27,4 @@ export function makeFontFace(): void {
   link.setAttribute("type", "text/css");
   link.setAttribute("href", "https://fonts.googleapis.com/icon?family=Material+Icons");
   document.head.appendChild(link);
-}
-
-/** Inclusive. */
-
-export function getRandomIntInclusive(min: number, max: number): number {
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min + 1) + min);
 }

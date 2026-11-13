@@ -7,8 +7,7 @@ export interface HealthCheckRequest {
   type: "healthCheck";
 }
 
-/** `ok` は 2xx だったか。 */
-
+/** `ok` は backend が 200 を返したか。 */
 export interface HealthCheckResponse {
   ok: boolean;
 }
