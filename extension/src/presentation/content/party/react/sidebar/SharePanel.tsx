@@ -1,38 +1,73 @@
 import { Check, Copy, Timer } from "lucide-react";
-import { useState } from "react";
 import { FaEnvelope, FaFacebookF, FaXTwitter } from "react-icons/fa6";
 import { SiLine } from "react-icons/si";
 
+import { Button } from "@/components/ui/button";
+import { useTransientFlag } from "@/components/useTransientFlag";
+import { FACEBOOK_APP_ID } from "@/infrastructure/env";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@d-party/ui";
-import { Button } from "@/components/ui/button";
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@d-party/ui";
-import { FACEBOOK_APP_ID } from "@/infrastructure/env";
 
 import type { SidebarState } from "../sidebarStore";
+
+const COPIED_FEEDBACK_MS = 1200;
 
 function timerUrl(shareUrl: string): string {
   if (!shareUrl) return "";
   return shareUrl.includes("?") ? `${shareUrl}&timer=true` : `${shareUrl}?timer=true`;
 }
 
-export function SharePanel({ state }: { state: SidebarState }): React.JSX.Element {
-  const [copied, setCopied] = useState(false);
-  const url = state.shareUrl;
-
-  const copy = async () => {
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1200);
+/** `copied` stays false when the clipboard write is refused (e.g. the page lost focus). */
+function useCopy(text: string): { copied: boolean; copy: () => void } {
+  const [copied, flagCopied] = useTransientFlag(COPIED_FEEDBACK_MS);
+  const copy = () => {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(flagCopied, () => undefined);
   };
+  return { copied, copy };
+}
+
+/** The URL with a copy icon; the whole field is the button. Extra props reach the `<button>` (for `TooltipTrigger asChild`). */
+function CopyField({
+  url,
+  placeholder,
+  copied,
+  ...props
+}: React.ComponentProps<"button"> & {
+  url: string;
+  placeholder: string;
+  copied: boolean;
+}): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      disabled={!url}
+      className="flex w-full items-center gap-1.5 rounded-lg border bg-muted/40 p-1.5 text-left transition-colors hover:bg-muted/70 disabled:cursor-not-allowed disabled:opacity-60"
+      {...props}
+    >
+      <span className="flex-1 truncate px-1 text-xs" title={url}>
+        {url || placeholder}
+      </span>
+      <span
+        aria-hidden
+        className="flex size-7 items-center justify-center rounded-md bg-secondary text-secondary-foreground"
+      >
+        {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+      </span>
+    </button>
+  );
+}
+
+export function SharePanel({ state }: { state: SidebarState }): React.JSX.Element {
+  const url = state.shareUrl;
+  const { copied, copy } = useCopy(url);
 
   const text = `dアニメストアで『${state.shareTitle}』を一緒に見ませんか？ 拡張機能『d-party』を使ってパーティーに参加してください`;
   const open = (shareUrl: string) => window.open(shareUrl, "", "width=700,height=400");
@@ -44,23 +79,13 @@ export function SharePanel({ state }: { state: SidebarState }): React.JSX.Elemen
       </p>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
-            type="button"
+          <CopyField
+            url={url}
+            placeholder="ルーム作成後にリンクが表示されます"
+            copied={copied}
             onClick={copy}
-            disabled={!url}
             aria-label="リンクをコピー"
-            className="flex w-full items-center gap-1.5 rounded-lg border bg-muted/40 p-1.5 text-left transition-colors hover:bg-muted/70 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <span className="flex-1 truncate px-1 text-xs" title={url}>
-              {url || "ルーム作成後にリンクが表示されます"}
-            </span>
-            <span
-              aria-hidden
-              className="flex size-7 items-center justify-center rounded-md bg-secondary text-secondary-foreground"
-            >
-              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-            </span>
-          </button>
+          />
         </TooltipTrigger>
         <TooltipContent side="top">
           {copied ? "コピーしました" : "リンクをコピー"}
@@ -133,15 +158,8 @@ export function SharePanel({ state }: { state: SidebarState }): React.JSX.Elemen
 }
 
 /** タイマー画面の URL（ロビー URL + `?timer=true`）。拡張機能が無くても開ける。 */
-
 function TimerUrlAccordion({ url }: { url: string }): React.JSX.Element {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    if (!url) return;
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1200);
-  };
+  const { copied, copy } = useCopy(url);
 
   return (
     <Accordion type="single" collapsible className="w-full">
@@ -154,23 +172,13 @@ function TimerUrlAccordion({ url }: { url: string }): React.JSX.Element {
           <p className="mb-1.5 text-[11px] leading-snug text-muted-foreground">
             拡張機能なし・dアニメストア不要で、再生中の動画のタイトルと時間だけを表示します。
           </p>
-          <button
-            type="button"
+          <CopyField
+            url={url}
+            placeholder="ルーム作成後にURLが表示されます"
+            copied={copied}
             onClick={copy}
-            disabled={!url}
             aria-label="タイマーURLをコピー"
-            className="flex w-full items-center gap-1.5 rounded-lg border bg-muted/40 p-1.5 text-left transition-colors hover:bg-muted/70 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <span className="flex-1 truncate px-1 text-xs" title={url}>
-              {url || "ルーム作成後にURLが表示されます"}
-            </span>
-            <span
-              aria-hidden
-              className="flex size-7 items-center justify-center rounded-md bg-secondary text-secondary-foreground"
-            >
-              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-            </span>
-          </button>
+          />
         </AccordionContent>
       </AccordionItem>
     </Accordion>

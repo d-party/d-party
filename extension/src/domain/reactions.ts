@@ -9,39 +9,44 @@ export const REACTION_TYPES = [
 
 export type ReactionType = (typeof REACTION_TYPES)[number];
 
+/** `reactIcon` は react-icons (Font Awesome 6) のキー。 */
 export const REACTION_META: Record<
   ReactionType,
-  { label: string; emoji: string }
+  { label: string; emoji: string; reactIcon: string }
 > = {
-  fav: { label: "お気に入り", emoji: "❤️" },
-  thumbs_up: { label: "いいね", emoji: "👍" },
-  smile: { label: "笑顔", emoji: "😄" },
-  cry: { label: "涙", emoji: "😢" },
-  middle_finger: { label: "ブーイング", emoji: "🖕" },
+  fav: { label: "お気に入り", emoji: "❤️", reactIcon: "FaHeart" },
+  thumbs_up: { label: "いいね", emoji: "👍", reactIcon: "FaThumbsUp" },
+  smile: { label: "笑顔", emoji: "😄", reactIcon: "FaFaceSmileBeam" },
+  cry: { label: "涙", emoji: "😢", reactIcon: "FaFaceSadCry" },
+  middle_finger: {
+    label: "ブーイング",
+    emoji: "🖕",
+    reactIcon: "FaHandMiddleFinger",
+  },
 };
 
-/** 既定のリアクション（統計の対象）。並びは表示順。 */
 export interface ReactionDef {
-  id: string;
+  id: ReactionType;
   label: string;
   reactIcon: string;
 }
 
-export const DEFAULT_REACTIONS: ReactionDef[] = [
-  {
-    id: "thumbs_up",
-    label: REACTION_META.thumbs_up.label,
-    reactIcon: "FaThumbsUp",
-  },
-  { id: "fav", label: REACTION_META.fav.label, reactIcon: "FaHeart" },
-  { id: "smile", label: REACTION_META.smile.label, reactIcon: "FaFaceSmileBeam" },
-  { id: "cry", label: REACTION_META.cry.label, reactIcon: "FaFaceSadCry" },
-  {
-    id: "middle_finger",
-    label: REACTION_META.middle_finger.label,
-    reactIcon: "FaHandMiddleFinger",
-  },
+const DISPLAY_ORDER: readonly ReactionType[] = [
+  "thumbs_up",
+  "fav",
+  "smile",
+  "cry",
+  "middle_finger",
 ];
+
+/** 既定のリアクション（統計の対象）。並びは表示順。 */
+export const DEFAULT_REACTIONS: readonly ReactionDef[] = DISPLAY_ORDER.map(
+  (id) => ({
+    id,
+    label: REACTION_META[id].label,
+    reactIcon: REACTION_META[id].reactIcon,
+  }),
+);
 
 export function isDefaultReaction(id: string): id is ReactionType {
   return (REACTION_TYPES as readonly string[]).includes(id);

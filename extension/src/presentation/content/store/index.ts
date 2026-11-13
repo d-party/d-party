@@ -1,6 +1,7 @@
-import { getParam, makeFontFace } from "../dom/utils";
-import { ChromeStorageSettingsRepository } from "@/infrastructure/storage/ChromeStorageSettingsRepository";
 import { DEFAULT_SETTINGS, type Settings } from "@/domain/settings";
+import { ChromeStorageSettingsRepository } from "@/infrastructure/storage/ChromeStorageSettingsRepository";
+
+import { makeFontFace } from "../dom/utils";
 
 /**
  * Episode-list pages (ci_pc / tp_pc): adds "open in another tab" and "create
@@ -15,13 +16,28 @@ const DECORATED_ATTR = "data-dparty-decorated";
 const MODAL_DECORATED_ATTR = "data-dparty-modal-decorated";
 const PLAYLINK_ATTR = "data-dparty-playlink";
 
+/** The player page, resolved against the current page (same origin and directory). */
+function playerUrl(partId: string, party?: "create"): string {
+  const url = new URL("sc_d_pc", window.location.href);
+  url.searchParams.set("partId", partId);
+  if (party) url.searchParams.set("party", party);
+  return url.href;
+}
+
+function openInNewTab(url: string): void {
+  window.open(url, "_blank", "noopener");
+}
+
 const settingsRepo = new ChromeStorageSettingsRepository();
 /** Kept in sync with chrome.storage and read at click time, so changes apply without reload. */
 let currentSettings: Settings = DEFAULT_SETTINGS;
 
 makeFontFace();
 ready(main);
-void loadSettings();
+// Subscribe before the first read so a change in between is not lost. A failed
+// read leaves the defaults in place.
+settingsRepo.onChange(applySettings);
+settingsRepo.getAll().then(applySettings, () => undefined);
 
 function main(): void {
   decorate();
@@ -36,19 +52,15 @@ function decorate(): void {
   decoratePlaylinks();
 }
 
-async function loadSettings(): Promise<void> {
-  currentSettings = await settingsRepo.getAll();
+function applySettings(next: Settings): void {
+  currentSettings = next;
   decorate();
-  settingsRepo.onChange((next) => {
-    currentSettings = next;
-    decorate();
-  });
 }
 
 function decorateEpisodes(): void {
   const itemList = document.querySelectorAll<HTMLAnchorElement>(".itemModule.list a");
 
-  for (const item of Array.from(itemList)) {
+  for (const item of itemList) {
     const href = item.getAttribute("href");
     if (!href || !/cd_pc/.test(href)) continue;
     if (item.hasAttribute(DECORATED_ATTR)) continue;
@@ -66,7 +78,7 @@ function decorateEpisodes(): void {
         icon: "play_circle_filled",
         variant: "play",
         tooltip: "別タブで再生",
-        href: "sc_d_pc?partId=" + partId,
+        url: playerUrl(partId),
       }),
     );
     overlay.appendChild(
@@ -74,7 +86,7 @@ function decorateEpisodes(): void {
         icon: "groups",
         variant: "party",
         tooltip: "パーティールームを作成",
-        href: "sc_d_pc?partId=" + partId + "&party=create",
+        url: playerUrl(partId, "create"),
       }),
     );
     item.parentElement?.appendChild(overlay);
@@ -85,14 +97,13 @@ function createButton(opts: {
   icon: string;
   variant: "play" | "party";
   tooltip: string;
-  href: string;
+  url: string;
 }): HTMLButtonElement {
-  const url = new URL(opts.href, window.location.href).href;
   return iconButton({
     icon: opts.icon,
     className: `dparty-btn dparty-btn--${opts.variant}`,
     tooltip: opts.tooltip,
-    onClick: () => window.open(url, "_blank", "noopener"),
+    onClick: () => openInNewTab(opts.url),
   });
 }
 
@@ -211,7 +222,7 @@ function decoratePlaylinks(): void {
     "a.playlink[data-partid], a.directPlayReady[data-partid]",
   );
 
-  for (const link of Array.from(links)) {
+  for (const link of links) {
     if (link.hasAttribute(PLAYLINK_ATTR)) continue;
     link.setAttribute(PLAYLINK_ATTR, "1");
 
@@ -223,8 +234,7 @@ function decoratePlaylinks(): void {
         if (!partId) return;
         event.preventDefault();
         event.stopPropagation();
-        const url = new URL("sc_d_pc?partId=" + partId, window.location.href).href;
-        window.open(url, "_blank", "noopener");
+        openInNewTab(playerUrl(partId));
       },
       true,
     );
@@ -235,8 +245,7 @@ function decoratePlaylinks(): void {
 function openPlayerInNewTab(): boolean {
   const partId = currentPartId();
   if (!partId) return false;
-  const url = new URL("sc_d_pc?partId=" + partId, window.location.href).href;
-  window.open(url, "_blank", "noopener");
+  openInNewTab(playerUrl(partId));
   return true;
 }
 
@@ -248,15 +257,16 @@ function currentPartId(): string | null {
   const img = document.querySelector<HTMLImageElement>("#modalThumbImg");
   const src = img?.getAttribute("src") ?? img?.getAttribute("data-src") ?? "";
   const match = src.match(/\/(\d+)_\d+_\d+\.(?:png|jpe?g)/i);
-  return match ? match[1] : getParam("partId");
+  return (
+    match?.[1] ?? new URLSearchParams(window.location.search).get("partId")
+  );
 }
 
 /** Content scripts often start after `load`, so run now if it already fired. */
-
 function ready(fn: () => void): void {
   if (document.readyState === "complete") {
     fn();
   } else {
-    window.addEventListener("load", fn, false);
+    window.addEventListener("load", fn, { once: true });
   }
 }

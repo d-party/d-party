@@ -1,46 +1,17 @@
 import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
 
-import { emptyStats, type PersonalStats } from "@/domain/personalStats";
+import {
+  PERSONAL_STATS_STORAGE_KEY,
+  emptyStats,
+  type PersonalStats,
+} from "@/domain/personalStats";
 
 import { PersonalStatsPanel } from "./PersonalStatsPanel";
+import { installChromeMock } from "./storybookChromeMock";
 
-const STORAGE_KEY = "personal_stats";
-
-/**
- * Provides an in-memory chrome.storage.sync so the stats panel can render in
- * Storybook (outside the extension context), seeded with `initial` stats.
- */
-function withChromeMock(initial: PersonalStats | null): Decorator {
+function withStats(stats: PersonalStats): Decorator {
   return (Story) => {
-    const store: Record<string, unknown> = {};
-    if (initial) store[STORAGE_KEY] = initial;
-    const listeners: Array<() => void> = [];
-    const mock = {
-      storage: {
-        sync: {
-          get: (keys: string[]) => {
-            const result: Record<string, unknown> = {};
-            for (const key of keys) {
-              if (key in store) result[key] = store[key];
-            }
-            return Promise.resolve(result);
-          },
-          set: (items: Record<string, unknown>) => {
-            Object.assign(store, items);
-            listeners.forEach((listener) => listener());
-            return Promise.resolve();
-          },
-          onChanged: {
-            addListener: (cb: () => void) => listeners.push(cb),
-            removeListener: (cb: () => void) => {
-              const index = listeners.indexOf(cb);
-              if (index >= 0) listeners.splice(index, 1);
-            },
-          },
-        },
-      },
-    };
-    (globalThis as { chrome?: unknown }).chrome = mock;
+    installChromeMock({ [PERSONAL_STATS_STORAGE_KEY]: stats });
     return (
       <div className="w-[360px] bg-background p-4 text-foreground">
         <Story />
@@ -75,10 +46,10 @@ type Story = StoryObj<typeof PersonalStatsPanel>;
 
 /** A returning user with plenty of accumulated activity. */
 export const Populated: Story = {
-  decorators: [withChromeMock(populated)],
+  decorators: [withStats(populated)],
 };
 
 /** First run: nothing recorded yet. */
 export const Empty: Story = {
-  decorators: [withChromeMock(emptyStats())],
+  decorators: [withStats(emptyStats())],
 };

@@ -2,38 +2,27 @@ import { createRoot } from "react-dom/client";
 
 import type { ReactionPlayOptions, ReactionView } from "@/application/ports";
 
-import {
-  ReactionLayer,
-  type ReactionLayerHandle,
-  type ReactionPush,
-} from "./react/reactions/ReactionLayer";
+import { ReactionLayer, hasAnimation } from "./react/reactions/ReactionLayer";
+import { ReactionStore } from "./react/reactions/reactionStore";
 
 /** Transparent layer over `.videoWrapper` that plays the Lottie animations. */
 export class ReactionViewReact implements ReactionView {
-  private handle: ReactionLayerHandle | null = null;
+  private readonly store = new ReactionStore();
   private mounted = false;
-  private pending: ReactionPush[] = [];
 
   play(id: string, opts?: ReactionPlayOptions): void {
-    const push: ReactionPush = {
+    this.ensureMounted();
+    if (!hasAnimation(id)) return;
+    this.store.push({
       id,
       userName: opts?.userName,
       mode: opts?.mode ?? "normal",
-    };
-    this.ensureMounted();
-    if (this.handle) {
-      this.handle.push(push);
-    } else {
-      // Mount is asynchronous (React effect); queue until the layer registers.
-      this.pending.push(push);
-    }
+    });
   }
 
   private ensureMounted(): void {
     if (this.mounted) return;
-    const wrapper = document.getElementsByClassName(
-      "videoWrapper",
-    )[0] as HTMLElement | undefined;
+    const wrapper = document.querySelector<HTMLElement>(".videoWrapper");
     if (!wrapper) return;
     if (getComputedStyle(wrapper).position === "static") {
       wrapper.style.position = "relative";
@@ -44,15 +33,6 @@ export class ReactionViewReact implements ReactionView {
     host.style.pointerEvents = "none";
     wrapper.appendChild(host);
     this.mounted = true;
-    const root = createRoot(host);
-    root.render(
-      <ReactionLayer
-        register={(h) => {
-          this.handle = h;
-          for (const p of this.pending) h.push(p);
-          this.pending = [];
-        }}
-      />,
-    );
+    createRoot(host).render(<ReactionLayer store={this.store} />);
   }
 }

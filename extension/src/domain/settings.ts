@@ -5,13 +5,14 @@
  * - `badge`: 右下に「ユーザー名 : リアクション」を出す
  * - `left`: 左側を揺れながら上る
  */
-export type ReactionDisplayMode = "normal" | "badge" | "left";
+export const REACTION_DISPLAY_MODES = ["normal", "badge", "left"] as const;
 
-export const REACTION_DISPLAY_MODES: readonly ReactionDisplayMode[] = [
-  "normal",
-  "badge",
-  "left",
-] as const;
+export type ReactionDisplayMode = (typeof REACTION_DISPLAY_MODES)[number];
+
+export const USER_NAME_MAX_LENGTH = 15;
+
+/** react-icons (Font Awesome 6) のキー。backend の既定値と同じ。 */
+export const DEFAULT_USER_ICON = "FaRegUser";
 
 export interface Settings {
   autoAnotherTab: boolean;
@@ -38,7 +39,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reactionDisplay: "normal",
   extraReactions: [],
   userName: "ユーザー",
-  userIcon: "FaRegUser",
+  userIcon: DEFAULT_USER_ICON,
 };
 
 export const STORAGE_KEYS = {
