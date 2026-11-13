@@ -35,6 +35,7 @@ manage.py       /env_files/*.env があれば読む
 compose・nginx・env はルートが持ち、`backend/` は build context として参照される。
 ホストの解決先は env（`DATABASE_HOST` · `REDIS_HOST` など）で差し替える。
 env を読むのは `settings.py` だけにし、ほかは `django.conf.settings` から参照する。
+任意の env は `STATS_CACHE_SECONDS`（統計 API と shields バッジのキャッシュ秒数。既定 300）。
 
 ## 壊してはいけないもの
 
@@ -74,8 +75,7 @@ docker compose exec django python manage.py close_active_sessions
 
 コンテナ外で要る env: `SECRET_KEY` `DEBUG` `MY_DOMAIN` `POSTGRES_DB` `POSTGRES_PASSWORD`
 `DATABASE_USER` `DATABASE_HOST` `DATABASE_PORT` `DATABASE_ENGINE` `REDIS_HOST` `REDIS_PORT`
-`LANGUAGE_CODE` `TIME_ZONE` `D_ANIME_STORE_DOMAIN` `CHROME_EXTENSION_REQUIRED_VERSION`
-（任意: `STATS_CACHE_SECONDS`）。
+`LANGUAGE_CODE` `TIME_ZONE` `D_ANIME_STORE_DOMAIN` `CHROME_EXTENSION_REQUIRED_VERSION`。
 
 migration はコミット済み。モデルを変えたときだけ `makemigrations` して生成物をコミットする。
 
