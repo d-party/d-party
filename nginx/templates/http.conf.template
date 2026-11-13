@@ -1,4 +1,4 @@
-# upstream の host:port は envsubst で .env.global から埋める。
+# envsubst で ${MY_DOMAIN} ${DJANGO_UPSTREAM} ${FRONTEND_UPSTREAM} を埋める（.env.global / .env.dev）。
 upstream app_server {
     server ${DJANGO_UPSTREAM} fail_timeout=0;
 }
@@ -8,26 +8,36 @@ upstream frontend_server {
 
 server {
     listen 80 default;
-    server_name $MY_DOMAIN www.$MY_DOMAIN;
+    server_name ${MY_DOMAIN} www.${MY_DOMAIN};
 
     keepalive_timeout 10;
 
-    location /static/ {
-            alias /static/;
-    }
+    # proxy_pass する location はすべてこれを継承する。location の中に proxy_set_header を
+    # 1 つでも書くと、その location ではここの proxy_set_header が全部効かなくなる。
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_redirect off;
 
+    location /static/ {
+        alias /static/;
+    }
 
     location /.well-known/ {
         alias /.well-known/;
     }
 
-    # ── Django (ASGI): REST API・管理画面 ──
+    # ── Django (ASGI): REST API・管理画面・WebSocket ──
     location /api/ {
         # 公開 API だけなので、pnpm dev（:3000）や拡張機能から叩けるよう CORS を許す。
-        # add_header は named location へ引き継がれないので、ここで直接 proxy_pass する。
         add_header Access-Control-Allow-Origin "*" always;
         add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
         add_header Access-Control-Allow-Headers "Content-Type, Accept" always;
+        # if の中へは外側の add_header が継承されないので、同じものを書く。
         if ($request_method = OPTIONS) {
             add_header Access-Control-Allow-Origin "*" always;
             add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
@@ -35,18 +45,9 @@ server {
             add_header Access-Control-Max-Age 86400 always;
             return 204;
         }
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_redirect off;
         proxy_pass http://app_server;
     }
-    # /admin は上の prefix に合わずフロントの 404 になるので、/admin/ へ飛ばす。
-
+    # /admin は下の prefix に合わずフロントの 404 になるので、/admin/ へ飛ばす。
     location = /admin {
         return 301 /admin/;
     }
@@ -58,33 +59,17 @@ server {
         try_files $uri @proxy_to_app;
     }
 
-    # ── React フロントエンド: 公開ページ（/ /usage /qa /anime-store/lobby/… と静的アセット）──
+    # ── Next.js フロントエンド: 公開ページ（/ /usage /qa /anime-store/lobby/… と静的アセット）──
     location / {
         try_files $uri @proxy_to_frontend;
     }
 
+    # try_files 経由で named location へ渡す。prefix location に proxy_pass を直接書くと、nginx が
+    # 末尾スラッシュ無しのリクエスト（/anime-store/party など）を 301 で補完するようになる。
     location @proxy_to_app {
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_redirect off;
         proxy_pass http://app_server;
     }
-
     location @proxy_to_frontend {
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_redirect off;
         proxy_pass http://frontend_server;
     }
-
 }
