@@ -19,16 +19,13 @@ services:
     env_file: *env_file
   django:
     container_name: django
-    # Fixed name; CI scans `backend-django`.
     image: backend-django
     build:
       context: ./backend
-      dockerfile: Dockerfile
     volumes:
       - ./backend/:/usr/src/app/
       - ./backend/.env.django:/env_files/.env.django
       - ./.env.global:/env_files/.env.global
-    command: "sh entrypoint.sh"
     env_file:
       - ./backend/.env.django
       - *env_file
@@ -40,14 +37,13 @@ services:
     healthcheck:
       test:
         - "CMD-SHELL"
-        - "python -c \"import socket,sys; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1',8000)); s.close()\""
+        - "python -c \"import socket; socket.create_connection(('127.0.0.1', 8000), timeout=2).close()\""
       interval: 10s
       timeout: 5s
       retries: 12
       start_period: 60s
   frontend:
-    # 中身は override.yml（dev）と prod.yml が与える。
-
+    # image / build は override.yml（dev）と prod.yml が与える。
     container_name: frontend
     expose:
       - "3000"
@@ -65,9 +61,7 @@ services:
     container_name: postgres
     volumes:
       - "./postgres/data:/var/lib/postgresql/data"
-    env_file:
-      - ./postgres/.env.postgres
-      - *env_file
+    env_file: *env_file
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s

@@ -15,7 +15,6 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 # .env.prod は `KEY = value` 形式で source できないので、値を抜き出す。
-
 read_env() {
   sed -n -E "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*(.*[^[:space:]])[[:space:]]*\$/\1/p" \
     ./.env.prod | head -n 1

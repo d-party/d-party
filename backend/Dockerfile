@@ -10,7 +10,6 @@ COPY --from=uv /uv /uvx /bin/
 # The venv lives outside the app dir so compose's source bind mount does not hide it.
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    DEBCONF_NOWARNINGS=yes \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PROJECT_ENVIRONMENT=/opt/venv \
