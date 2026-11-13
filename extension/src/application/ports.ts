@@ -1,11 +1,31 @@
 /** Boundaries of the sync logic. The presentation layer implements them. */
 
-import type { PlayerOption, SyncOption, User } from "@/domain/protocol";
+import type {
+  IncomingMessage,
+  OutgoingMessage,
+  PlayerOption,
+  SyncOption,
+  User,
+} from "@/domain/protocol";
 import type { ConnectionStatus } from "@/domain/connectionStatus";
 import type { HistoryEntryInput } from "@/domain/history";
 import type { ReactionType } from "@/domain/reactions";
 import type { RoomSettings } from "@/domain/roomSettings";
 import type { ReactionDisplayMode, Settings } from "@/domain/settings";
+
+export interface PartySocketHandlers {
+  onOpen?: () => void;
+  onMessage: (message: IncomingMessage) => void;
+  onClose: () => void;
+}
+
+/** The party WebSocket. `connect()` again replaces the previous connection. */
+export interface PartySocket {
+  connect(handlers: PartySocketHandlers): void;
+  /** Throws when the socket is closing or closed. */
+  send(message: OutgoingMessage): void;
+  close(): void;
+}
 
 export interface Notifier {
   success(message: string): void;
@@ -18,7 +38,6 @@ export interface PlayerController {
   getOption(): PlayerOption;
   getTitle(): string;
   onAction(operation: string, option: SyncOption): void;
-  onSync(option: SyncOption): void;
 }
 
 /** Renders the sidebar (share/history/users/control panels). */
@@ -31,7 +50,6 @@ export interface SidebarView {
   addHistory(entry: HistoryEntryInput): void;
   updateUserList(users: User[]): void;
   setRoomSettings(settings: RoomSettings): void;
-  hideSidebar(): void;
   resetToCreate(): void;
 }
 

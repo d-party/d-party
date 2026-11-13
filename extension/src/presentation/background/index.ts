@@ -3,7 +3,8 @@
  * and update, hence the stored flag), and runs the sidebar's health check,
  * which content scripts cannot fetch under Local Network Access.
  */
-import { HEALTH_CHECK_ENDPOINT, USAGE_URL } from "@/infrastructure/env";
+import { health } from "@/infrastructure/api/generated/d-party";
+import { USAGE_URL } from "@/infrastructure/env";
 import type {
   HealthCheckRequest,
   HealthCheckResponse,
@@ -30,8 +31,8 @@ chrome.runtime.onMessage.addListener(
     sendResponse: (response: HealthCheckResponse) => void,
   ) => {
     if (message?.type !== "healthCheck") return undefined;
-    fetch(HEALTH_CHECK_ENDPOINT, { method: "GET" })
-      .then((res) => sendResponse({ ok: res.ok }))
+    health()
+      .then((response) => sendResponse({ ok: response.status === 200 }))
       .catch(() => sendResponse({ ok: false }));
     return true; // 非同期に sendResponse するためチャネルを開いたままにする。
   },
