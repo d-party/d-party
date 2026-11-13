@@ -20,6 +20,25 @@ concurrency:
 
 permissions: {}
 
+# settings の import が env を要求するので、全ジョブへダミー値を渡す。実際に接続するのは
+# pytest ジョブの PostgreSQL だけ（services.postgres と同じ値にする）。
+env:
+  SECRET_KEY: django-insecure-ci
+  DEBUG: "1"
+  MY_DOMAIN: localhost
+  D_ANIME_STORE_DOMAIN: animestore.docomo.ne.jp
+  TIME_ZONE: Asia/Tokyo
+  LANGUAGE_CODE: ja
+  DATABASE_ENGINE: django.db.backends.postgresql
+  DATABASE_USER: d_party
+  DATABASE_HOST: localhost
+  DATABASE_PORT: "5432"
+  POSTGRES_DB: d_party
+  POSTGRES_PASSWORD: password
+  REDIS_HOST: localhost
+  REDIS_PORT: "6379"
+  CHROME_EXTENSION_REQUIRED_VERSION: 1.0.0
+
 defaults:
   run:
     working-directory: backend
@@ -72,22 +91,6 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-    env:
-      SECRET_KEY: django-insecure-ci
-      DEBUG: "1"
-      MY_DOMAIN: localhost
-      D_ANIME_STORE_DOMAIN: animestore.docomo.ne.jp
-      TIME_ZONE: Asia/Tokyo
-      LANGUAGE_CODE: ja
-      DATABASE_ENGINE: django.db.backends.postgresql
-      DATABASE_USER: d_party
-      DATABASE_HOST: localhost
-      DATABASE_PORT: "5432"
-      POSTGRES_DB: d_party
-      POSTGRES_PASSWORD: password
-      REDIS_HOST: localhost
-      REDIS_PORT: "6379"
-      CHROME_EXTENSION_REQUIRED_VERSION: 1.0.0
     steps:
       - uses: actions/checkout@v7
         with:
@@ -130,23 +133,6 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-    # settings の import が env を要求する。接続はしないので値はダミーでよい。
-    env:
-      SECRET_KEY: django-insecure-ci
-      DEBUG: "1"
-      MY_DOMAIN: localhost
-      D_ANIME_STORE_DOMAIN: animestore.docomo.ne.jp
-      TIME_ZONE: Asia/Tokyo
-      LANGUAGE_CODE: ja
-      DATABASE_ENGINE: django.db.backends.postgresql
-      DATABASE_USER: d_party
-      DATABASE_HOST: localhost
-      DATABASE_PORT: "5432"
-      POSTGRES_DB: d_party
-      POSTGRES_PASSWORD: password
-      REDIS_HOST: localhost
-      REDIS_PORT: "6379"
-      CHROME_EXTENSION_REQUIRED_VERSION: 1.0.0
     steps:
       - uses: actions/checkout@v7
         with:
@@ -170,23 +156,6 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-    # settings の import が env を要求する。接続はしないので値はダミーでよい。
-    env:
-      SECRET_KEY: django-insecure-ci
-      DEBUG: "1"
-      MY_DOMAIN: localhost
-      D_ANIME_STORE_DOMAIN: animestore.docomo.ne.jp
-      TIME_ZONE: Asia/Tokyo
-      LANGUAGE_CODE: ja
-      DATABASE_ENGINE: django.db.backends.postgresql
-      DATABASE_USER: d_party
-      DATABASE_HOST: localhost
-      DATABASE_PORT: "5432"
-      POSTGRES_DB: d_party
-      POSTGRES_PASSWORD: password
-      REDIS_HOST: localhost
-      REDIS_PORT: "6379"
-      CHROME_EXTENSION_REQUIRED_VERSION: 1.0.0
     steps:
       - uses: actions/checkout@v7
         with:

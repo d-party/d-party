@@ -4,11 +4,11 @@
 
 | ワークフロー | name | 内容 | paths |
 | --- | --- | --- | --- |
-| `backend-ci.yml` | `Backend/CI` | ruff · pytest · mypy · license-check | `backend/**` |
+| `backend-ci.yml` | `Backend/CI` | ruff · pytest · mypy · openapi（`openapi.json` の drift）· license-check | `backend/**` |
 | `backend-build.yml` | `Backend/Build` | hadolint · build → dockle → migrate → 起動 → API 応答 | `backend/**` |
-| `frontend-ci.yml` | `Frontend/CI` | 生成物の drift · typecheck · lint · license-check | `frontend/**` `packages/**` + workspace 設定 |
+| `frontend-ci.yml` | `Frontend/CI` | 生成物の drift · typecheck · lint · license-check | `frontend/**` `packages/**` `backend/openapi.json` + workspace 設定 |
 | `frontend-build.yml` | `Frontend/Build` | next build · storybook · イメージ build → 起動 → ページ疎通 | 同上 |
-| `extension-ci.yml` | `Extension/CI` | 生成物の drift · typecheck · lint · license-check | `extension/**` `packages/**` + workspace 設定 |
+| `extension-ci.yml` | `Extension/CI` | 生成物の drift · typecheck · lint · license-check | `extension/**` `packages/**` `backend/openapi.json` + workspace 設定 |
 | `extension-build.yml` | `Extension/Build` | build:prod（manifest の参照先の実在確認）· zip · storybook | 同上 |
 | `infra-ci.yml` | `Infra/CI` | helm lint · helm template | `infra/**` |
 | `nginx-ci.yml` | `Nginx/CI` | nginx テンプレートの構文チェック | `nginx/**` |
