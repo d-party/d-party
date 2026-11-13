@@ -83,7 +83,6 @@ spec:
                 # SIGTERM が届くまでの猶予。新規 WS を旧 Pod へ流さない。
                 command: ["sh", "-c", "sleep {{ .Values.django.preStopSleepSeconds }}"]
           # HTTP だと ALLOWED_HOSTS に弾かれるので TCP で見る。
-
           readinessProbe:
             tcpSocket:
               port: 8000

@@ -59,8 +59,8 @@ PriorityClass 名を解決する（stateful / app）。name が空なら何も�
 {{- define "d-party.priorityClassName.app" -}}{{ .Values.priorityClass.app.name }}{{- end -}}
 
 {{/*
-Django/Frontend/migrate が共通で読む env（DB/Redis ホストはコンポーネント名から導出）。
-envFrom(ConfigMap+Secret) に加えて、ここで接続ホストを env として注入する。
+backend イメージを使うコンテナ（django / migrate / collectstatic）が読む接続先の env。
+ホストはコンポーネント名から、ポート・ユーザー・DB 名は values から導出する。
 */}}
 {{- define "d-party.connectionEnv" -}}
 - name: DATABASE_HOST

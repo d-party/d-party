@@ -72,9 +72,9 @@ django:
       memory: 512Mi
 
 # ── マイグレーション（Helm hook Job: post-install/post-upgrade）───────────────
+# backend イメージ（django.image）で migrate を実行する。
 migrate:
   enabled: true
-  # backend イメージで migrate を実行（django.image を流用）。
   backoffLimit: 2
 
 # ── Next.js フロントエンド ───────────────────────────────────────────────────
@@ -192,7 +192,6 @@ networkPolicy:
 
 # ── PriorityClass（メモリ逼迫時に DB/Redis を優先して残す）────────────────────
 # 共有の PriorityClass が既にあるなら create=false にして名前だけ指定する。
-
 priorityClass:
   # true: 下記 2 つの PriorityClass を chart が生成して割り当てる。
   # false: 既存の PriorityClass 名を参照するだけ（name が空なら未指定）。
