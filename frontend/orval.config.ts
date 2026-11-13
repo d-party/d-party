@@ -4,7 +4,6 @@ import { defineConfig } from "orval";
  * REST client from the backend's OpenAPI schema (`backend/openapi.json`, written by
  * `manage.py spectacular`). Run `pnpm api:generate`.
  */
-
 export default defineConfig({
   dParty: {
     input: {

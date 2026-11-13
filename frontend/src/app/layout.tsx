@@ -3,17 +3,21 @@ import type { Metadata } from "next";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { SITE_URL } from "@/infrastructure/env";
+import {
+  OPEN_GRAPH_BASE,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+} from "@/lib/metadata";
 
 import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "d-party",
-    template: "%s | d-party",
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
   },
-  description:
-    "dアニメストアでもウォッチパーティーができる、完全無料の Google Chrome 向け拡張機能 d-party。",
+  description: SITE_DESCRIPTION,
   keywords: [
     "d-party",
     "dパーティー",
@@ -31,19 +35,15 @@ export const metadata: Metadata = {
   },
   // Defaults; pages override them through lib/metadata.ts.
   openGraph: {
-    title: "d-party",
-    description:
-      "dアニメストアでもウォッチパーティーができる、完全無料の Google Chrome 向け拡張機能 d-party。",
-    siteName: "d-party",
-    type: "website",
-    locale: "ja_JP",
+    ...OPEN_GRAPH_BASE,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
     url: "/",
   },
   twitter: {
     card: "summary_large_image",
-    title: "d-party",
-    description:
-      "dアニメストアでもウォッチパーティーができる、完全無料の Google Chrome 向け拡張機能 d-party。",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
   },
 };
 
@@ -52,7 +52,6 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>): React.JSX.Element {
   return (
     // html は scroll-behavior: smooth。この属性が無いと遷移のたびに滑らかにスクロールする。
-
     <html lang="ja" data-scroll-behavior="smooth">
       <body className="flex min-h-dvh flex-col">
         <Header />

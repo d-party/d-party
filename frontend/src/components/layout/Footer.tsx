@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { GITHUB_ORG_URL } from "@/lib/links";
+
 export function Footer(): React.JSX.Element {
   return (
     <footer className="mt-auto border-t border-border bg-card py-6">
@@ -8,7 +10,7 @@ export function Footer(): React.JSX.Element {
           d-party — dアニメストアでウォッチパーティー ·{" "}
           <a
             className="underline-offset-4 hover:underline"
-            href="https://github.com/d-Party"
+            href={GITHUB_ORG_URL}
             target="_blank"
             rel="noreferrer noopener"
           >

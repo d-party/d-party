@@ -1,8 +1,10 @@
 /** Plain values only (no `next/og`, no JSX), so Storybook can import them too. */
 
 /** 1.91:1, as Open Graph / Twitter expect. */
-
 export const OG_SIZE = { width: 1200, height: 630 } as const;
+
+/** The family the cards are set in; `loadOgFonts()` registers it under this name. */
+export const OG_FONT_FAMILY = "Noto Sans JP";
 
 /** `alt` of the site-wide card. */
 export const SITE_OG_ALT =

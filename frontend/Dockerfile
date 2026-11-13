@@ -47,7 +47,6 @@ RUN addgroup --system --gid 1001 nodejs \
 COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/static ./frontend/.next/static
 # public/ は standalone に丸ごとは入らない。
-
 COPY --from=builder /app/frontend/public ./frontend/public
 
 USER nextjs

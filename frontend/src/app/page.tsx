@@ -6,7 +6,7 @@ import { Features } from "@/components/landing/Features";
 import { Hero } from "@/components/landing/Hero";
 import { Reveal } from "@/components/motion/Reveal";
 import { Button } from "@/components/ui/button";
-import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
+import { CHROME_WEBSTORE_URL } from "@/lib/links";
 import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata({
