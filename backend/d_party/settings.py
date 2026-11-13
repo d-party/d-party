@@ -127,10 +127,6 @@ DATABASES = {
         "PASSWORD": os.environ["POSTGRES_PASSWORD"],
         "HOST": os.environ["DATABASE_HOST"],
         "PORT": os.environ["DATABASE_PORT"],
-        "TEST": {
-            "NAME": "test_db",
-            "MIRROR": "default",
-        },
     }
 }
 

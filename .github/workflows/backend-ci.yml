@@ -102,8 +102,6 @@ jobs:
         run: uv sync --frozen
       - name: check for missing migrations
         run: uv run python manage.py makemigrations --check --dry-run
-      - name: migrate
-        run: uv run python manage.py migrate
       - name: run pytest
         run: uv run pytest --cov --cov-report=xml
       # fork の PR では投稿できないので continue-on-error（本文は artifact に残る）。
