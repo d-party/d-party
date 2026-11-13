@@ -2,8 +2,7 @@
 // LOADTEST_SCENARIO=ws_oneway.js で実行する。
 
 import { sleep } from 'k6';
-import { Trend, Counter, Rate } from 'k6/metrics';
-import { setTimeout, clearTimeout } from 'k6/timers';
+import { Rate } from 'k6/metrics';
 import { Participant } from '../lib/participant.js';
 import {
   createMsg,
@@ -12,24 +11,23 @@ import {
   updateSettingMsg,
   leaveMsg,
 } from '../lib/protocol.js';
+import {
+  TARGET,
+  VUS,
+  DURATION,
+  PING_INTERVAL_MS,
+  ROOM_LOAD_MS,
+  HEADERS,
+  PART_ID,
+  roomSize,
+  metrics,
+  roomSetup,
+  every,
+  delay,
+} from '../lib/scenario.js';
 
-const TARGET = __ENV.TARGET || 'ws://nginx/anime-store/party/';
-const ROOM_SIZE = Number(__ENV.ROOM_SIZE || 4); // host + (ROOM_SIZE-1) viewers
-const VUS = Number(__ENV.VUS || 1);
-const DURATION = __ENV.DURATION || '30s';
-const PING_INTERVAL_MS = Number(__ENV.PING_INTERVAL_MS || 1000);
-const ROOM_LOAD_MS = Number(__ENV.ROOM_LOAD_MS || 8000);
-const ORIGIN = __ENV.ORIGIN || '';
-const HEADERS = ORIGIN ? { Origin: ORIGIN } : null;
-const PART_ID = __ENV.PART_ID || 'loadtest-0001';
+const ROOM_SIZE = roomSize(4); // host + (ROOM_SIZE-1) viewers
 
-const metrics = {
-  connectTime: new Trend('ws_connect_time', true),
-  broadcastLatency: new Trend('broadcast_latency', true),
-  broadcastReceived: new Counter('broadcast_received'),
-  wsErrors: new Counter('ws_errors'),
-};
-const roomSetup = new Rate('room_setup_success');
 // 一方通行モードの強制が効いているか: guest の video_operation が host へ届かなければ true。
 const oneWayEnforced = new Rate('one_way_enforced');
 // host の操作は通常どおり guest へ届くか。
@@ -47,20 +45,6 @@ export const options = {
     broadcast_latency: ['p(95)<500'],
   },
 };
-
-function every(intervalMs, fn) {
-  let timer;
-  const tick = () => {
-    fn();
-    timer = setTimeout(tick, intervalMs);
-  };
-  timer = setTimeout(tick, intervalMs);
-  return () => clearTimeout(timer);
-}
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 // waitFor が指定時間内に解決したら true、タイムアウトしたら false を返す（例外にしない）。
 async function received(participant, action, timeoutMs) {
@@ -120,7 +104,6 @@ async function runRoom() {
     stop();
 
     // 5) 後片付け。one_way だけではルームは消えない。全員が切れたら回収される。
-
     host.send(leaveMsg());
     await delay(200);
   } catch (e) {
