@@ -1,10 +1,9 @@
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { rspack, type Compiler, type Configuration } from "@rspack/core";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const src = (p: string) => path.resolve(__dirname, "src", p);
+const root = import.meta.dirname;
+const src = (p: string) => path.resolve(root, "src", p);
 const isProduction = process.env.D_PARTY_ENV === "production";
 
 const isLocalhost = (pattern: string) =>
@@ -52,7 +51,7 @@ class StripLocalhostFromManifestPlugin {
 const config: Configuration = {
   mode: process.env.NODE_ENV === "development" ? "development" : "production",
   devtool: false,
-  context: __dirname,
+  context: root,
   entry: {
     background: src("presentation/background/index.ts"),
     "content-store": src("presentation/content/store/index.ts"),
@@ -63,13 +62,14 @@ const config: Configuration = {
     "sidebar-style": src("styles/sidebar.css"),
   },
   output: {
-    path: path.resolve(__dirname, "dist"),
+    path: path.resolve(root, "dist"),
     filename: "js/[name].js",
     clean: true,
   },
   resolve: {
-    extensions: [".ts", ".tsx", ".js", ".jsx", ".json"],
-    alias: { "@": src("") },
+    extensions: [".ts", ".tsx", "..."],
+    // `@/*` comes from tsconfig.json's `paths`.
+    tsConfig: path.resolve(root, "tsconfig.json"),
   },
   module: {
     rules: [
@@ -92,12 +92,10 @@ const config: Configuration = {
       },
     ],
   },
-  experiments: { css: true },
   performance: { hints: false },
   optimization: {
     // Content scripts and the service worker must each be one file.
     splitChunks: false,
-    runtimeChunk: false,
   },
   plugins: [
     new rspack.DefinePlugin({
@@ -114,8 +112,8 @@ const config: Configuration = {
     new rspack.CopyRspackPlugin({
       patterns: [
         { from: "public/manifest.json", to: "manifest.json" },
-        { from: "public/icon", to: "icon", noErrorOnMissing: true },
-        { from: "public/css", to: "css", noErrorOnMissing: true },
+        { from: "public/icon", to: "icon" },
+        { from: "public/css", to: "css" },
       ],
     }),
     ...(isProduction ? [new StripLocalhostFromManifestPlugin()] : []),

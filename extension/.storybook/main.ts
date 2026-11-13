@@ -1,33 +1,21 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
 import type { StorybookConfig } from "@storybook/react-vite";
-
-const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const config: StorybookConfig = {
   // @d-party/ui の story も取り込む。
-
   stories: [
     "../src/**/*.stories.@(ts|tsx)",
     "../../packages/ui/src/**/*.stories.@(ts|tsx)",
   ],
   addons: ["@storybook/addon-docs"],
-  framework: {
-    name: "@storybook/react-vite",
-    options: {},
-  },
+  framework: "@storybook/react-vite",
   core: {
     disableTelemetry: true,
   },
   viteFinal: async (viteConfig) => {
     const { mergeConfig } = await import("vite");
     return mergeConfig(viteConfig, {
-      resolve: {
-        alias: {
-          "@": path.resolve(dirname, "../src"),
-        },
-      },
+      // `@/*` comes from tsconfig.json's `paths`.
+      resolve: { tsconfigPaths: true },
       define: {
         "process.env.D_PARTY_ENV": JSON.stringify(
           process.env.D_PARTY_ENV ?? "development",
