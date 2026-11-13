@@ -5,7 +5,6 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["node_modules/**"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -24,7 +23,6 @@ export default tseslint.config(
     files: ["**/*.stories.tsx"],
     rules: {
       // 両アプリの Storybook から読まれるので、型はレンダラの @storybook/react から取る。
-
       "storybook/no-renderer-packages": "off",
     },
   },
