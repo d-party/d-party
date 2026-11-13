@@ -2,30 +2,27 @@
 // LOADTEST_SCENARIO=ws_timer.js で実行する。
 
 import { sleep } from 'k6';
-import { Trend, Counter, Rate } from 'k6/metrics';
-import { setTimeout, clearTimeout } from 'k6/timers';
+import { Rate } from 'k6/metrics';
 import { Participant } from '../lib/participant.js';
 import { createMsg, videoPingMsg, spectateMsg, leaveMsg } from '../lib/protocol.js';
+import {
+  TARGET,
+  VUS,
+  DURATION,
+  PING_INTERVAL_MS,
+  ROOM_LOAD_MS,
+  HEADERS,
+  PART_ID,
+  roomSize,
+  metrics,
+  roomSetup,
+  every,
+  delay,
+} from '../lib/scenario.js';
 
-const TARGET = __ENV.TARGET || 'ws://nginx/anime-store/party/';
-// 観覧者数（host を除く）。既定は ROOM_SIZE-1 相当（ROOM_SIZE=一接続数の目安）。
-const ROOM_SIZE = Number(__ENV.ROOM_SIZE || 4);
-const SPECTATORS = Math.max(1, ROOM_SIZE - 1);
-const VUS = Number(__ENV.VUS || 1);
-const DURATION = __ENV.DURATION || '30s';
-const PING_INTERVAL_MS = Number(__ENV.PING_INTERVAL_MS || 1000);
-const ROOM_LOAD_MS = Number(__ENV.ROOM_LOAD_MS || 8000);
-const ORIGIN = __ENV.ORIGIN || '';
-const HEADERS = ORIGIN ? { Origin: ORIGIN } : null;
-const PART_ID = __ENV.PART_ID || 'loadtest-0001';
+// 観覧者数（host を除く）は ROOM_SIZE-1。
+const SPECTATORS = Math.max(1, roomSize(4) - 1);
 
-const metrics = {
-  connectTime: new Trend('ws_connect_time', true),
-  broadcastLatency: new Trend('broadcast_latency', true),
-  broadcastReceived: new Counter('broadcast_received'),
-  wsErrors: new Counter('ws_errors'),
-};
-const roomSetup = new Rate('room_setup_success');
 const spectateSuccess = new Rate('spectate_success'); // 全 spectator が spectate 受理された割合
 
 export const options = {
@@ -40,20 +37,6 @@ export const options = {
     ws_errors: ['count<1'],
   },
 };
-
-function every(intervalMs, fn) {
-  let timer;
-  const tick = () => {
-    fn();
-    timer = setTimeout(tick, intervalMs);
-  };
-  timer = setTimeout(tick, intervalMs);
-  return () => clearTimeout(timer);
-}
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 async function runRoom() {
   const participants = [];
@@ -92,7 +75,6 @@ async function runRoom() {
     stop();
 
     // 4) 後片付け。
-
     host.send(leaveMsg());
     await delay(200);
   } catch (e) {

@@ -6,7 +6,6 @@ import { withTimeout, pingSentAt } from './protocol.js';
 export class Participant {
   // metrics: { connectTime, broadcastLatency, broadcastReceived, wsErrors } を注入
   // headers: ハンドシェイクの追加ヘッダ（Origin など）
-
   constructor(url, { name, metrics, connectTimeoutMs = 5000, headers = null }) {
     this.url = url;
     this.name = name;
