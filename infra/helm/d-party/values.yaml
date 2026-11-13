@@ -35,7 +35,8 @@ django:
     repository: ghcr.io/d-party/backend
     tag: "v0.0.0"          # 初期値。image-updater が semver で書き換える
     pullPolicy: IfNotPresent
-  # 2 以上にしてよい（close_active_sessions は古い行しか回収しない）。
+  # 2 以上にしてよい（close_active_sessions は古い行しか回収しない。セッションは 1 日以上
+  # 続かない前提）。
   replicaCount: 1
   # django だけを強いノードへ寄せるとき用。未設定ならグローバルの値を使う。
   nodeSelector: {}
