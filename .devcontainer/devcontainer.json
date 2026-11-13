@@ -62,12 +62,8 @@
         "esbenp.prettier-vscode",
         "bradlc.vscode-tailwindcss"
       ],
+      // 整形とインタプリタの設定は .vscode/settings.json にある。
       "settings": {
-        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/backend/.venv/bin/python",
-        "editor.formatOnSave": true,
-        "[python]": {
-          "editor.defaultFormatter": "charliermarsh.ruff"
-        },
         "sqltools.connections": [
           {
             "name": "d-party (compose postgres)",
