@@ -41,6 +41,13 @@ services:
         { while :; do sleep 6h & wait $${!}; nginx -c /etc/nginx/nginx.prod.conf -s reload; done; } &
         exec nginx -c /etc/nginx/nginx.prod.conf -g 'daemon off;'
 
+  # 再起動ポリシーが無いと、ホストや Docker の再起動後に DB だけ戻らない。
+  postgres:
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+
   certbot:
     image: certbot/certbot:latest
     container_name: certbot
