@@ -23,10 +23,7 @@ const meta = {
   title: "UI/Toast",
   component: Demo,
   tags: ["autodocs"],
-  parameters: {
-    layout: "centered",
-    backgrounds: { default: "dark", values: [{ name: "dark", value: "#1f1f23" }] },
-  },
+  parameters: { layout: "centered" },
   argTypes: {
     variant: { control: "select", options: ["success", "info", "alert"] },
   },

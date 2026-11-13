@@ -1,5 +1,11 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import { AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import * as React from "react";
 
 import { cn } from "./lib/utils";
@@ -34,7 +40,7 @@ function Toast({ className, variant, ...props }: ToastProps): React.JSX.Element 
   );
 }
 
-const ICONS: Record<ToastVariant, { Icon: typeof CheckCircle2; className: string }> = {
+const ICONS: Record<ToastVariant, { Icon: LucideIcon; className: string }> = {
   success: { Icon: CheckCircle2, className: "text-emerald-400" },
   info: { Icon: Info, className: "text-sky-400" },
   alert: { Icon: AlertTriangle, className: "text-red-400" },

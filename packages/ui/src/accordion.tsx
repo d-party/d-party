@@ -4,7 +4,6 @@ import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { cn } from "./lib/utils";
 
 /** トリガのアイコンは呼び出し側が置く（shadcn と違い組み込まない）。 */
-
 function Accordion({
   ...props
 }: React.ComponentProps<typeof AccordionPrimitive.Root>): React.JSX.Element {
