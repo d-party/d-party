@@ -11,5 +11,4 @@ export const COLORS = {
 } as const;
 
 /** The logo with its baked `#cc0033` fill swapped for the theme red. */
-
 export const LOGO_RED = logoUrl.replace("%23cc0033", "%23fb2c36");

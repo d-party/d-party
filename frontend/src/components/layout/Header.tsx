@@ -13,11 +13,14 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-
 import { useToggle } from "react-use";
 
 import { Logo } from "@/components/Logo";
-import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
+import {
+  CHROME_WEBSTORE_URL,
+  GITHUB_ORG_URL,
+  GITHUB_SPONSORS_URL,
+} from "@/lib/links";
 import { cn } from "@d-party/ui";
 
 type NavLink = {
@@ -38,10 +41,10 @@ const NAV_LINKS: NavLink[] = [
     icon: Download,
     external: true,
   },
-  { label: "開発", href: "https://github.com/d-Party", icon: Code2, external: true },
+  { label: "開発", href: GITHUB_ORG_URL, icon: Code2, external: true },
   {
     label: "寄付",
-    href: "https://github.com/sponsors/d-party",
+    href: GITHUB_SPONSORS_URL,
     icon: Heart,
     external: true,
   },
@@ -123,7 +126,7 @@ export function Header(): React.JSX.Element {
 
       <ul
         className={cn(
-          "flex flex-wrap gap-1 border-t border-neutral-800 px-4 pb-2 lg:hidden",
+          "flex-wrap gap-1 border-t border-neutral-800 px-4 pb-2 lg:hidden",
           open ? "flex" : "hidden",
         )}
       >

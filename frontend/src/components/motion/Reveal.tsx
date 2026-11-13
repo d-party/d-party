@@ -10,7 +10,6 @@ type RevealProps = {
 };
 
 /** Fades in on first scroll into view; no motion under `prefers-reduced-motion`. */
-
 export function Reveal({
   children,
   className,

@@ -1,5 +1,3 @@
-import type React from "react";
-
 import logoUrl from "./logo-data";
 
 type LogoProps = React.ImgHTMLAttributes<HTMLImageElement>;

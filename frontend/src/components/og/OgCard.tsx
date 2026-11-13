@@ -1,10 +1,5 @@
-/**
- * Layout shared by every OG card (1200×630). Inline styles and the flexbox
- * subset Satori supports only — no Tailwind or external CSS — so the same
- * component renders to PNG and previews in Storybook.
- */
-
 import { COLORS, LOGO_RED } from "@/components/og/brand";
+import { OG_FONT_FAMILY } from "@/lib/og/card";
 
 export interface OgCardProps {
   /** Small red line above the headline, e.g. `"この作品を一緒に視聴中"`. */
@@ -17,6 +12,11 @@ export interface OgCardProps {
   headlineSize?: number;
 }
 
+/**
+ * Layout shared by every OG card (1200×630). Inline styles and the flexbox
+ * subset Satori supports only — no Tailwind or external CSS — so the same
+ * component renders to PNG and previews in Storybook.
+ */
 export function OgCard({
   eyebrow,
   headline,
@@ -36,7 +36,7 @@ export function OgCard({
         backgroundColor: COLORS.bgFrom,
         backgroundImage: `radial-gradient(1100px 540px at 88% -10%, rgba(${COLORS.primaryRgb},0.28), rgba(${COLORS.primaryRgb},0) 60%), linear-gradient(135deg, ${COLORS.bgFrom} 0%, ${COLORS.bgTo} 100%)`,
         color: COLORS.text,
-        fontFamily: "Noto Sans JP",
+        fontFamily: OG_FONT_FAMILY,
         position: "relative",
       }}
     >

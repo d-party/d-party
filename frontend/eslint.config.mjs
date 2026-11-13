@@ -9,8 +9,6 @@ export default tseslint.config(
   {
     ignores: [
       ".next/**",
-      "out/**",
-      "node_modules/**",
       "src/infrastructure/api/generated/**",
       "next-env.d.ts",
       "storybook-static/**",
@@ -29,7 +27,6 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs["core-web-vitals"].rules,
       "@typescript-eslint/no-unused-vars": [
         "error",

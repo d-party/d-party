@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
+import { CHROME_WEBSTORE_URL } from "@/lib/links";
 
 const container: Variants = {
   hidden: {},
@@ -46,7 +46,7 @@ export function Hero(): React.JSX.Element {
         animate="show"
         className="mx-auto flex max-w-4xl flex-col items-center px-4 pb-10 pt-20 text-center sm:pb-12 sm:pt-28"
       >
-          <motion.div variants={item}>
+        <motion.div variants={item}>
           <motion.div
             animate={reduce ? undefined : { y: [0, -8, 0] }}
             transition={

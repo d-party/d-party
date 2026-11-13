@@ -1,11 +1,9 @@
-import type { ImageResponse } from "next/og";
+import { ImageResponse } from "next/og";
 
+import { RoomOgImage } from "@/components/og/RoomOgImage";
+import { resolveRoomTitle } from "@/infrastructure/lobby";
 import { OG_SIZE, ROOM_OG_ALT } from "@/lib/og/card";
-import { renderRoomImage } from "@/lib/og/renderRoomImage";
-
-// Node runtime: reads the room title and a font at request time.
-
-export const runtime = "nodejs";
+import { loadOgFonts } from "@/lib/og/fonts";
 
 export const alt = ROOM_OG_ALT;
 export const size = OG_SIZE;
@@ -17,5 +15,13 @@ export default async function Image({
   params: Promise<{ roomId: string }>;
 }): Promise<ImageResponse> {
   const { roomId } = await params;
-  return renderRoomImage(roomId);
+  const [title, fonts] = await Promise.all([
+    resolveRoomTitle(roomId),
+    loadOgFonts(),
+  ]);
+
+  return new ImageResponse(<RoomOgImage title={title} />, {
+    ...OG_SIZE,
+    fonts,
+  });
 }
