@@ -6,11 +6,11 @@ import type { ReactionType } from "@/domain/reactions";
 import { ReactNotifier } from "@/infrastructure/notifier/ReactNotifier";
 import { ChromePersonalStatsRepository } from "@/infrastructure/storage/ChromePersonalStatsRepository";
 import { ChromeStorageSettingsRepository } from "@/infrastructure/storage/ChromeStorageSettingsRepository";
-import { WEBSOCKET_ENDPOINT } from "@/infrastructure/env";
+import { WEBSOCKET_ENDPOINT, lobbyUrl } from "@/infrastructure/env";
 import { PartyWebSocketClient } from "@/infrastructure/ws/PartyWebSocketClient";
 
 import { getParam, toHttpUrl } from "../dom/utils";
-import { PlayerControllerDom } from "./PlayerControllerDom";
+import { PlayerControllerDom, episodeTitle } from "./PlayerControllerDom";
 import { mountSidebar } from "./react/mountSidebar";
 import { mountPipButton } from "./react/PipButton";
 import { mountPlayerControls } from "./react/PlayerControls";
@@ -26,14 +26,16 @@ const byClass = (cls: string) =>
 const settingsRepo = new ChromeStorageSettingsRepository();
 let currentSettings: Settings = DEFAULT_SETTINGS;
 const settings: SettingsProvider = { current: () => currentSettings };
-void settingsRepo.getAll().then((s) => (currentSettings = s));
-settingsRepo.onChange((s) => (currentSettings = s));
 
-/** Delivers the current value right away (the initial load may still be pending), then changes. */
+/**
+ * Delivers the current value right away (the initial load may still be pending), then changes.
+ * 拡張機能を再読み込みした後のページでは読み出しが失敗する。そのときは手元の値のまま続ける。
+ */
 const subscribeSettings = (cb: (s: Settings) => void): (() => void) => {
-  void settingsRepo.getAll().then(cb);
+  settingsRepo.getAll().then(cb, () => undefined);
   return settingsRepo.onChange(cb);
 };
+subscribeSettings((s) => (currentSettings = s));
 
 const statsRepo = new ChromePersonalStatsRepository();
 const stats: StatsRecorder = {
@@ -51,12 +53,27 @@ const client = new PartyWebSocketClient(WEBSOCKET_ENDPOINT);
 
 // Mode comes from the URL (?party=create|join).
 const partyParam = getParam("party");
-const mode: "create" | "join" | "normal" =
-  partyParam === "create"
-    ? "create"
-    : partyParam === "join"
-      ? "join"
-      : "normal";
+const mode =
+  partyParam === "create" || partyParam === "join" ? partyParam : "normal";
+
+const PLAY_KEYS = new Set(["Space", "Enter", "NumpadEnter", "KeyK"]);
+const SKIP_KEYS = new Set([
+  "KeyJ",
+  "KeyL",
+  "ArrowRight",
+  "ArrowLeft",
+  ...Array.from({ length: 10 }, (_, n) => [`Digit${n}`, `Numpad${n}`]).flat(),
+]);
+// シークバーと、送り・戻しの各ボタン。
+const SKIP_CONTROL_CLASSES = [
+  "seekArea",
+  "skipButton",
+  "skip10Button",
+  "skip30Button",
+  "backButton",
+  "back10Button",
+  "back30Button",
+];
 
 const { store: sidebarStore, controller: sidebarController } = mountSidebar({
   onCreateRoom: () => {
@@ -65,7 +82,7 @@ const { store: sidebarStore, controller: sidebarController } = mountSidebar({
     // タイトルは OGP 用。取れなければ空文字。
     session.createRoom(
       getParam("partId") ?? "",
-      shareTitle(),
+      episodeTitle(),
       sidebarStore.getSnapshot().draftRoomSettings,
     );
   },
@@ -92,6 +109,7 @@ const notifier = new ReactNotifier(sidebarStore);
 
 const session = new RoomSession({
   client,
+  shareLinkFor: lobbyUrl,
   player,
   sidebar: sidebarController,
   reactions,
@@ -117,15 +135,15 @@ mountPipControl();
 document.addEventListener("fullscreenchange", () => {
   if (document.fullscreenElement) {
     sidebarStore.hide();
-  } else {
-    if (mode !== "normal") sidebarStore.show();
+  } else if (mode !== "normal") {
+    sidebarStore.show();
   }
 });
 
 video().addEventListener("loadeddata", () => {
   const title = document.querySelector("title");
   if (title) title.textContent = player.getTitle();
-  sidebarStore.setShareTitle(shareTitle());
+  sidebarStore.setShareTitle(episodeTitle());
 });
 
 video().addEventListener(
@@ -139,12 +157,6 @@ video().addEventListener(
   },
   { once: true },
 );
-
-function shareTitle(): string {
-  const text = (cls: string) =>
-    document.getElementsByClassName(cls)[0]?.textContent ?? "";
-  return `${text("backInfoTxt1")} - ${text("backInfoTxt2")} - ${text("backInfoTxt3")}`;
-}
 
 function bindPlayerEvents(): void {
   if (playerEventsBound) return;
@@ -182,7 +194,7 @@ function bindPlayerEvents(): void {
     guard.allow();
   });
 
-  bindClick("nextThumbinner", () => {
+  bindById("nextThumbinner", () => {
     if (active()) {
       session.sendVideoOperation("next_thumbnail");
       announce("next");
@@ -200,76 +212,30 @@ function bindPlayerEvents(): void {
       session.sendVideoOperation("prev");
     }
   });
-  bindClick("prevThumbinner", () => {
+  bindById("prevThumbinner", () => {
     if (active()) session.sendVideoOperation("prev_thumbnail");
   });
 
   bindClass("backArea", () => {
-    if (session.inRoom && guard.available) {
-      announce(!v.paused ? "play" : "stop");
-    }
+    if (active()) announce(v.paused ? "stop" : "play");
   });
 
-  for (const cls of [
-    "seekArea",
-    "skipButton",
-    "skip10Button",
-    "skip30Button",
-  ]) {
+  for (const cls of SKIP_CONTROL_CLASSES) {
     bindClass(cls, () => {
       if (session.inRoom) announce("skip");
     });
   }
-  bindClass("backButton", () => {
-    if (session.inRoom) announce("skip");
-  });
-  bindClass("back10Button", () => {
-    if (session.inRoom) announce("skip");
-  });
-  bindClass("back30Button", () => {
-    if (session.inRoom) announce("skip");
-  });
 
   document.querySelectorAll<HTMLElement>("#speed span").forEach((speed) => {
     speed.onclick = () => {
-      if (session.inRoom) {
-        const value = speed.getAttribute("data-value");
-        announce("ratechange" + value);
-      }
+      if (session.inRoom) announce(`ratechange${speed.dataset.value}`);
     };
   });
 
   window.addEventListener("keydown", (event) => {
-    const playKeys = ["Space", "Enter", "NumpadEnter", "KeyK"];
-    const skipKeys = [
-      "KeyJ",
-      "KeyL",
-      "ArrowRight",
-      "ArrowLeft",
-      "Digit1",
-      "Digit2",
-      "Digit3",
-      "Digit4",
-      "Digit5",
-      "Digit6",
-      "Digit7",
-      "Digit8",
-      "Digit9",
-      "Digit0",
-      "Numpad1",
-      "Numpad2",
-      "Numpad3",
-      "Numpad4",
-      "Numpad5",
-      "Numpad6",
-      "Numpad7",
-      "Numpad8",
-      "Numpad9",
-      "Numpad0",
-    ];
-    if (playKeys.includes(event.code)) {
-      if (active()) announce(!v.paused ? "play" : "stop");
-    } else if (skipKeys.includes(event.code)) {
+    if (PLAY_KEYS.has(event.code)) {
+      if (active()) announce(v.paused ? "stop" : "play");
+    } else if (SKIP_KEYS.has(event.code)) {
       if (session.inRoom) announce("skip");
     }
   });
@@ -322,7 +288,7 @@ function primePausedOverlay(done?: () => void): void {
   void v.play().catch(() => finish());
 }
 
-function bindClick(id: string, handler: () => void): void {
+function bindById(id: string, handler: () => void): void {
   const el = document.getElementById(id);
   if (el) el.onclick = handler;
 }
@@ -411,20 +377,12 @@ function mountPipControl(): void {
 }
 
 function nextPageAnotherTab(): void {
-  const options: MutationObserverInit = {
-    childList: true,
-    characterData: false,
-    characterDataOldValue: false,
-    attributes: false,
-    subtree: true,
-  };
   const callback = () => {
     // ページの CSP がインライン script を禁じるので、ページ側のハンドラは外さず
     // onclick を直接差し替える。
     document.querySelectorAll<HTMLElement>(".recommend").forEach((item) => {
       item.onclick = () => {
         // javascript: などを踏まないよう http(s) に限る。
-
         const raw = item.querySelector("input")?.getAttribute("value");
         const next = raw ? toHttpUrl(raw) : null;
         if (next) window.location.href = next;
@@ -433,6 +391,9 @@ function nextPageAnotherTab(): void {
   };
   const target = document.querySelector("#swiper-wrapper");
   if (currentSettings.autoAnotherTab && target) {
-    new MutationObserver(callback).observe(target, options);
+    new MutationObserver(callback).observe(target, {
+      childList: true,
+      subtree: true,
+    });
   }
 }

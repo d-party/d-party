@@ -14,7 +14,7 @@ src/
     roomSettings.ts  ルーム設定
   application/     ユースケースとポート
     RoomSession.ts   再生同期のオーケストレーション
-    ports.ts         PlayerController / SidebarView / Notifier などの境界
+    ports.ts         PartySocket / PlayerController / SidebarView / Notifier などの境界
     ActionGuard.ts   受信した操作を送り返さないためのフラグ
   infrastructure/  ws/ · storage/（chrome.storage.sync）· notifier/ · api/ · env.ts
   presentation/    注入先ごとのエントリ
@@ -31,6 +31,8 @@ rspack のエントリは `background` · `content-store` · `content-party` · 
 
 ## 約束
 
+- `application/` は `infrastructure/` を import しない。WebSocket は `ports.ts` の `PartySocket`、
+  共有リンクの URL は `RoomSessionDeps.shareLinkFor` で受け取る。
 - `domain/protocol.ts` は backend の `streamer/format.py` と一致させる。アクション名・
   メッセージの形・`option.paused` / `rate` の文字列表現を変えない。
 - `video_operation` には任意の `title` を付ける（通常の操作と 5 秒ごとのハートビートの両方）。
