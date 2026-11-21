@@ -9,6 +9,8 @@ ignore: |
   dist/
   .next/
   storybook-static/
+  # Claude Code の worktree（未追跡）。中に Helm の templates を丸ごと含む。
+  .claude/
   # Helm の templates は Go テンプレート（{{- ... }}）で、素の YAML としては
   # インデントも括弧も規則どおりにならない。ここは helm lint / helm template
   # （Infra/CI）が担当するので yamllint の対象から外す。
