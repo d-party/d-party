@@ -1,5 +1,5 @@
 export const CHROME_WEBSTORE_URL =
-  "https://chrome.google.com/webstore/detail/d-party/ibmlcfpijglpfbfgaleaeooebgdgcbpc?hl=ja";
+  "https://chromewebstore.google.com/detail/d-party/ibmlcfpijglpfbfgaleaeooebgdgcbpc?hl=ja";
 
 export const GOOGLE_CHROME_URL = "https://www.google.com/intl/ja_jp/chrome/";
 
