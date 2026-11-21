@@ -8,12 +8,11 @@ import {
   fromWire,
   isDefaultRoomSettings,
 } from "@/domain/roomSettings";
-import type { PartyWebSocketClient } from "@/infrastructure/ws/PartyWebSocketClient";
-import { ANIMESTORE_REDIRECT_ENDPOINT } from "@/infrastructure/env";
 
 import type { ActionGuard } from "./ActionGuard";
 import type {
   Notifier,
+  PartySocket,
   PlayerController,
   ReactionView,
   SettingsProvider,
@@ -22,7 +21,9 @@ import type {
 } from "./ports";
 
 export interface RoomSessionDeps {
-  client: PartyWebSocketClient;
+  client: PartySocket;
+  /** 共有リンク（ロビー）の URL。 */
+  shareLinkFor: (roomId: string) => string;
   player: PlayerController;
   sidebar: SidebarView;
   reactions: ReactionView;
@@ -51,14 +52,14 @@ export class RoomSession {
   private isHost = false;
   // ホストが再生状態を定期配信してゲストのずれを直す。
   private heartbeatTimer: number | null = null;
-  static HEARTBEAT_MS = 5000;
+  private static readonly HEARTBEAT_MS = 5000;
   // 手動の sync のときだけトーストを出す（join 直後の自動 sync では出さない）。
   private pendingManualSyncToast = false;
   // 接続時間のうち、まだ統計へ足していない区間の開始時刻。
   private connectedAt: number | null = null;
   // タブを閉じると切断ハンドラが走らないことがあるので、定期的に書き出す。
   private connectionCheckpointTimer: number | null = null;
-  static CONNECTION_CHECKPOINT_MS = 60000;
+  private static readonly CONNECTION_CHECKPOINT_MS = 60000;
 
   private roomSettings: RoomSettings = DEFAULT_ROOM_SETTINGS;
   // 入室直後の room_setting は初期値なので、変更として通知しない。
@@ -66,14 +67,11 @@ export class RoomSession {
   // 作成時に選んだ設定。create の応答後に update_setting で送る。
   private pendingSettings: RoomSettings | null = null;
   private lastOneWayNoticeAt = 0;
-  static ONE_WAY_NOTICE_THROTTLE_MS = 3000;
+  private static readonly ONE_WAY_NOTICE_THROTTLE_MS = 3000;
   // 受信した操作を適用すると seek → playing のように複数のメディアイベントが続き、
   // 後続は guard の再開後に届く。この時刻の直後のイベントは自分の操作として扱わない。
   private lastRemoteApplyAt = 0;
-  static REMOTE_APPLY_ECHO_MS = 500;
-
-  userId = "";
-  roomId = "";
+  private static readonly REMOTE_APPLY_ECHO_MS = 500;
 
   constructor(deps: RoomSessionDeps) {
     this.deps = deps;
@@ -121,7 +119,6 @@ export class RoomSession {
     this.joined = false;
     this.resetDelayMs = 200;
     this.roomSettingsInitialized = false;
-    this.roomId = roomId;
     this.deps.sidebar.setConnectionStatus("idle");
     this.openSocket(() => {
       this.send({
@@ -136,9 +133,11 @@ export class RoomSession {
   }
 
   // OPEN 前に send() すると InvalidStateError になるので、最初の送信は onOpen で行う。
-  private openSocket(onOpen?: () => void): void {
+  private openSocket(onOpen: () => void): void {
+    // 前の接続の close は client が捨てるので、フラグを持ち越さない。
+    this.intentionalTeardown = false;
     this.deps.client.connect({
-      onOpen: () => onOpen?.(),
+      onOpen,
       onMessage: (message) => this.handleMessage(message),
       onClose: () => {
         if (this.intentionalTeardown) {
@@ -155,17 +154,21 @@ export class RoomSession {
             label: CONNECT_FAILED,
           });
         }
-        this.stopHeartbeat();
-        this.endConnectionTracking();
-        this.isHost = false;
-        this._inRoom = false;
+        this.resetRoomState();
         this.joined = false;
-        this.roomSettings = DEFAULT_ROOM_SETTINGS;
-        this.pendingSettings = null;
         this.deps.sidebar.setJoined(false);
         this.deps.sidebar.setConnectionStatus("failed");
       },
     });
+  }
+
+  private resetRoomState(): void {
+    this.stopHeartbeat();
+    this.endConnectionTracking();
+    this.isHost = false;
+    this._inRoom = false;
+    this.roomSettings = DEFAULT_ROOM_SETTINGS;
+    this.pendingSettings = null;
   }
 
   private startConnectionTracking(): void {
@@ -216,15 +219,18 @@ export class RoomSession {
       this.requestSync({ manual: false });
       return;
     }
+    this.sendPlayerState(operation);
+    this.deps.guard.allow();
+  }
+
+  private sendPlayerState(operation: string): void {
     this.send({
       action: "video_operation",
-      user_id: this.userId,
       operation,
       option: this.deps.player.getOption(),
       title: this.deps.player.getTitle(),
       request_id: now(),
     });
-    this.deps.guard.allow();
   }
 
   requestSync(opts: { manual?: boolean } = {}): void {
@@ -251,7 +257,6 @@ export class RoomSession {
     this.send({
       action: "operation_notification",
       operation,
-      user_name: this.userName,
       request_id: now(),
     });
   }
@@ -282,27 +287,16 @@ export class RoomSession {
 
   /** Leave the room (caller is responsible for any UI teardown). */
   leave(): void {
-    this.send({ action: "leave", user_name: this.userName, request_id: now() });
-    this.stopHeartbeat();
-    this.endConnectionTracking();
-    this.isHost = false;
-    this._inRoom = false;
-    this.roomSettings = DEFAULT_ROOM_SETTINGS;
-    this.pendingSettings = null;
+    this.send({ action: "leave", request_id: now() });
+    this.resetRoomState();
   }
 
   private startHeartbeat(): void {
     if (this.heartbeatTimer !== null) return;
     this.heartbeatTimer = window.setInterval(() => {
-      if (!this.isHost || !this._inRoom || !this.joined) return;
-      this.send({
-        action: "video_operation",
-        user_id: this.userId,
-        operation: "sync",
-        option: this.deps.player.getOption(),
-        title: this.deps.player.getTitle(),
-        request_id: now(),
-      });
+      if (this.isHost && this._inRoom && this.joined) {
+        this.sendPlayerState("sync");
+      }
     }, RoomSession.HEARTBEAT_MS);
   }
 
@@ -343,17 +337,10 @@ export class RoomSession {
         player.onAction(message.operation, message.option);
         break;
       case "create":
-        this.userId = message.user.user_id;
-        this.roomId = message.room_id;
-        this.joined = true;
+        this.enterRoom(message.room_id, message.user);
         this.isHost = true;
-        this.startConnectionTracking();
         this.deps.stats.roomCreated();
         this.startHeartbeat();
-        sidebar.setSelfUserId(this.userId);
-        sidebar.setShareLink(ANIMESTORE_REDIRECT_ENDPOINT + this.roomId);
-        sidebar.setJoined(true);
-        sidebar.setConnectionStatus("connected");
         sidebar.showSharePanel();
         notifier.success("ルームの作成に成功しました");
         sidebar.addHistory({
@@ -370,15 +357,8 @@ export class RoomSession {
         this.pendingSettings = null;
         break;
       case "join":
-        this.userId = message.user.user_id;
-        this.roomId = message.room_id;
-        this.joined = true;
-        this.startConnectionTracking();
+        this.enterRoom(message.room_id, message.user);
         this.deps.stats.roomJoined();
-        sidebar.setSelfUserId(this.userId);
-        sidebar.setShareLink(ANIMESTORE_REDIRECT_ENDPOINT + this.roomId);
-        sidebar.setJoined(true);
-        sidebar.setConnectionStatus("connected");
         notifier.success("ルームに参加");
         // join の応答より前に送ると、サーバでユーザーが未作成のまま処理されて落ちる。
         this.requestSync({ manual: false });
@@ -456,7 +436,7 @@ export class RoomSession {
       case "reaction":
         if (!settings.current().hideReaction) {
           reactions.play(message.reaction_type, {
-            userName: message.user?.user_name,
+            userName: message.user.user_name,
             mode: settings.current().reactionDisplay,
           });
         }
@@ -475,15 +455,21 @@ export class RoomSession {
     }
   }
 
+  /** create / join をサーバが受理した。 */
+  private enterRoom(roomId: string, self: User): void {
+    const { sidebar } = this.deps;
+    this.joined = true;
+    this.startConnectionTracking();
+    sidebar.setSelfUserId(self.user_id);
+    sidebar.setShareLink(this.deps.shareLinkFor(roomId));
+    sidebar.setJoined(true);
+    sidebar.setConnectionStatus("connected");
+  }
+
   private handleRoomDeleted(): void {
     this.intentionalTeardown = true;
     this.joined = false;
-    this._inRoom = false;
-    this.stopHeartbeat();
-    this.endConnectionTracking();
-    this.isHost = false;
-    this.roomSettings = DEFAULT_ROOM_SETTINGS;
-    this.pendingSettings = null;
+    this.resetRoomState();
     this.deps.client.close();
     this.deps.notifier.alert("ルームが削除されました");
     this.deps.sidebar.resetToCreate();
@@ -544,6 +530,4 @@ export class RoomSession {
   }
 }
 
-function now(): number {
-  return new Date().getTime();
-}
+const now = Date.now;
