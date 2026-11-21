@@ -78,11 +78,12 @@ async function runRoom() {
         metrics,
         headers: HEADERS,
       });
+      // connect や参加が失敗しても finally で閉じられるよう、先に登録する。
+      participants.push(viewer);
       await viewer.connect();
       const joinedP = viewer.waitFor('join');
       viewer.send(joinMsg({ roomId, userName: `viewer-${__VU}-${i}` }));
       await joinedP;
-      participants.push(viewer);
     }
     roomSetup.add(true);
 
