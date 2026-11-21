@@ -27,5 +27,5 @@ docker compose -f docker-compose.yml -f docker-compose.override.yml \
 LOADTEST_VUS=20 LOADTEST_ROOM_SIZE=5 LOADTEST_DURATION=2m docker compose ... run --rm k6
 
 docker run --rm -v "$PWD/loadtest:/loadtest" -w /loadtest \
-  grafana/k6:2.3.0 inspect /loadtest/scenarios/ws_party.js
+  grafana/k6:2.4.0 inspect /loadtest/scenarios/ws_party.js
 ```
