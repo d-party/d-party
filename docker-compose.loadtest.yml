@@ -23,7 +23,6 @@ services:
       django:
         condition: service_healthy
     # シナリオは LOADTEST_SCENARIO（ws_party.js / ws_oneway.js / ws_timer.js）。
-
     command:
       - run
       - --summary-export=/loadtest/results/summary.json
