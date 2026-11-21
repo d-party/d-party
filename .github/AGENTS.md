@@ -13,6 +13,7 @@
 | `infra-ci.yml` | `Infra/CI` | helm lint · helm template | `infra/**` |
 | `nginx-ci.yml` | `Nginx/CI` | nginx テンプレートの構文チェック | `nginx/**` |
 | `repo-ci.yml` | `Repo/CI` | actionlint · shellcheck · yamllint · CodeQL | 全体 |
+| `repo-badge.yml` | `Repo/Badge` | PR が触ったパスからラベル `Backend` `Frontend` `Extension` `Infra` を付け外しする（対応表は `labeler.yml`） | PR 全体 |
 | `storybook-deploy.yml` | `Storybook/Deploy` | 両 Storybook を GitHub Pages の `/extension/` `/frontend/` へ | main のみ |
 | `release.yml` | `Release` | 統一リリース | 手動 |
 | `maintenance.yml` | `Repo/Maintenance` | Claude Code が `dependabot-review-and-merge` → `release` を無人実行 | 毎週火曜 10:00 JST・手動 |
