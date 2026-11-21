@@ -43,7 +43,7 @@ dアニメストアには「一緒に観る」機能がありません。d-party
 | `packages/ui/` | 両者が共有する shadcn/ui プリミティブ | TypeScript · Radix · Tailwind CSS v4 |
 | [`infra/`](infra/README.md) | k3s (Raspberry Pi) デプロイ | Helm chart · Argo CD · rootless BuildKit |
 | [`loadtest/`](loadtest/README.md) | WebSocket 負荷試験 | k6 |
-| `nginx/` `postgres/` `redis/` | オーケストレーション | docker compose |
+| `nginx/` | リバースプロキシの設定 | docker compose |
 
 `extension/` · `frontend/` · `packages/ui/` は **pnpm workspace** の 3 パッケージで、
 ロックファイルはルートの `pnpm-lock.yaml` 1 本です。ビルド・lint・型検査の

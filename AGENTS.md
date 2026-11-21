@@ -57,7 +57,7 @@ docker-compose.prod.yml       prod（nginx が TLS 終端・certbot）
 docker-compose.loadtest.yml   k6（loadtest profile）
 .env.global                   全環境共通の env
 .env.dev / .env.prod          環境固有の env
-nginx/ postgres/ redis/       各サービスの設定
+nginx/                        nginx の設定（postgres/ は dev のデータ置き場）
 ```
 
 - frontend のビルドコンテキストはルート（`dockerfile: frontend/Dockerfile`）。

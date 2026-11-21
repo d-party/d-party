@@ -87,7 +87,6 @@ export function updateSettingMsg({
 }
 
 // loadtest の ping なら送信時刻（ms）、それ以外は null。
-
 export function pingSentAt(msg) {
   const src = msg && msg.option && msg.option.src;
   if (typeof src === 'string' && src.startsWith(PING_PREFIX)) {

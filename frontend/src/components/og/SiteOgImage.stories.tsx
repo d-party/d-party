@@ -12,10 +12,7 @@ import { SiteOgImage } from "./SiteOgImage";
 const meta: Meta<typeof SiteOgImage> = {
   title: "OGP/SiteOgImage",
   component: SiteOgImage,
-  parameters: {
-    layout: "centered",
-    backgrounds: { default: "light" },
-  },
+  parameters: { layout: "centered" },
   decorators: [ogPreview],
 };
 

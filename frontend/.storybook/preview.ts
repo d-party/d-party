@@ -7,13 +7,6 @@ const preview: Preview = {
     controls: {
       matchers: { color: /(background|color)$/i, date: /Date$/i },
     },
-    backgrounds: {
-      default: "dark",
-      values: [
-        { name: "dark", value: "hsl(222.2 84% 4.9%)" },
-        { name: "light", value: "#ffffff" },
-      ],
-    },
   },
 };
 

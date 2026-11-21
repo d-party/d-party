@@ -9,18 +9,13 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
     "isolatedModules": true,
-    "verbatimModuleSyntax": false,
     "noEmit": true,
     "types": ["chrome", "react", "react-dom"],
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "rspack.config.ts", "orval.config.ts", ".storybook"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src", "rspack.config.ts", "orval.config.ts", ".storybook"]
 }
