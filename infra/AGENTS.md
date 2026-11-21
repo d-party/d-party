@@ -5,7 +5,7 @@ Raspberry Pi (arm64) の k3s クラスタへ Helm でデプロイし、Argo CD �
 
 ```
 helm/d-party/   d-party の Helm chart（nginx · django · frontend · postgres · redis · migrate hook
-                · networkpolicy · priorityclass · ingress（任意））
+                · close-expired-rooms CronJob · networkpolicy · priorityclass · ingress（任意））
 platform/       クラスタ共有の基盤（ローカルレジストリと各ノードの registries.yaml）
 build/          rootless BuildKit で arm64 ネイティブビルドし、共有レジストリへ push する Job
 argocd/         Argo CD Application の雛形（実体は運用リポジトリ）

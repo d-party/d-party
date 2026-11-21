@@ -77,6 +77,23 @@ migrate:
   enabled: true
   backoffLimit: 2
 
+# ── 期限切れルームの強制クローズ（CronJob）───────────────────────────────────
+# backend イメージ（django.image）で close_expired_rooms を定期実行する。閉じられずに残った
+# ルームが統計に数えられ続けないよう、作成から maxAgeHours を超えたルームを在室中でも閉じる。
+closeExpiredRooms:
+  enabled: true
+  # 毎時 17 分（クラスタのタイムゾーン。毎時なのでずれても影響しない）。
+  schedule: "17 * * * *"
+  maxAgeHours: 48
+  backoffLimit: 1
+  activeDeadlineSeconds: 600
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
 # ── Next.js フロントエンド ───────────────────────────────────────────────────
 frontend:
   image:
@@ -202,7 +219,7 @@ priorityClass:
   stateful:
     name: d-party-stateful
     value: 100000
-  # django / frontend / nginx / migrate 用（低め）。
+  # django / frontend / nginx / migrate / close-expired-rooms 用（低め）。
   app:
     name: d-party-app
     value: 10000

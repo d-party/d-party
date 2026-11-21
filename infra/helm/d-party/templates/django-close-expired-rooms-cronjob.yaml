@@ -1,0 +1,68 @@
+{{- if .Values.closeExpiredRooms.enabled -}}
+# 作成から maxAgeHours を超えたルームを定期的に強制クローズする（close_expired_rooms）。
+# 閉じられずに alive のまま残ったルームが、統計の「アクティブ」に数えられ続けるのを防ぐ。
+# 在室中の接続へ room_deleted を配信するので、postgres に加えて redis にも接続する。
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "d-party.closeExpiredRooms.fullname" . }}
+  labels:
+    {{- include "d-party.labels" . | nindent 4 }}
+    app.kubernetes.io/component: close-expired-rooms
+spec:
+  schedule: {{ .Values.closeExpiredRooms.schedule | quote }}
+  # 前回がまだ走っていたら今回は飛ばす（コマンド自体は並行実行しても安全）。
+  concurrencyPolicy: Forbid
+  # 定刻に起動できなかった回は、10 分以内なら遅れて走らせる（過ぎたら次の定刻へ回す）。
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: {{ .Values.closeExpiredRooms.backoffLimit }}
+      # 固まった Job が Forbid で以後の回を止め続けないようにする。
+      activeDeadlineSeconds: {{ .Values.closeExpiredRooms.activeDeadlineSeconds }}
+      template:
+        metadata:
+          labels:
+            {{- include "d-party.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: close-expired-rooms
+        spec:
+          restartPolicy: Never
+          {{- with (include "d-party.priorityClassName.app" .) }}
+          priorityClassName: {{ . }}
+          {{- end }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with (.Values.django.nodeSelector | default .Values.nodeSelector) }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with (.Values.django.tolerations | default .Values.tolerations) }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: close-expired-rooms
+              image: "{{ .Values.django.image.repository }}:{{ .Values.django.image.tag }}"
+              imagePullPolicy: {{ .Values.django.image.pullPolicy }}
+              securityContext:
+                {{- toYaml .Values.django.securityContext | nindent 16 }}
+              command:
+                - python
+                - manage.py
+                - close_expired_rooms
+                - --hours
+                - {{ .Values.closeExpiredRooms.maxAgeHours | quote }}
+              envFrom:
+                - configMapRef:
+                    name: {{ include "d-party.configName" . }}
+                - secretRef:
+                    name: {{ include "d-party.secretName" . }}
+              env:
+                {{- include "d-party.connectionEnv" . | nindent 16 }}
+              resources:
+                {{- toYaml .Values.closeExpiredRooms.resources | nindent 16 }}
+{{- end -}}

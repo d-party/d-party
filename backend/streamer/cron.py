@@ -4,7 +4,7 @@ A room's per-tap ``AnimeReaction`` rows are folded into the compact
 ``ReactionStat`` aggregate the moment the room ends (host delete / grace-period
 delete) and the raw rows are hard-deleted, so the database only retains
 aggregates. Despite the module name this is *not* a scheduled job: it runs from
-``consumers.py`` (and ``close_active_sessions``) when a room ends.
+``consumers.py`` (and ``close_expired_rooms``) when a room ends.
 """
 
 from django.db import transaction
