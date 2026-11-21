@@ -233,6 +233,8 @@ function bindPlayerEvents(): void {
   });
 
   window.addEventListener("keydown", (event) => {
+    // 押しっぱなしのキーリピートで、通知を全員へ連打しない。
+    if (event.repeat) return;
     if (PLAY_KEYS.has(event.code)) {
       if (active()) announce(v.paused ? "stop" : "play");
     } else if (SKIP_KEYS.has(event.code)) {
