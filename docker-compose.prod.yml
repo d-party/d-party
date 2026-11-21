@@ -11,11 +11,6 @@ services:
       - ./.env.secret
     restart: unless-stopped
 
-  postgres:
-    env_file:
-      - ./.env.secret
-    restart: unless-stopped
-
   frontend:
     # NEXT_PUBLIC_* は build で埋め込む。build 引数は env_file を読めないので .env.prod と揃える。
     build:
@@ -48,6 +43,15 @@ services:
         /docker-entrypoint.d/20-envsubst-on-templates.sh &&
         { while :; do sleep 6h & wait $${!}; nginx -c /etc/nginx/nginx.prod.conf -s reload; done; } &
         exec nginx -c /etc/nginx/nginx.prod.conf -g 'daemon off;'
+
+  # 再起動ポリシーが無いと、ホストや Docker の再起動後に DB だけ戻らない。
+  postgres:
+    env_file:
+      - ./.env.secret
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
 
   certbot:
     image: certbot/certbot:latest

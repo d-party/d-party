@@ -30,8 +30,11 @@ import {
   statsUserAliveCount,
   statsUserAllCount,
 } from "@/infrastructure/api/generated/d-party";
+import type {
+  PerDayCount,
+  ReactionTypeCount,
+} from "@/infrastructure/api/generated/model";
 import { Skeleton } from "@d-party/ui";
-import type { PerDayCount } from "@/infrastructure/api/generated/model";
 
 type Totals = {
   userAll: number;
@@ -40,8 +43,6 @@ type Totals = {
   userAlive: number;
   roomAlive: number;
 };
-
-type ReactionRow = { reaction_type: string; count: number };
 
 /** Keyed by the backend's `reaction_type`. Same icons as the player's buttons. */
 const REACTION_META: Record<string, { Icon: IconType; label: string }> = {
@@ -153,17 +154,15 @@ function BarChart({
     return <p className="text-sm text-muted-foreground">データがありません。</p>;
   }
   const max = Math.max(1, ...data.map((d) => d.value));
-  const first = data[0]?.label ?? "";
-  const last = data[data.length - 1]?.label ?? "";
   return (
     <div>
       <div className="h-44">
         <BarChartJS data={chart.chartData} options={chart.options} />
       </div>
       <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-        <span>{first}</span>
+        <span>{data[0].label}</span>
         <span>最大 {max}</span>
-        <span>{last}</span>
+        <span>{data[data.length - 1].label}</span>
       </div>
     </div>
   );
@@ -172,16 +171,15 @@ function BarChart({
 function StatCard({
   label,
   value,
-  loading,
 }: {
   label: string;
-  value: number | null;
-  loading: boolean;
+  /** 読み込み中は undefined。 */
+  value: number | undefined;
 }): React.JSX.Element {
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <p className="text-sm text-muted-foreground">{label}</p>
-      {loading || value === null ? (
+      {value === undefined ? (
         <Skeleton className="mt-2 h-9 w-20" />
       ) : (
         <p className="mt-2 text-3xl font-bold tabular-nums">
@@ -208,7 +206,7 @@ type StatsData = {
   totals: Totals;
   userSeries: Bar[];
   roomSeries: Bar[];
-  reactions: ReactionRow[];
+  reactions: ReactionTypeCount[];
 };
 
 /** 200 の本体を取り出す。400 や nginx の 502 は例外にしてエラー表示へ倒す。 */
@@ -265,7 +263,7 @@ export function StatsDashboard({ days }: { days: number }): React.JSX.Element {
     );
   }
 
-  const totals = value?.totals ?? null;
+  const totals = value?.totals;
   const userSeries = trimZeroEdges(value?.userSeries ?? []);
   const roomSeries = trimZeroEdges(value?.roomSeries ?? []);
   const reactions = value?.reactions ?? [];
@@ -274,15 +272,11 @@ export function StatsDashboard({ days }: { days: number }): React.JSX.Element {
   return (
     <div className="space-y-10">
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="累計ユーザー" value={totals?.userAll ?? null} loading={loading} />
-        <StatCard label="累計ルーム" value={totals?.roomAll ?? null} loading={loading} />
-        <StatCard
-          label="累計リアクション"
-          value={totals?.reactionAll ?? null}
-          loading={loading}
-        />
-        <StatCard label="接続中ユーザー" value={totals?.userAlive ?? null} loading={loading} />
-        <StatCard label="接続中ルーム" value={totals?.roomAlive ?? null} loading={loading} />
+        <StatCard label="累計ユーザー" value={totals?.userAll} />
+        <StatCard label="累計ルーム" value={totals?.roomAll} />
+        <StatCard label="累計リアクション" value={totals?.reactionAll} />
+        <StatCard label="接続中ユーザー" value={totals?.userAlive} />
+        <StatCard label="接続中ルーム" value={totals?.roomAlive} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

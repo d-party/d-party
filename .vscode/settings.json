@@ -19,13 +19,10 @@
   },
 
   // ── Python (backend/) ─────────────────────────────────────────────────────
-  // backend は black から ruff へ移行済み（backend/pyproject.toml の [tool.ruff]）。
+  // 整形は ruff（backend/pyproject.toml の [tool.ruff]）。
   // インタプリタは uv sync が backend/.venv に作るものを使う。
   "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
-  "[python]": {
-    "editor.defaultFormatter": "charliermarsh.ruff",
-    "editor.formatOnSave": true
-  },
+  "[python]": { "editor.defaultFormatter": "charliermarsh.ruff" },
 
   // ── TypeScript (extension/ · frontend/) ───────────────────────────────────
   // pnpm workspace なので typescript はルートの仮想ストアから解決される。

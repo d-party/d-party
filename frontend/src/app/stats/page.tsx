@@ -14,7 +14,6 @@ const DEFAULT_DAYS = 365;
 const MAX_DAYS = 365;
 
 /** `?days=N` を 1〜365 に収める。不正なら 365。 */
-
 function resolveDays(raw: string | string[] | undefined): number {
   const value = Number(Array.isArray(raw) ? raw[0] : raw);
   if (!Number.isFinite(value)) return DEFAULT_DAYS;

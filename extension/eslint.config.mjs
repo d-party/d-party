@@ -1,33 +1,29 @@
 import js from "@eslint/js";
+import { defineConfig, globalIgnores } from "eslint/config";
 import reactHooks from "eslint-plugin-react-hooks";
 import storybook from "eslint-plugin-storybook";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
-export default tseslint.config(
-  {
-    ignores: [
-      "dist/**",
-      "storybook-static/**",
-      "node_modules/**",
-      "src/infrastructure/api/generated/**",
-      "public/**",
-    ],
-  },
+export default defineConfig(
+  globalIgnores([
+    "dist/**",
+    "storybook-static/**",
+    "src/infrastructure/api/generated/**",
+  ]),
   js.configs.recommended,
-  ...tseslint.configs.recommended,
+  tseslint.configs.recommended,
+  reactHooks.configs.flat.recommended,
+  storybook.configs["flat/recommended"],
   {
     languageOptions: {
       globals: { ...globals.browser, ...globals.webextensions },
     },
-    plugins: { "react-hooks": reactHooks },
     rules: {
-      ...reactHooks.configs.recommended.rules,
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
     },
   },
-  ...storybook.configs["flat/recommended"],
 );
