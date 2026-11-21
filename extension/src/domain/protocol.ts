@@ -29,7 +29,8 @@ export interface SyncOption {
   part_id: string;
 }
 
-// Outgoing (client -> server). Each carries a `request_id`.
+// Outgoing (client -> server). Each carries a `request_id`. The server knows the
+// sender from the connection, so messages do not repeat the user.
 
 export interface CreateRoomMessage {
   action: "create";
@@ -51,7 +52,6 @@ export interface JoinRoomMessage {
 
 export interface VideoOperationMessage {
   action: "video_operation";
-  user_id: string;
   operation: string;
   option: PlayerOption;
   /** タイマー画面がエピソードの切り替えに追従するために毎回送る。 */
@@ -74,13 +74,11 @@ export interface SyncResponseMessage {
 export interface OperationNotificationMessage {
   action: "operation_notification";
   operation: string;
-  user_name: string;
   request_id: number;
 }
 
 export interface LeaveMessage {
   action: "leave";
-  user_name: string;
   request_id: number;
 }
 
@@ -149,10 +147,8 @@ export interface JoinEvent {
 
 export interface ServerMessageEvent {
   action: "server_message";
-  /** Present for control messages such as "host_change". */
-  message_type?: string;
-  /** Present for the join-failure message ("failed_join"). */
-  message?: string;
+  /** `failed_spectate` はタイマー画面（frontend）にだけ届く。 */
+  message_type: "failed_join" | "failed_spectate" | "host_change" | "room_deleted";
 }
 
 export interface UserAddEvent {
@@ -191,16 +187,15 @@ export interface ReactionEvent {
   /** デフォルト名（`fav` 等）または エクストラ id（Noto コードポイント）。 */
   reaction_type: string;
   /** 「ユーザー名 : リアクション」の表示に使う。 */
-  user?: User;
+  user: User;
 }
 
 /** create / join のときと、ホストが変えたときに届く。 */
-
 export interface RoomSettingEvent {
   action: "room_setting";
-  one_way?: boolean;
-  owner_leave_delete?: boolean;
-  disable_reaction?: boolean;
+  one_way: boolean;
+  owner_leave_delete: boolean;
+  disable_reaction: boolean;
 }
 
 export type IncomingMessage =

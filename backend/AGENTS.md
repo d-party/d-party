@@ -61,7 +61,7 @@ compose・nginx・env はルートが持ち、`backend/` は build context と�
 uv sync
 uv run ruff format --check . && uv run ruff check .
 uv run mypy .        # settings が env を要求するので CI と同じダミー env を渡す
-uv run pytest        # Redis は不要。PostgreSQL は要る
+uv run pytest        # Redis は不要。PostgreSQL は要る（`test_<POSTGRES_DB>` を作って使う）
 uv run pip-licenses
 docker compose exec django python manage.py close_active_sessions
 ```
@@ -69,6 +69,7 @@ docker compose exec django python manage.py close_active_sessions
 コンテナ外で要る env: `SECRET_KEY` `DEBUG` `MY_DOMAIN` `POSTGRES_DB` `POSTGRES_PASSWORD`
 `DATABASE_USER` `DATABASE_HOST` `DATABASE_PORT` `DATABASE_ENGINE` `REDIS_HOST` `REDIS_PORT`
 `LANGUAGE_CODE` `TIME_ZONE` `D_ANIME_STORE_DOMAIN` `CHROME_EXTENSION_REQUIRED_VERSION`。
+Dev Container からは `DATABASE_HOST=localhost` でつながる。
 
 migration はコミット済み。モデルを変えたときだけ `makemigrations` して生成物をコミットする。
 

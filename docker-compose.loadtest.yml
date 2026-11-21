@@ -3,7 +3,7 @@
 
 services:
   k6:
-    image: grafana/k6:2.3.0
+    image: grafana/k6:2.4.0
     container_name: k6
     profiles: ["loadtest"]
     # マウントした ./loadtest（uid 1000）へ結果を書けるようにする。
@@ -23,7 +23,6 @@ services:
       django:
         condition: service_healthy
     # シナリオは LOADTEST_SCENARIO（ws_party.js / ws_oneway.js / ws_timer.js）。
-
     command:
       - run
       - --summary-export=/loadtest/results/summary.json
