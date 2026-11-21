@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { resolveRoom } from "@/infrastructure/lobby";
+import { resolveRoomTitle } from "@/infrastructure/lobby";
 
 /** Text metadata for the room. The page is a client component, so it lives here. */
 export async function generateMetadata({
@@ -9,7 +9,7 @@ export async function generateMetadata({
   params: Promise<{ roomId: string }>;
 }): Promise<Metadata> {
   const { roomId } = await params;
-  const { title } = await resolveRoom(roomId);
+  const title = await resolveRoomTitle(roomId);
 
   const pageTitle = title
     ? `${title} を一緒に視聴`

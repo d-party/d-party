@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-const FONT_FAMILY = "Noto Sans JP";
+import { OG_FONT_FAMILY } from "@/lib/og/card";
 
 // Noto Sans JP weights are bundled in the repo (`public/fonts/`) and read from
 // disk, so the OG images need no request-time fetch to Google Fonts. The full
@@ -10,7 +10,7 @@ const FONT_FAMILY = "Noto Sans JP";
 // resolves correctly in dev, `next start`, and the Docker container alike.
 const FONT_DIR = join(process.cwd(), "public", "fonts");
 
-export interface OgFont {
+interface OgFont {
   name: string;
   data: Buffer;
   weight: 400 | 700;
@@ -29,8 +29,8 @@ export async function loadOgFonts(): Promise<OgFont[]> {
       readFile(join(FONT_DIR, "NotoSansJP-Bold.ttf")),
     ]);
     return [
-      { name: FONT_FAMILY, data: regular, weight: 400, style: "normal" },
-      { name: FONT_FAMILY, data: bold, weight: 700, style: "normal" },
+      { name: OG_FONT_FAMILY, data: regular, weight: 400, style: "normal" },
+      { name: OG_FONT_FAMILY, data: bold, weight: 700, style: "normal" },
     ];
   } catch {
     return [];

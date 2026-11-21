@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Faq, type FaqEntry } from "@/components/qa/Faq";
-import { D_ANIME_STORE_URL } from "@/infrastructure/env";
+import {
+  D_ANIME_STORE_URL,
+  FEEDBACK_FORM_URL,
+  GITHUB_ORG_URL,
+  GITHUB_SPONSORS_URL,
+} from "@/lib/links";
 import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata({
@@ -92,7 +97,7 @@ const ENTRIES: FaqEntry[] = [
     answer: (
       <>
         <a
-          href="https://forms.gle/kKPbAPGY96rbaKgK8"
+          href={FEEDBACK_FORM_URL}
           target="_blank"
           rel="noreferrer noopener"
           className="text-primary underline-offset-4 hover:underline"
@@ -101,7 +106,7 @@ const ENTRIES: FaqEntry[] = [
         </a>{" "}
         または{" "}
         <a
-          href="https://github.com/d-Party"
+          href={GITHUB_ORG_URL}
           target="_blank"
           rel="noreferrer noopener"
           className="text-primary underline-offset-4 hover:underline"
@@ -132,7 +137,7 @@ const ENTRIES: FaqEntry[] = [
         <p className="mt-3">
           全てのコードは{" "}
           <a
-            href="https://github.com/d-Party"
+            href={GITHUB_ORG_URL}
             target="_blank"
             rel="noreferrer noopener"
             className="text-primary underline-offset-4 hover:underline"
@@ -155,7 +160,7 @@ const ENTRIES: FaqEntry[] = [
       <>
         はい、{" "}
         <a
-          href="https://github.com/sponsors/d-party"
+          href={GITHUB_SPONSORS_URL}
           target="_blank"
           rel="noreferrer noopener"
           className="text-primary underline-offset-4 hover:underline"

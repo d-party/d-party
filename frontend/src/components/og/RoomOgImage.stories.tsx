@@ -13,10 +13,7 @@ import { RoomOgImage } from "./RoomOgImage";
 const meta: Meta<typeof RoomOgImage> = {
   title: "OGP/RoomOgImage",
   component: RoomOgImage,
-  parameters: {
-    layout: "centered",
-    backgrounds: { default: "light" },
-  },
+  parameters: { layout: "centered" },
   decorators: [ogPreview],
   argTypes: {
     title: { control: "text" },

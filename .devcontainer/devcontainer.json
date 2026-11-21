@@ -33,7 +33,7 @@
     "ghcr.io/devcontainers-extra/features/cloudflared:1": {},
     "ghcr.io/rio/features/k3d:1": {},
     "ghcr.io/devcontainers-extra/features/k6:1": {
-      "version": "2.3.0"
+      "version": "2.4.0"
     }
   },
   "remoteEnv": {
@@ -62,12 +62,8 @@
         "esbenp.prettier-vscode",
         "bradlc.vscode-tailwindcss"
       ],
+      // 整形とインタプリタの設定は .vscode/settings.json にある。
       "settings": {
-        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/backend/.venv/bin/python",
-        "editor.formatOnSave": true,
-        "[python]": {
-          "editor.defaultFormatter": "charliermarsh.ruff"
-        },
         "sqltools.connections": [
           {
             "name": "d-party (compose postgres)",

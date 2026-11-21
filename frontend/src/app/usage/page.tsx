@@ -16,7 +16,7 @@ import {
   D_ANIME_STORE_URL,
   GOOGLE_CHROME_URL,
   MICROSOFT_EDGE_URL,
-} from "@/infrastructure/env";
+} from "@/lib/links";
 import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata({

@@ -6,10 +6,7 @@ import type { ReactionType } from "@/domain/reactions";
 import { ReactNotifier } from "@/infrastructure/notifier/ReactNotifier";
 import { ChromePersonalStatsRepository } from "@/infrastructure/storage/ChromePersonalStatsRepository";
 import { ChromeStorageSettingsRepository } from "@/infrastructure/storage/ChromeStorageSettingsRepository";
-import {
-  DMM_REDIRECT_ENDPOINT,
-  DMM_WEBSOCKET_ENDPOINT,
-} from "@/infrastructure/env";
+import { DMM_WEBSOCKET_ENDPOINT, dmmLobbyUrl } from "@/infrastructure/env";
 import { PartyWebSocketClient } from "@/infrastructure/ws/PartyWebSocketClient";
 
 import { getParam } from "../../dom/utils";
@@ -128,8 +125,8 @@ const session = new RoomSession({
   settings,
   guard,
   stats,
-  // 共有リンクは DMM 用ロビーへ（dアニメの既定ではなく DMM の redirect endpoint）。
-  redirectEndpoint: DMM_REDIRECT_ENDPOINT,
+  // 共有リンクは DMM 用ロビーへ。
+  shareLinkFor: dmmLobbyUrl,
 });
 
 sidebarStore.setMode(mode);

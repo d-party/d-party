@@ -16,23 +16,6 @@ from streamer.models import (
 )
 
 
-def _clear_reaction_tables() -> None:
-    """Drop reaction rows so reaction-count assertions are deterministic.
-
-    The test DB uses a ``MIRROR`` config, so rows committed by ``transaction=True``
-    tests (e.g. the consumer folding test) are not flushed between runs. Called in
-    ``setUp`` it runs inside the per-test transaction and is rolled back afterwards,
-    so it only hides that committed pollution for the duration of one test.
-
-    統計はサービス横断で合算するため（``_reaction_counts_by_type``）、DMM の生／集計
-    リアクションも一緒にクリアする（DMM consumer テストが DmmReactionStat をコミットする）。
-    """
-    ReactionStat.objects.all().delete()
-    AnimeReaction.objects.all().delete(hard=True)
-    DmmReactionStat.objects.all().delete()
-    DmmReaction.objects.all().delete(hard=True)
-
-
 class TestHealthCheckAPI(APITestCase):
     def setUp(self) -> None:
         self.client = APIClient()
@@ -199,7 +182,6 @@ class TestStatsPeriodScope(APITestCase):
 
     def setUp(self) -> None:
         self.client = APIClient()
-        _clear_reaction_tables()
 
     @staticmethod
     def _make_reaction(room, reaction_type, when):
@@ -211,11 +193,7 @@ class TestStatsPeriodScope(APITestCase):
 
     @pytest.mark.django_db
     def test_user_all_count_respects_days(self):
-        """40 日前のユーザーは 30 日窓では数えず 365 日窓では数える。
-
-        テスト DB は ``MIRROR`` 設定で他テストの行が残りうるため、絶対値ではなく
-        「40 日前ユーザーを 1 人足すと 365 日窓だけ +1 される」差分で検証する。
-        """
+        """40 日前のユーザーは 30 日窓では数えず 365 日窓では数える。"""
         from streamer.models import AnimeUser
 
         AnimeUserFactory()  # recent（auto_now_add で created_at=now）
@@ -227,8 +205,8 @@ class TestStatsPeriodScope(APITestCase):
 
         c30 = self.client.get(endpoint, {"days": "30"}).data["data"]["count"]
         c365 = self.client.get(endpoint, {"days": "365"}).data["data"]["count"]
-        assert c30 >= 1  # recent は 30 日窓に入る
-        assert c365 - c30 >= 1  # 40 日前ユーザーは 365 日窓のみに入る
+        assert c30 == 1  # recent だけ
+        assert c365 == 2  # 40 日前のユーザーも入る
 
     @pytest.mark.django_db
     def test_reaction_counts_come_from_reactionstat_and_live(self):
@@ -286,7 +264,6 @@ class TestStatsCache(APITestCase):
     def setUp(self) -> None:
         self.client = APIClient()
         self.endpoint = "/api/v1/statistics/anime-store/anime-reaction-all-count"
-        _clear_reaction_tables()
 
     @pytest.mark.django_db
     def test_response_is_cached(self):
@@ -305,7 +282,6 @@ class TestReactionCountShieldsAPI(APITestCase):
     def setUp(self) -> None:
         self.client = APIClient()
         self.endpoint = "/api/shields/total-reaction"
-        _clear_reaction_tables()
 
     @pytest.mark.django_db
     def test_counts_folded_and_live_reactions(self):

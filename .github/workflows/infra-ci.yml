@@ -34,9 +34,9 @@ jobs:
       - uses: azure/setup-helm@v5
       - name: helm lint
         run: helm lint infra/helm/d-party
-      # 本番に近い上書き（外部 Secret + 独自ドメイン）でも組めること。
       - name: helm template (defaults)
         run: helm template d-party infra/helm/d-party > /dev/null
+      # 本番に近い上書き（外部 Secret + 独自ドメイン）でも組めること。
       - name: helm template (existingSecret + domain)
         run: |
           helm template d-party infra/helm/d-party \

@@ -1,7 +1,6 @@
-/** OG card for every page except the room lobby. */
-
 import { OgCard } from "@/components/og/OgCard";
 
+/** OG card for every page except the room lobby. */
 export function SiteOgImage(): React.JSX.Element {
   return (
     <OgCard

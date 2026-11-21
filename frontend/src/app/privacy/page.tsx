@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { GITHUB_ORG_URL, GITHUB_REPO_URL } from "@/lib/links";
 import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata({
@@ -12,12 +13,11 @@ export const metadata: Metadata = pageMetadata({
 
 const UPDATED_AT = "2026-10-12";
 
-const SOURCE_URL =
-  "https://github.com/d-party/d-party/blob/main/extension/PRIVACY.md";
+const SOURCE_URL = `${GITHUB_REPO_URL}/blob/main/extension/PRIVACY.md`;
 
 export default function PrivacyPage(): React.JSX.Element {
   return (
-    <main className="mx-auto max-w-3xl px-4 py-12">
+    <article className="mx-auto max-w-3xl px-4 py-12">
       <header className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">
           プライバシーポリシー
@@ -45,7 +45,7 @@ export default function PrivacyPage(): React.JSX.Element {
           <li>運営: d-party 開発チーム（個人有志によるオープンソースプロジェクト）</li>
           <li>
             ソースコード:{" "}
-            <ExtLink href="https://github.com/d-party">
+            <ExtLink href={GITHUB_ORG_URL}>
               github.com/d-party
             </ExtLink>
           </li>
@@ -363,13 +363,13 @@ export default function PrivacyPage(): React.JSX.Element {
         <ul className="list-disc space-y-1 pl-6">
           <li>
             GitHub:{" "}
-            <ExtLink href="https://github.com/d-party">
+            <ExtLink href={GITHUB_ORG_URL}>
               github.com/d-party
             </ExtLink>
           </li>
           <li>
             Issue:{" "}
-            <ExtLink href="https://github.com/d-party/d-party/issues">
+            <ExtLink href={`${GITHUB_REPO_URL}/issues`}>
               github.com/d-party/d-party/issues
             </ExtLink>
           </li>
@@ -381,7 +381,7 @@ export default function PrivacyPage(): React.JSX.Element {
         <ExtLink href={SOURCE_URL}>GitHub の PRIVACY.md</ExtLink>{" "}
         で公開しています。
       </p>
-    </main>
+    </article>
   );
 }
 

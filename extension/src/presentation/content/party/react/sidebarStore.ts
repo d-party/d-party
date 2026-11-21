@@ -163,9 +163,6 @@ export class SidebarController implements SidebarView {
   setRoomSettings(settings: RoomSettings): void {
     this.store.setRoomSettings(settings);
   }
-  hideSidebar(): void {
-    this.store.hide();
-  }
   resetToCreate(): void {
     this.store.resetToCreate();
   }

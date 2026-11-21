@@ -13,7 +13,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Download } from "lucide-react";
 
 import { dmmLobbyResolve } from "@/infrastructure/api/generated/d-party";
-import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
+import { CHROME_WEBSTORE_URL } from "@/lib/links";
 
 /**
  * DMM TV のルーム遷移ロビー。dアニメの `anime-store/lobby/[roomId]` と同じ
