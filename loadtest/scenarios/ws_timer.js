@@ -59,13 +59,14 @@ async function runRoom() {
         metrics,
         headers: HEADERS,
       });
+      // connect や参加が失敗しても finally で閉じられるよう、先に登録する。
+      participants.push(spec);
       await spec.connect();
       const ackP = spec.waitFor('spectate');
       spec.send(spectateMsg({ roomId }));
       const ack = await ackP;
       // spectate 受理応答は現在の part_id を返す（初期状態の受け渡し確認）。
       spectateSuccess.add(ack.part_id !== undefined);
-      participants.push(spec);
     }
     roomSetup.add(true);
 
