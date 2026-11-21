@@ -9,7 +9,7 @@ import { Clock, Download, PictureInPicture2 } from "lucide-react";
 import { openTimerPopup } from "@/components/timer/openTimerPopup";
 import { TimerView } from "@/components/timer/TimerView";
 import { lobbyResolve } from "@/infrastructure/api/generated/d-party";
-import { CHROME_WEBSTORE_URL } from "@/infrastructure/env";
+import { CHROME_WEBSTORE_URL } from "@/lib/links";
 
 /**
  * The extension's `content-version` writes "true" / "false" into

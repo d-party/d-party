@@ -44,6 +44,7 @@ jobs:
           if helm template d-party infra/helm/d-party > /dev/null 2>&1; then
             echo "秘密値なしで render できてしまう"; exit 1
           fi
+      # 本番に近い上書き（外部 Secret + 独自ドメイン）でも組めること。
       - name: helm template (existingSecret + domain)
         run: |
           helm template d-party infra/helm/d-party \
