@@ -37,7 +37,7 @@ dアニメストアには「一緒に観る」機能がありません。d-party
 
 | パス | 中身 | スタック |
 | --- | --- | --- |
-| [`backend/`](backend/AGENTS.md) | Django バックエンド | Python 3.15 · Django 6 · Channels · DRF · PostgreSQL 16 · Redis 7 |
+| [`backend/`](backend/AGENTS.md) | Django バックエンド | Python 3.15 · Django 6 · Channels · DRF · PostgreSQL 16 · Redis 8 |
 | [`extension/`](extension/AGENTS.md) | ブラウザ拡張機能 | Manifest V3 · TypeScript · React 19 · rspack · Tailwind CSS v4 |
 | [`frontend/`](frontend/AGENTS.md) | ユーザー向け公開サイト | Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 |
 | `packages/ui/` | 両者が共有する shadcn/ui プリミティブ | TypeScript · Radix · Tailwind CSS v4 |
