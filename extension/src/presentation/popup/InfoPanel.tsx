@@ -33,7 +33,7 @@ const LINKS: InfoLink[] = [
     icon: Tv,
   },
   {
-    href: "https://chrome.google.com/webstore/detail/d-party/ibmlcfpijglpfbfgaleaeooebgdgcbpc?hl=ja",
+    href: "https://chromewebstore.google.com/detail/d-party/ibmlcfpijglpfbfgaleaeooebgdgcbpc?hl=ja",
     label: "Chrome ウェブストア",
     description: "拡張機能ページ・レビュー投稿",
     icon: FaChrome,
