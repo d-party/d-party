@@ -23,10 +23,11 @@
 | streamer/management/\_\_init\_\_.py                     |        0 |        0 |    100% |           |
 | streamer/management/commands/\_\_init\_\_.py            |        0 |        0 |    100% |           |
 | streamer/management/commands/close\_active\_sessions.py |       16 |        0 |    100% |           |
+| streamer/management/commands/close\_expired\_rooms.py   |       42 |        3 |     93% | 42, 61-62 |
 | streamer/mixins.py                                      |       38 |        7 |     82% |31, 34, 64, 70-71, 74, 77 |
 | streamer/models.py                                      |       62 |        1 |     98% |        96 |
 | streamer/util.py                                        |        9 |        0 |    100% |           |
-| **TOTAL**                                               |  **942** |   **69** | **93%** |           |
+| **TOTAL**                                               |  **984** |   **72** | **93%** |           |
 
 
 ## Setup coverage badge
