@@ -1,9 +1,9 @@
 import datetime
-import os
 from unittest import mock
 
 import pytest
 import redis
+from django.conf import settings
 from django.db import OperationalError
 from django.utils import timezone
 from rest_framework import status
@@ -68,9 +68,7 @@ class TestVersionCheckAPI(APITestCase):
     @pytest.mark.django_db
     def test_version_check_possible_edgecase_ok_200(self):
         """最小バージョンと同じなら可。"""
-        get_params = {
-            "extension-version": str(os.getenv("CHROME_EXTENSION_REQUIRED_VERSION"))
-        }
+        get_params = {"extension-version": settings.CHROME_EXTENSION_REQUIRED_VERSION}
         response = self.client.get(self.endpoint, get_params)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["is_possible"]
@@ -122,7 +120,7 @@ class TestAnimeStoreLobbyResolveAPI(APITestCase):
         assert response.data["title"] == "鬼滅の刃 - 第1話 - 残酷"
         # 拡張機能は転送先の URL から ``party`` と ``room_id`` を読んで参加する。
         assert response.data["redirect_url"] == (
-            f"https://{os.environ['D_ANIME_STORE_DOMAIN']}/animestore/sc_d_pc"
+            f"https://{settings.D_ANIME_STORE_DOMAIN}/animestore/sc_d_pc"
             f"?partId=654321&party=join&room_id={room.room_id}"
         )
 

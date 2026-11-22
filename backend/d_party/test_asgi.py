@@ -9,10 +9,10 @@ import d_party.asgi
 
 
 @pytest.fixture
-def load_application(settings, monkeypatch):
-    """``asgi.py`` は import 時に env と ``DEBUG`` を読むので、値を決めてから読み直す。"""
-    monkeypatch.setenv("MY_DOMAIN", "d-party.example")
-    monkeypatch.setenv("D_ANIME_STORE_DOMAIN", "animestore.example")
+def load_application(settings):
+    """``asgi.py`` は import 時に settings を読むので、値を決めてから読み直す。"""
+    settings.MY_DOMAIN = "d-party.example"
+    settings.D_ANIME_STORE_DOMAIN = "animestore.example"
 
     def load(*, debug: bool):
         settings.DEBUG = debug

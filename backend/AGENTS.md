@@ -18,11 +18,12 @@ Django へ振り分ける。
 d_party/        settings.py · asgi.py（ProtocolTypeRouter / OriginValidator）· urls.py
 streamer/       同時視聴のコア
   consumers.py    AnimePartyConsumer（create / join / leave / video_operation / reaction …）
-  format.py       pydantic のメッセージ定義（公開プロトコル）
-  models.py       AnimeRoom / AnimeUser / AnimeReaction / AnimeRoomHistory / Setting
+  format.py       pydantic のメッセージ定義（公開プロトコル。受信の検証と送信の形）
+  repository.py   consumer が await で呼ぶ永続化（ルーム・参加者・設定）
+  reactions.py    リアクションの集計（ルーム終了時の ReactionStat への畳み込み · 種別ごとの累計）
+  models.py       AnimeRoom / AnimeUser / AnimeReaction / AnimeRoomHistory / Setting / ReactionStat
   mixins.py       LogicalDeletionMixin（論理削除）
   fields.py       EncryptedCharField（Fernet）
-  cron.py         fold_room_reactions（ルーム終了時にリアクションを ReactionStat へ畳み込む）
   management/commands/close_active_sessions.py   起動時の ghost 回収
   management/commands/close_expired_rooms.py     48 時間を超えたルームの強制クローズ（cron）
 api/            DRF（統計 · shields バッジ · バージョン確認 · ロビー解決）
@@ -34,12 +35,18 @@ manage.py       /env_files/*.env があれば読む
 
 compose・nginx・env はルートが持ち、`backend/` は build context として参照される。
 ホストの解決先は env（`DATABASE_HOST` · `REDIS_HOST` など）で差し替える。
+env を読むのは `settings.py` だけにし、ほかは `django.conf.settings` から参照する。
+任意の env は `STATS_CACHE_SECONDS`（統計 API と shields バッジのキャッシュ秒数。既定 300）。
 
 ## 壊してはいけないもの
 
 - **WebSocket プロトコル**: `format.py` の `action` 値・フィールド名・ネストは
   `extension/src/domain/protocol.ts` と一致させる。基底型のフィールド（`response`）は
   `SerializeAsAny` を付けないとサブクラスのフィールドが直列化で落ちる。
+- **受信の検証**: クライアントの入力は `format.py` の `*Request` で検証する。長すぎる文字列は
+  弾かずに切り詰める（上限は `models.py` の定数）。検証エラーや想定外の例外では、
+  `handle_exception` が退室の後始末をしてから接続を閉じる。例外を素通しすると `disconnect` が
+  呼ばれず、在室者の行が alive のまま残る。
 - **論理削除**: `objects.alive()` / `delete()`（論理）/ `delete(hard=True)`（物理）の意味を変えない。
 - **暗号化**: `AnimeUser.user_name` の鍵は `SECRET_KEY` から作る。`SECRET_KEY` を変えると既存行は復号できない。
 - **REST API**: `api/urls.py` のパスとレスポンスの形は外部から参照される（shields は `{"schemaVersion": 1, ...}`）。

@@ -1,6 +1,6 @@
 import factory
 
-from .models import AnimeRoom, AnimeUser, Setting
+from .models import DEFAULT_USER_ICON, AnimeRoom, AnimeUser, Setting
 
 
 class AnimeRoomFactory(factory.django.DjangoModelFactory):
@@ -9,8 +9,6 @@ class AnimeRoomFactory(factory.django.DjangoModelFactory):
 
     part_id = "123456"
     title = factory.Faker("sentence", nb_words=3)
-    updated_at = factory.Faker("date")
-    created_at = factory.Faker("date")
 
 
 class AnimeUserFactory(factory.django.DjangoModelFactory):
@@ -18,11 +16,9 @@ class AnimeUserFactory(factory.django.DjangoModelFactory):
         model = AnimeUser
 
     user_name = factory.Faker("name")
-    user_icon = "FaRegUser"
+    user_icon = DEFAULT_USER_ICON
     room_id = factory.SubFactory(AnimeRoomFactory)
     is_host = False
-    updated_at = factory.Faker("date")
-    created_at = factory.Faker("date")
 
 
 class SettingFactory(factory.django.DjangoModelFactory):

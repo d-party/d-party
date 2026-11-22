@@ -55,20 +55,16 @@ class LogicalDeletionMixin(models.Model):
     class Meta:
         abstract = True
 
-    @classmethod
-    def get_deleted_value(cls):
-        return now()
-
     def delete(self, using=None, keep_parents=False, hard=False):
         if hard:
             return super().delete(using=using, keep_parents=keep_parents)
-        self.deleted_at = self.get_deleted_value()
+        self.deleted_at = now()
         self.save(using=using, update_fields=[DELETE_FLAG_FIELD])
         return (1, {self._meta.label: 1})
 
-    def revive(self, force_update=False, using=None):
+    def revive(self, using=None):
         self.deleted_at = None
-        return self.save()
+        self.save(using=using, update_fields=[DELETE_FLAG_FIELD])
 
     def is_dead(self) -> bool:
         return self.deleted_at is not None

@@ -11,6 +11,15 @@ from .mixins import (
     LogicalDeletionQuerySet,
 )
 
+# 列の長さ。WebSocket の入力検証（``format.py``）も同じ値を使う。
+PART_ID_MAX_LENGTH = 16
+TITLE_MAX_LENGTH = 255
+USER_NAME_MAX_LENGTH = 20
+USER_ICON_MAX_LENGTH = 64
+DEFAULT_USER_NAME = "user"
+# react-icons (Font Awesome 6) のキー。
+DEFAULT_USER_ICON = "FaRegUser"
+
 
 class AnimeRoomQuerySet(LogicalDeletionQuerySet):
     """``AnimeRoom`` 用のクエリセット。人数の集計ヘルパを提供する。"""
@@ -36,9 +45,9 @@ class AnimeRoomManager(LogicalDeletionManager.from_queryset(AnimeRoomQuerySet)):
 
 class AnimeRoom(LogicalDeletionMixin):
     room_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    part_id = models.CharField(max_length=16)
+    part_id = models.CharField(max_length=PART_ID_MAX_LENGTH)
     # 作成時に拡張機能が送る作品名（以後は更新しない）。OGP などに使う。
-    title = models.CharField(max_length=255, blank=True, default="")
+    title = models.CharField(max_length=TITLE_MAX_LENGTH, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -82,9 +91,13 @@ class Setting(models.Model):
 
 class AnimeUser(LogicalDeletionMixin):
     user_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user_name = EncryptedCharField(default="user", max_length=20)
-    # react-icons (Font Awesome 6) のキー。個人情報ではないので平文。
-    user_icon = models.CharField(default="FaRegUser", max_length=64)
+    user_name = EncryptedCharField(
+        default=DEFAULT_USER_NAME, max_length=USER_NAME_MAX_LENGTH
+    )
+    # 個人情報ではないので平文。
+    user_icon = models.CharField(
+        default=DEFAULT_USER_ICON, max_length=USER_ICON_MAX_LENGTH
+    )
     room_id = models.ForeignKey(
         AnimeRoom, on_delete=models.CASCADE, related_name="inroom"
     )
@@ -120,7 +133,7 @@ class AnimeRoomHistory(models.Model):
 class ReactionStat(models.Model):
     """日次 × 種別に畳み込んだリアクションの集計。
 
-    ルーム終了時に ``cron.fold_room_reactions`` が ``AnimeReaction`` をここへ加算し、
+    ルーム終了時に ``reactions.fold_room_reactions`` が ``AnimeReaction`` をここへ加算し、
     元の行は物理削除する。``(date, reaction_type)`` で一意。
     """
 

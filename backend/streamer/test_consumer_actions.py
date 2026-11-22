@@ -11,9 +11,10 @@ import pytest
 from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 
-from . import consumers
+from . import consumers, repository
 from .consumers import AnimePartyConsumer
 from .factories import AnimeRoomFactory, AnimeUserFactory
+from .format import OPERATION_MAX_LENGTH
 from .models import AnimeReaction, AnimeRoom, AnimeUser, ReactionStat, ReactionType
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -230,7 +231,7 @@ async def test_operation_notification_is_broadcast_to_the_others():
     assert notification == {
         "action": "operation_notification",
         "room_id": created["room_id"],
-        "operation": "x" * consumers.OPERATION_MAX_LENGTH,
+        "operation": "x" * OPERATION_MAX_LENGTH,
         "user": guest_user,
     }
     assert await guest.receive_nothing()
@@ -273,10 +274,10 @@ async def test_host_leave_promotes_the_oldest_guest():
 async def test_host_leave_without_a_successor_still_announces_the_leave(monkeypatch):
     """人数を数えた直後に残りの全員が抜けた場合。昇格はせず、退室の通知は続ける。"""
 
-    async def nobody(self):
-        return None
+    async def nobody(room):
+        return False
 
-    monkeypatch.setattr(AnimePartyConsumer, "database_promote_next_host", nobody)
+    monkeypatch.setattr(repository, "promote_next_host", nobody)
     host, _, [(guest, _)] = await _room_with_guests("guest")
 
     await host.disconnect()
@@ -292,23 +293,19 @@ async def test_promote_next_host_picks_the_oldest_alive_user():
     await database_sync_to_async(gone.delete)()
     oldest = await database_sync_to_async(AnimeUserFactory)(room_id=room)
     await database_sync_to_async(AnimeUserFactory)(room_id=room)
-    consumer = AnimePartyConsumer()
-    consumer.anime_room = room
 
-    promoted = await consumer.database_promote_next_host()
+    assert await repository.promote_next_host(room)
 
-    assert promoted.user_id == oldest.user_id
     hosts = await database_sync_to_async(
         lambda: list(AnimeUser.objects.filter(is_host=True))
     )()
     assert hosts == [oldest]
 
 
-async def test_promote_next_host_returns_none_for_an_empty_room():
-    consumer = AnimePartyConsumer()
-    consumer.anime_room = await database_sync_to_async(AnimeRoomFactory)()
+async def test_promote_next_host_reports_an_empty_room():
+    room = await database_sync_to_async(AnimeRoomFactory)()
 
-    assert await consumer.database_promote_next_host() is None
+    assert not await repository.promote_next_host(room)
 
 
 async def test_spectator_disconnect_leaves_the_room_untouched():
@@ -337,7 +334,7 @@ class TestRoomGracePeriod:
             room_id=room, reaction_type="S"
         )
 
-        assert await consumers._logical_delete_room_if_empty(str(room.room_id))
+        assert await repository.close_room_if_empty(str(room.room_id))
 
         assert not await _is_alive(AnimeRoom, room.pk)
         assert not await database_sync_to_async(AnimeReaction.objects.exists)()
@@ -348,7 +345,7 @@ class TestRoomGracePeriod:
         room = await database_sync_to_async(AnimeRoomFactory)()
         await database_sync_to_async(AnimeUserFactory)(room_id=room)
 
-        assert not await consumers._logical_delete_room_if_empty(str(room.room_id))
+        assert not await repository.close_room_if_empty(str(room.room_id))
 
         assert await _is_alive(AnimeRoom, room.pk)
 
@@ -357,7 +354,7 @@ class TestRoomGracePeriod:
         await database_sync_to_async(room.delete)()
         closed_at = room.deleted_at
 
-        assert not await consumers._logical_delete_room_if_empty(str(room.room_id))
+        assert not await repository.close_room_if_empty(str(room.room_id))
 
         stored = await database_sync_to_async(AnimeRoom.objects.get)(pk=room.pk)
         assert stored.deleted_at == closed_at
@@ -605,5 +602,5 @@ async def test_spectator_neither_keeps_the_room_open_nor_becomes_host():
     assert messages[1]["user_list"] == []
     # 観覧だけが残ったルームは無人として扱い、猶予のあとで閉じる。
     assert room_id in consumers._pending_room_deletes
-    assert await consumers._logical_delete_room_if_empty(room_id)
+    assert await repository.close_room_if_empty(room_id)
     await spectator.disconnect()
