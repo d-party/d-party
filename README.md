@@ -231,6 +231,9 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml \
     --profile letsencrypt up -d
 ```
 
+`close-expired-rooms` サービスが 1 時間ごとに `close_expired_rooms` を走らせ、作成から 48 時間を
+超えたルームを強制クローズします（閉じられずに残ったルームを統計に残さないため）。
+
 certbot は 12 時間ごとに `renew` を試み、nginx は 6 時間ごとに reload して新しい証明書を
 取り込みます。証明書と秘密鍵は `./certbot/`（gitignore 済み）に置かれます。
 

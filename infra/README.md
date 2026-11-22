@@ -26,7 +26,7 @@ infra/
   helm/d-party/              ← d-party 単体の Helm chart（このリポジトリの本体）
     Chart.yaml values.yaml
     templates/               nginx · django · frontend · postgres · redis · migrate(hook)
-                             · networkpolicy · priorityclass · ingress(任意)
+                             · close-expired-rooms(CronJob) · networkpolicy · priorityclass · ingress(任意)
   platform/                  ← クラスタ共有の基盤（d-party 専用ではない。詳細は platform/README.md）
     registry.yaml            ← クラスタ内ローカルレジストリ（registry:2）＋ NodePort
     k3s-registries.yaml      ← ノードの /etc/rancher/k3s/registries.yaml スニペット
@@ -164,8 +164,14 @@ sequenceDiagram
 > `close_active_sessions` が **`updated_at` が 1 日以上前の alive 行だけ**を回収します
 > （稼働中セッションは更新が新しいので消さない）。旧来の「全 alive 行を削除」設計と異なり
 > **複数レプリカでも他 Pod の生きたセッションを巻き込まない**ので、`replicaCount` を増やしても
-> 安全です（既定は RPi 想定で 1）。時間ベースの保持期間 cron は廃止しました（リアクションは
-> ルーム終了時に `ReactionStat` へ畳み込み）。
+> 安全です（既定は RPi 想定で 1）。リアクションはルーム終了時に `ReactionStat` へ
+> 畳み込みます。
+>
+> **ルームの寿命**：閉じられずに残ったルームが統計に数えられ続けないよう、CronJob
+> `<release>-close-expired-rooms` が毎時 `close_expired_rooms` を走らせ、**作成から 48 時間を
+> 超えたルームを在室中でも強制クローズ**します（`room_deleted` を配信）。間隔と閾値は
+> `closeExpiredRooms.schedule` / `closeExpiredRooms.maxAgeHours`、止めるなら
+> `closeExpiredRooms.enabled=false`。
 >
 > 完全な水平スケール時の残課題は `consumers.py` の `_pending_room_deletes`（猶予削除を
 > プロセスローカルの dict + asyncio.Task で持つ点）のみ。再参加が別ワーカーに着地すると
