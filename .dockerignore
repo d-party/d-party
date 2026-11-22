@@ -15,5 +15,5 @@
 .env.secret
 # 実行時に生成され、イメージへ持ち込む意味がないもの
 certbot/
-postgres/data/
+postgres/data*/
 loadtest/results/

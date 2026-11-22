@@ -87,7 +87,7 @@ jobs:
     # Redis は不要（conftest.py がインメモリに差し替える）。
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18
         env:
           POSTGRES_DB: d_party
           POSTGRES_USER: d_party

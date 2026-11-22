@@ -155,8 +155,13 @@ nginx:
 postgres:
   image:
     repository: postgres
-    tag: "16"
+    tag: "18"
     pullPolicy: IfNotPresent
+  # PGDATA に使う、ボリューム（/var/lib/postgresql/data）の中のディレクトリ名。
+  # メジャー版は互換の無いデータ形式を持つので、版ごとに分ける。上げるときは
+  # 新しい名前の空ディレクトリで initdb し、dump を restore する。旧版のディレクトリは
+  # 残るので、image.tag と dataSubdir を戻せば切り戻せる（手順は infra/README.md §3.6）。
+  dataSubdir: pgdata18
   auth:
     database: d_party
     username: d_party

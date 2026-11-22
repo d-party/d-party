@@ -9,7 +9,7 @@ description: >-
 type: application
 
 # chart 自体のバージョン。テンプレート/values 構造を変えたら上げる。
-version: 0.1.0
+version: 0.2.0
 
 # appVersion は持たない。アプリのバージョンはイメージ tag（argocd-image-updater が
 # django.image.tag / frontend.image.tag を書き換える）そのものなので、chart 側で二重に
