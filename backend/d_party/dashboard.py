@@ -3,16 +3,10 @@
 from __future__ import annotations
 
 from django.conf import settings
-from django.db.models import Count, Sum
 from django.utils.timezone import localdate
 
-from streamer.models import (
-    AnimeReaction,
-    AnimeRoom,
-    AnimeUser,
-    ReactionStat,
-    ReactionType,
-)
+from streamer.models import AnimeRoom, AnimeUser, ReactionType
+from streamer.reactions import reaction_counts_by_type
 
 
 def environment_callback(request):
@@ -26,39 +20,19 @@ def environment_callback(request):
 
 
 def _reaction_breakdown():
-    """種別ごとの累計リアクション数を求める。
-
-    リアクションはルーム終了時に ``ReactionStat`` へ日次×種別で畳み込まれ、生の
-    ``AnimeReaction`` はハードデリートされる。したがって「畳み込み済みの集計」と
-    「まだルームが生きている未畳み込みの生データ」を合算する（統計 API と同じ条件）。
-    """
-    counts: dict[str, int] = {value: 0 for value, _label in ReactionType.choices}
-
-    folded = ReactionStat.objects.values("reaction_type").annotate(total=Sum("count"))
-    for row in folded:
-        counts[row["reaction_type"]] = counts.get(row["reaction_type"], 0) + (
-            row["total"] or 0
-        )
-
-    live = (
-        AnimeReaction.objects.filter(room_id__deleted_at__isnull=True)
-        .values("reaction_type")
-        .annotate(total=Count("reaction_id"))
+    """種別ごとの累計リアクション数を、多い順の内訳と合計にして返す。"""
+    counts = reaction_counts_by_type()
+    total = counts.total()
+    by_count = sorted(
+        ReactionType.choices, key=lambda choice: counts[choice[0]], reverse=True
     )
-    for row in live:
-        counts[row["reaction_type"]] = (
-            counts.get(row["reaction_type"], 0) + row["total"]
-        )
-
-    label_of = dict(ReactionType.choices)
-    total = sum(counts.values())
     breakdown = [
         {
-            "label": label_of.get(value, value),
-            "count": count,
-            "percent": round(count / total * 100) if total else 0,
+            "label": label,
+            "count": counts[value],
+            "percent": round(counts[value] / total * 100) if total else 0,
         }
-        for value, count in sorted(counts.items(), key=lambda kv: kv[1], reverse=True)
+        for value, label in by_count
     ]
     return breakdown, total
 

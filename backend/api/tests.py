@@ -1,7 +1,7 @@
 import datetime
-import os
 
 import pytest
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
@@ -51,9 +51,7 @@ class TestVersionCheckAPI(APITestCase):
     @pytest.mark.django_db
     def test_version_check_possible_edgecase_ok_200(self):
         """最小バージョンと同じなら可。"""
-        get_params = {
-            "extension-version": str(os.getenv("CHROME_EXTENSION_REQUIRED_VERSION"))
-        }
+        get_params = {"extension-version": settings.CHROME_EXTENSION_REQUIRED_VERSION}
         response = self.client.get(self.endpoint, get_params)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["is_possible"]

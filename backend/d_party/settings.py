@@ -13,13 +13,23 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 
 DEBUG = os.environ["DEBUG"] == "1"
 
-ALLOWED_HOSTS = [os.environ["MY_DOMAIN"], "www." + os.environ["MY_DOMAIN"], "django"]
+# 公開サイトのドメインと、拡張機能が動く dアニメストアのドメイン。
+MY_DOMAIN = os.environ["MY_DOMAIN"]
+D_ANIME_STORE_DOMAIN = os.environ["D_ANIME_STORE_DOMAIN"]
+
+# これより古い拡張機能にはロビーで更新を促す（``x.y.z``）。
+CHROME_EXTENSION_REQUIRED_VERSION = os.environ.get("CHROME_EXTENSION_REQUIRED_VERSION")
+
+# 統計 API のレスポンスをキャッシュする秒数。
+STATS_CACHE_SECONDS = int(os.environ.get("STATS_CACHE_SECONDS", "300"))
+
+ALLOWED_HOSTS = [MY_DOMAIN, f"www.{MY_DOMAIN}", "django"]
 if DEBUG:
     # ``["*"]`` にしない。DEBUG=1 のまま本番に出ても Host ヘッダを偽装させないため。
     ALLOWED_HOSTS += ["localhost", "127.0.0.1", "[::1]", "testserver"]
 # TLS は nginx / Cloudflare が終端し Django からは http に見えるので、https の Origin を
 # 明示的に信頼する。
-CSRF_TRUSTED_ORIGINS = ["https://*." + os.environ["MY_DOMAIN"]]
+CSRF_TRUSTED_ORIGINS = [f"https://*.{MY_DOMAIN}"]
 
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
@@ -52,8 +62,9 @@ INSTALLED_APPS = [
 # OpenAPI スキーマは `manage.py spectacular` でファイル（backend/openapi.json）に書き出す。
 # スキーマを配信する URL は持たない。
 REST_FRAMEWORK = {
-    # REST API はすべて公開（認証なし）。スキーマにも認証を載せない。
+    # REST API はすべて公開（認証・権限なし）。スキーマにも認証を載せない。
     "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
@@ -85,7 +96,7 @@ TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         # unfold の admin/index.html をダッシュボードで上書きする。
-        "DIRS": [os.path.join(BASE_DIR, "templates")],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -98,7 +109,6 @@ TEMPLATES = [
     },
 ]
 
-# redis
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
 CHANNEL_LAYERS = {
@@ -117,8 +127,6 @@ CACHES = {
     }
 }
 
-# Database
-
 DATABASES = {
     "default": {
         "ENGINE": os.environ["DATABASE_ENGINE"],
@@ -134,25 +142,15 @@ DATABASES = {
     }
 }
 
-# Password validation
-
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    {"NAME": f"django.contrib.auth.password_validation.{validator}"}
+    for validator in (
+        "UserAttributeSimilarityValidator",
+        "MinimumLengthValidator",
+        "CommonPasswordValidator",
+        "NumericPasswordValidator",
+    )
 ]
-
-
-# Internationalization
 
 LANGUAGE_CODE = os.environ["LANGUAGE_CODE"]
 
@@ -267,21 +265,16 @@ UNFOLD = {
 }
 
 
-# Static files (CSS, JavaScript, Images)
-
 STATIC_URL = "static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "static/")
+STATIC_ROOT = BASE_DIR / "static"
 # 公開ページは frontend が持つので、static は管理画面の素材だけ。
-STATICFILES_DIRS = [os.path.join(BASE_DIR, "assets")]
-
-# Default primary key field type
+STATICFILES_DIRS = [BASE_DIR / "assets"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Channels
 ASGI_APPLICATION = "d_party.asgi.application"
 
-# axes
+# 管理画面のログイン試行制限（django-axes）。
 AXES_FAILURE_LIMIT = 10
 AXES_COOLOFF_TIME = 6
 # ユーザー名だけでロックする。

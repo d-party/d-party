@@ -20,7 +20,7 @@ streamer/       同時視聴のコア
   consumers.py    AnimePartyConsumer（create / join / leave / video_operation / reaction …）
   format.py       pydantic のメッセージ定義（公開プロトコル。受信の検証と送信の形）
   repository.py   consumer が await で呼ぶ永続化（ルーム・参加者・設定）
-  reactions.py    fold_room_reactions（ルーム終了時にリアクションを ReactionStat へ畳み込む）
+  reactions.py    リアクションの集計（ルーム終了時の ReactionStat への畳み込み · 種別ごとの累計）
   models.py       AnimeRoom / AnimeUser / AnimeReaction / AnimeRoomHistory / Setting / ReactionStat
   mixins.py       LogicalDeletionMixin（論理削除）
   fields.py       EncryptedCharField（Fernet）
@@ -34,6 +34,8 @@ manage.py       /env_files/*.env があれば読む
 
 compose・nginx・env はルートが持ち、`backend/` は build context として参照される。
 ホストの解決先は env（`DATABASE_HOST` · `REDIS_HOST` など）で差し替える。
+env を読むのは `settings.py` だけにし、ほかは `django.conf.settings` から参照する。
+任意の env は `STATS_CACHE_SECONDS`（統計 API と shields バッジのキャッシュ秒数。既定 300）。
 
 ## 壊してはいけないもの
 
