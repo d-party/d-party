@@ -96,12 +96,27 @@ max-complexity = 10
 [tool.coverage.run]
 # python-coverage-comment-action はリポジトリ相対のパスを要求する。
 relative_files = true
+# import されなかったファイルも 0% として数える（source が無いと表から消える）。
+source = ["."]
+branch = true
 omit = [
+    ".venv/*",
     "*/migrations/*",
     "manage.py",
+    # テストとその支援コード。
     "*/tests.py",
     "*/test_*.py",
     "conftest.py",
+    "*/factories.py",
+    # gunicorn が読む設定値だけのファイル。起動は Backend/Build が確かめる。
+    "gunicorn.conf.py",
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    # サブクラスが必ず上書きする抽象メソッド。
+    "raise NotImplementedError",
 ]
 
 [tool.pytest.ini_options]
