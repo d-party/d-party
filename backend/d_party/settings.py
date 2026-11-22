@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "axes",
+    "django_otp",
+    "django_otp_webauthn",
     "streamer",
     "api",
 ]
@@ -66,6 +68,8 @@ SPECTACULAR_SETTINGS = {
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesBackend",
     "django.contrib.auth.backends.ModelBackend",
+    # パスキーでのログイン。検証済みの credential から user を引くだけで、パスワードは見ない。
+    "django_otp_webauthn.backends.WebAuthnBackend",
 ]
 
 MIDDLEWARE = [
@@ -74,6 +78,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # AuthenticationMiddleware の後に置く（user.is_verified() を生やす）。
+    "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "axes.middleware.AxesMiddleware",
@@ -240,6 +246,13 @@ UNFOLD = {
                         "link": reverse_lazy("admin:auth_user_changelist"),
                     },
                     {
+                        "title": _("パスキー"),
+                        "icon": "passkey",
+                        "link": reverse_lazy(
+                            "admin:django_otp_webauthn_webauthncredential_changelist"
+                        ),
+                    },
+                    {
                         "title": _("グループ"),
                         "icon": "shield_person",
                         "link": reverse_lazy("admin:auth_group_changelist"),
@@ -286,3 +299,17 @@ AXES_RESET_ON_SUCCESS = True
 
 if DEBUG:
     AXES_ENABLED = False
+
+# パスキー（WebAuthn）。管理画面のログインにだけ使う。
+# RP ID を変えると登録済みのパスキーはすべて使えなくなる（移行はできない）。
+OTP_WEBAUTHN_RP_ID = os.environ["MY_DOMAIN"]
+OTP_WEBAUTHN_RP_NAME = "d-party"
+OTP_WEBAUTHN_ALLOWED_ORIGINS = [
+    "https://" + os.environ["MY_DOMAIN"],
+    "https://www." + os.environ["MY_DOMAIN"],
+]
+if DEBUG:
+    # nginx 経由と runserver 直の両方から管理画面に入る。
+    OTP_WEBAUTHN_ALLOWED_ORIGINS += ["http://localhost", "http://localhost:8000"]
+# パスキーでログインした後の行き先（?next= が無いとき）。
+LOGIN_REDIRECT_URL = "admin:index"
