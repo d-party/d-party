@@ -91,7 +91,11 @@ class TestAnimeStoreLobbyResolveAPI(APITestCase):
         assert response.data["part_id"] == "654321"
         assert response.data["room_id"] == str(room.room_id)
         assert response.data["title"] == "鬼滅の刃 - 第1話 - 残酷"
-        assert "partId=654321" in response.data["redirect_url"]
+        # 拡張機能は転送先の URL から ``party`` と ``room_id`` を読んで参加する。
+        assert response.data["redirect_url"] == (
+            f"https://{os.environ['D_ANIME_STORE_DOMAIN']}/animestore/sc_d_pc"
+            f"?partId=654321&party=join&room_id={room.room_id}"
+        )
 
     @pytest.mark.django_db
     def test_lobby_resolve_not_found_404(self):
@@ -160,7 +164,7 @@ class TestStatsPeriodScope(APITestCase):
     @pytest.mark.django_db
     def test_reaction_counts_come_from_reactionstat_and_live(self):
         """リアクション集計は ReactionStat（畳み込み済み）と alive ルームの合算。"""
-        today = timezone.now().date()
+        today = timezone.localdate()
         ReactionStat.objects.create(date=today, reaction_type="S", count=5)
         live_room = AnimeRoomFactory()  # alive
         self._make_reaction(live_room, "S", timezone.now())
@@ -186,7 +190,7 @@ class TestStatsCache(APITestCase):
 
     @pytest.mark.django_db
     def test_response_is_cached(self):
-        today = timezone.now().date()
+        today = timezone.localdate()
         ReactionStat.objects.create(date=today, reaction_type="S", count=3)
 
         first = self.client.get(self.endpoint, {"days": "30"})
