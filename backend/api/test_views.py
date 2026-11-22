@@ -87,9 +87,9 @@ def test_per_day_series_covers_every_day_of_the_window(client):
     ("version", "is_possible"),
     [("1.10.0", True), ("1.9.0", True), ("2.0.0", True), ("1.8.99", False)],
 )
-def test_version_check_compares_numerically(client, monkeypatch, version, is_possible):
+def test_version_check_compares_numerically(client, settings, version, is_possible):
     """文字列として比べると ``1.10.0`` < ``1.9.0`` になる。"""
-    monkeypatch.setenv("CHROME_EXTENSION_REQUIRED_VERSION", "1.9.0")
+    settings.CHROME_EXTENSION_REQUIRED_VERSION = "1.9.0"
 
     response = client.get(
         "/api/v1/chrome-extension/version-check", {"extension-version": version}

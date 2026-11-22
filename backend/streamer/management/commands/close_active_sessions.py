@@ -14,8 +14,8 @@ import datetime
 from django.core.management.base import BaseCommand
 from django.utils.timezone import now
 
-from streamer.cron import fold_room_reactions
 from streamer.models import AnimeRoom, AnimeUser
+from streamer.reactions import fold_room_reactions
 
 STALE_AFTER = datetime.timedelta(days=1)
 
