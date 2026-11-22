@@ -5,6 +5,7 @@ they are still in use; younger rooms are left alone.
 """
 
 import datetime
+import io
 
 import pytest
 from asgiref.sync import async_to_sync
@@ -97,3 +98,51 @@ def test_hours_option_and_idempotency():
 def test_rejects_non_positive_hours():
     with pytest.raises(CommandError):
         call_command("close_expired_rooms", hours=0)
+
+
+@pytest.mark.django_db
+def test_close_room_reports_a_room_someone_else_already_closed():
+    from .management.commands.close_expired_rooms import close_room
+
+    room = _make_room(datetime.timedelta(hours=49))
+    user = AnimeUser.objects.get(room_id=room)
+    room.delete()
+
+    assert close_room(room.pk) is False
+    # ルームを閉じた側がユーザーも閉じる。負けた側は触らない。
+    assert AnimeUser.objects.alive().filter(pk=user.pk).exists()
+
+
+@pytest.mark.django_db
+def test_room_closed_by_a_concurrent_run_is_not_counted_or_notified(monkeypatch):
+    from .management.commands import close_expired_rooms
+
+    _make_room(datetime.timedelta(hours=49))
+    notified = []
+    monkeypatch.setattr(close_expired_rooms, "close_room", lambda room_id: False)
+    monkeypatch.setattr(close_expired_rooms, "notify_room_deleted", notified.append)
+    out = io.StringIO()
+
+    call_command("close_expired_rooms", stdout=out)
+
+    assert notified == []
+    assert "closed 0 room(s)" in out.getvalue()
+
+
+@pytest.mark.django_db
+def test_channel_layer_failure_does_not_fail_the_run(monkeypatch, caplog):
+    from .management.commands import close_expired_rooms
+
+    class BrokenLayer:
+        async def group_send(self, group, message):
+            raise ConnectionError("redis is down")
+
+    expired = _make_room(datetime.timedelta(hours=49))
+    monkeypatch.setattr(close_expired_rooms, "get_channel_layer", BrokenLayer)
+    out = io.StringIO()
+
+    call_command("close_expired_rooms", stdout=out)
+
+    assert not _is_alive(expired)
+    assert "closed 1 room(s)" in out.getvalue()
+    assert f"failed to notify room {expired.pk}" in caplog.text
