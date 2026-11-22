@@ -87,6 +87,17 @@ docker compose exec django python manage.py close_expired_rooms   # --hours で�
 `LANGUAGE_CODE` `TIME_ZONE` `D_ANIME_STORE_DOMAIN` `CHROME_EXTENSION_REQUIRED_VERSION`。
 Dev Container からは `DATABASE_HOST=localhost` でつながる。
 
+## テストとカバレッジ
+
+- テストは対象のアプリの中に `test_<対象>.py` で置く（`tests.py` は consumer と API の既存分）。
+- `uv run pytest --cov --cov-report=term-missing:skip-covered` で漏れている行と分岐が出る。
+- 計測の設定は `pyproject.toml` の `[tool.coverage.*]`。分岐も数え、import されないファイルも
+  0% として数える（`source = ["."]`）。
+- 計測から外すのは、テストとその支援コード（`factories.py` · `conftest.py`）、生成物
+  （`migrations/`）、プロセスの起動だけを担うもの（`manage.py` · `gunicorn.conf.py`。起動は
+  `Backend/Build` が確かめる）に限る。テストを書けるコードを `omit` や `# pragma: no cover` で
+  隠さない。
+
 migration はコミット済み。モデルを変えたときだけ `makemigrations` して生成物をコミットする。
 
 ## CI
