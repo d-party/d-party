@@ -10,10 +10,11 @@
 | api/urls.py                                             |        3 |        0 |    100% |           |
 | api/views.py                                            |      221 |        7 |     97% |167, 265, 283, 305, 343, 379, 450 |
 | d\_party/\_\_init\_\_.py                                |        0 |        0 |    100% |           |
-| d\_party/settings.py                                    |       45 |        3 |     93% |     25-28 |
-| d\_party/urls.py                                        |        7 |        2 |     71% |     13-16 |
+| d\_party/dashboard.py                                   |       29 |       19 |     34% |24, 35-63, 68-107 |
+| d\_party/settings.py                                    |       51 |        3 |     94% |     25-28 |
+| d\_party/urls.py                                        |        7 |        2 |     71% |     19-22 |
 | streamer/\_\_init\_\_.py                                |        0 |        0 |    100% |           |
-| streamer/admin.py                                       |       54 |        6 |     89% |18, 26, 38, 55, 60, 65 |
+| streamer/admin.py                                       |       59 |        6 |     90% |22, 30, 42, 59, 64, 69 |
 | streamer/apps.py                                        |        4 |        0 |    100% |           |
 | streamer/consumers.py                                   |      333 |       40 |     88% |66-73, 80, 90, 230-231, 267, 297, 312-321, 328-339, 351, 376-380, 386, 413, 461-466, 574, 587 |
 | streamer/cron.py                                        |       13 |        0 |    100% |           |
@@ -27,7 +28,7 @@
 | streamer/mixins.py                                      |       38 |        7 |     82% |31, 34, 64, 70-71, 74, 77 |
 | streamer/models.py                                      |       62 |        1 |     98% |        96 |
 | streamer/util.py                                        |        9 |        0 |    100% |           |
-| **TOTAL**                                               |  **984** |   **72** | **93%** |           |
+| **TOTAL**                                               | **1024** |   **91** | **91%** |           |
 
 
 ## Setup coverage badge

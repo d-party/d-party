@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_6771cd11f63e06d1_admin_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.17.3">coverage.py v7.17.3</a>,
-            created at 2026-11-22 07:06 +0000
+            created at 2026-11-22 07:19 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -87,17 +87,23 @@
     <p class="run"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="key">from</span> <span class="nam">django</span><span class="op">.</span><span class="nam">urls</span> <span class="key">import</span> <span class="nam">include</span><span class="op">,</span> <span class="nam">path</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="nam">urlpatterns</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t">    <span class="nam">path</span><span class="op">(</span><span class="str">&quot;admin/&quot;</span><span class="op">,</span> <span class="nam">admin</span><span class="op">.</span><span class="nam">site</span><span class="op">.</span><span class="nam">urls</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t">    <span class="nam">path</span><span class="op">(</span><span class="str">&quot;api/&quot;</span><span class="op">,</span> <span class="nam">include</span><span class="op">(</span><span class="str">&quot;api.urls&quot;</span><span class="op">)</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="key">if</span> <span class="nam">settings</span><span class="op">.</span><span class="nam">DEBUG</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t">    <span class="key">from</span> <span class="nam">django</span><span class="op">.</span><span class="nam">conf</span><span class="op">.</span><span class="nam">urls</span><span class="op">.</span><span class="nam">static</span> <span class="key">import</span> <span class="nam">static</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t">    <span class="com"># django-stubs &#12398; static() &#12398;&#25147;&#12426;&#20516;&#22411;&#12364; urlpatterns &#12392;&#21512;&#12431;&#12394;&#12356;&#12290;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t">    <span class="nam">urlpatterns</span> <span class="op">+=</span> <span class="nam">static</span><span class="op">(</span>  <span class="com"># type: ignore[arg-type]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t">        <span class="nam">settings</span><span class="op">.</span><span class="nam">STATIC_URL</span><span class="op">,</span> <span class="nam">document_root</span><span class="op">=</span><span class="nam">settings</span><span class="op">.</span><span class="nam">STATIC_ROOT</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t">    <span class="com"># nginx &#12364; Django &#12408;&#27969;&#12377;&#12398;&#12399; /admin/ &#37197;&#19979;&#12394;&#12398;&#12391;&#12289;&#12381;&#12398;&#20013;&#12395;&#32622;&#12367;&#12290;admin.site.urls &#12364;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t">    <span class="com"># /admin/ &#20197;&#19979;&#12434;&#12377;&#12409;&#12390;&#25342;&#12358;&#12398;&#12391;&#12289;&#12381;&#12428;&#12424;&#12426;&#21069;&#12395;&#26360;&#12367;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t">    <span class="nam">path</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t">        <span class="str">&quot;admin/passkey/&quot;</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t">        <span class="nam">include</span><span class="op">(</span><span class="str">&quot;django_otp_webauthn.urls&quot;</span><span class="op">,</span> <span class="nam">namespace</span><span class="op">=</span><span class="str">&quot;otp_webauthn&quot;</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t">    <span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t">    <span class="nam">path</span><span class="op">(</span><span class="str">&quot;admin/&quot;</span><span class="op">,</span> <span class="nam">admin</span><span class="op">.</span><span class="nam">site</span><span class="op">.</span><span class="nam">urls</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t">    <span class="nam">path</span><span class="op">(</span><span class="str">&quot;api/&quot;</span><span class="op">,</span> <span class="nam">include</span><span class="op">(</span><span class="str">&quot;api.urls&quot;</span><span class="op">)</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t"><span class="key">if</span> <span class="nam">settings</span><span class="op">.</span><span class="nam">DEBUG</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t">    <span class="key">from</span> <span class="nam">django</span><span class="op">.</span><span class="nam">conf</span><span class="op">.</span><span class="nam">urls</span><span class="op">.</span><span class="nam">static</span> <span class="key">import</span> <span class="nam">static</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t">    <span class="com"># django-stubs &#12398; static() &#12398;&#25147;&#12426;&#20516;&#22411;&#12364; urlpatterns &#12392;&#21512;&#12431;&#12394;&#12356;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis show_mis"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t">    <span class="nam">urlpatterns</span> <span class="op">+=</span> <span class="nam">static</span><span class="op">(</span>  <span class="com"># type: ignore[arg-type]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t">        <span class="nam">settings</span><span class="op">.</span><span class="nam">STATIC_URL</span><span class="op">,</span> <span class="nam">document_root</span><span class="op">=</span><span class="nam">settings</span><span class="op">.</span><span class="nam">STATIC_ROOT</span>&nbsp;</span><span class="r"></span></p>
+    <p class="mis mis2 show_mis"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -107,7 +113,7 @@
             <a class="nav" href="z_6771cd11f63e06d1_admin_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.17.3">coverage.py v7.17.3</a>,
-            created at 2026-11-22 07:06 +0000
+            created at 2026-11-22 07:19 +0000
         </p>
     </div>
 </footer>
