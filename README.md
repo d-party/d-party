@@ -5,31 +5,32 @@
 | Name                                                    |    Stmts |     Miss |   Branch |   BrPart |   Cover |   Missing |
 |-------------------------------------------------------- | -------: | -------: | -------: | -------: | ------: | --------: |
 | api/\_\_init\_\_.py                                     |        0 |        0 |        0 |        0 |    100% |           |
-| api/apps.py                                             |        4 |        0 |        0 |        0 |    100% |           |
+| api/apps.py                                             |        3 |        0 |        0 |        0 |    100% |           |
 | api/serializers.py                                      |       30 |        0 |        0 |        0 |    100% |           |
 | api/urls.py                                             |        3 |        0 |        0 |        0 |    100% |           |
-| api/views.py                                            |      220 |        0 |       40 |        0 |    100% |           |
+| api/views.py                                            |      161 |        0 |       18 |        0 |    100% |           |
 | d\_party/\_\_init\_\_.py                                |        0 |        0 |        0 |        0 |    100% |           |
-| d\_party/asgi.py                                        |       14 |        0 |        2 |        0 |    100% |           |
-| d\_party/dashboard.py                                   |       29 |        0 |        6 |        0 |    100% |           |
-| d\_party/settings.py                                    |       51 |        0 |        8 |        0 |    100% |           |
+| d\_party/asgi.py                                        |       12 |        0 |        2 |        0 |    100% |           |
+| d\_party/dashboard.py                                   |       23 |        0 |        2 |        0 |    100% |           |
+| d\_party/settings.py                                    |       55 |        0 |        8 |        0 |    100% |           |
 | d\_party/urls.py                                        |        7 |        0 |        2 |        0 |    100% |           |
 | streamer/\_\_init\_\_.py                                |        0 |        0 |        0 |        0 |    100% |           |
-| streamer/admin.py                                       |       59 |        0 |        0 |        0 |    100% |           |
-| streamer/apps.py                                        |        4 |        0 |        0 |        0 |    100% |           |
-| streamer/consumers.py                                   |      333 |        0 |       74 |        1 |     99% | 134-\>138 |
-| streamer/cron.py                                        |       13 |        0 |        4 |        0 |    100% |           |
+| streamer/admin.py                                       |       58 |        0 |        0 |        0 |    100% |           |
+| streamer/apps.py                                        |        3 |        0 |        0 |        0 |    100% |           |
+| streamer/consumers.py                                   |      212 |        5 |       54 |        4 |     97% |74-\>exit, 139-140, 150-151, 205 |
 | streamer/fields.py                                      |       23 |        0 |        4 |        0 |    100% |           |
-| streamer/format.py                                      |       55 |        0 |        2 |        0 |    100% |           |
+| streamer/format.py                                      |       85 |        0 |        2 |        0 |    100% |           |
 | streamer/management/\_\_init\_\_.py                     |        0 |        0 |        0 |        0 |    100% |           |
 | streamer/management/commands/\_\_init\_\_.py            |        0 |        0 |        0 |        0 |    100% |           |
 | streamer/management/commands/close\_active\_sessions.py |       20 |        0 |        2 |        0 |    100% |           |
 | streamer/management/commands/close\_expired\_rooms.py   |       42 |        0 |        8 |        0 |    100% |           |
-| streamer/mixins.py                                      |       38 |        0 |        4 |        0 |    100% |           |
-| streamer/models.py                                      |       62 |        0 |        0 |        0 |    100% |           |
+| streamer/mixins.py                                      |       35 |        0 |        4 |        0 |    100% |           |
+| streamer/models.py                                      |       68 |        0 |        0 |        0 |    100% |           |
+| streamer/reactions.py                                   |       28 |        0 |       10 |        0 |    100% |           |
+| streamer/repository.py                                  |       75 |        0 |       12 |        0 |    100% |           |
 | streamer/routing.py                                     |        3 |        0 |        0 |        0 |    100% |           |
 | streamer/util.py                                        |        9 |        0 |        2 |        0 |    100% |           |
-| **TOTAL**                                               | **1019** |    **0** |  **158** |    **1** | **99%** |           |
+| **TOTAL**                                               |  **955** |    **5** |  **130** |    **4** | **99%** |           |
 
 
 ## Setup coverage badge
