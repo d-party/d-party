@@ -125,7 +125,7 @@ PR でマージする。backend・frontend・拡張機能にまたがる変更�
 
 ```bash
 actionlint && shellcheck $(git ls-files '*.sh') && yamllint .
-helm lint infra/helm/d-party
+helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret
 pre-commit run --all-files
 cd backend && uv run ruff check . && uv run mypy . && uv run pytest
 pnpm run typecheck && pnpm run lint && pnpm run build
