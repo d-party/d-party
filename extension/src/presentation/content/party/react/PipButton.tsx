@@ -1,52 +1,39 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import { MdPictureInPicture, MdPictureInPictureAlt } from "react-icons/md";
 
 import type { Settings } from "@/domain/settings";
 
-type SettingsSubscribe = (cb: (s: Settings) => void) => () => void;
+import { type SettingsSubscribe, useLiveSettings } from "./useLiveSettings";
 
-/** Picture-in-Picture toggle. Shown without a room and not synced to the room. */
-export function mountPipButton(opts: {
-  fullscreenButton: Element;
+const HOST_ID = "d-party-pip-button";
+
+interface PipButtonProps {
   initialSettings: Settings;
   subscribe: SettingsSubscribe;
   onToggle: () => void;
-}): void {
-  const parent = opts.fullscreenButton.parentElement;
-  if (!parent) return;
-  if (document.getElementById("d-party-pip-button")) return;
-  const host = document.createElement("div");
-  host.id = "d-party-pip-button";
-  host.style.display = "contents";
-  parent.insertBefore(host, opts.fullscreenButton);
-  createRoot(host).render(
-    <PipButton
-      initialSettings={opts.initialSettings}
-      subscribe={opts.subscribe}
-      onToggle={opts.onToggle}
-    />,
-  );
 }
 
-export function PipButton({
-  initialSettings,
-  subscribe,
-  onToggle,
-}: {
-  initialSettings: Settings;
-  subscribe: SettingsSubscribe;
-  onToggle: () => void;
-}) {
-  const [enabled, setEnabled] = useState(initialSettings.enablePictureInPicture);
-  const inPip = usePipState();
+/** Picture-in-Picture toggle. Shown without a room and not synced to the room. */
+export function mountPipButton({
+  fullscreenButton,
+  ...props
+}: PipButtonProps & { fullscreenButton: Element }): void {
+  const parent = fullscreenButton.parentElement;
+  if (!parent) return;
+  if (document.getElementById(HOST_ID)) return;
+  const host = document.createElement("div");
+  host.id = HOST_ID;
+  host.style.display = "contents";
+  parent.insertBefore(host, fullscreenButton);
+  createRoot(host).render(<PipButton {...props} />);
+}
 
-  useEffect(() => {
-    const off = subscribe((s) => setEnabled(s.enablePictureInPicture));
-    return () => off();
-  }, [subscribe]);
+function PipButton({ initialSettings, subscribe, onToggle }: PipButtonProps) {
+  const { enablePictureInPicture } = useLiveSettings(initialSettings, subscribe);
+  const inPip = useSyncExternalStore(subscribePip, isInPip);
 
-  if (!enabled) return null;
+  if (!enablePictureInPicture) return null;
 
   return (
     <div
@@ -62,19 +49,20 @@ export function PipButton({
   );
 }
 
-function usePipState(): boolean {
-  const [inPip, setInPip] = useState(false);
-  useEffect(() => {
-    const v = document.getElementById("video") as HTMLVideoElement | null;
-    if (!v) return;
-    const update = () => setInPip(document.pictureInPictureElement === v);
-    v.addEventListener("enterpictureinpicture", update);
-    v.addEventListener("leavepictureinpicture", update);
-    update();
-    return () => {
-      v.removeEventListener("enterpictureinpicture", update);
-      v.removeEventListener("leavepictureinpicture", update);
-    };
-  }, []);
-  return inPip;
+const playerVideo = () => document.getElementById("video");
+
+function subscribePip(onChange: () => void): () => void {
+  const video = playerVideo();
+  if (!video) return () => undefined;
+  video.addEventListener("enterpictureinpicture", onChange);
+  video.addEventListener("leavepictureinpicture", onChange);
+  return () => {
+    video.removeEventListener("enterpictureinpicture", onChange);
+    video.removeEventListener("leavepictureinpicture", onChange);
+  };
+}
+
+function isInPip(): boolean {
+  const video = playerVideo();
+  return video !== null && document.pictureInPictureElement === video;
 }

@@ -25,7 +25,8 @@ env:
   MY_DOMAIN: localhost
   DJANGO_UPSTREAM: 127.0.0.1:8000
   FRONTEND_UPSTREAM: 127.0.0.1:3000
-  NGINX_IMAGE: nginx:1.31-alpine
+  # CVE-2026-123007（nginx2shell）の修正版以上に固定する。
+  NGINX_IMAGE: nginx:1.31.9-alpine
 
 jobs:
   syntax:

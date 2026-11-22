@@ -7,7 +7,17 @@ import {
   SITE_TWITTER_IMAGE_PATH,
 } from "@/lib/og/card";
 
-const SITE_NAME = "d-party";
+export const SITE_NAME = "d-party";
+
+export const SITE_DESCRIPTION =
+  "dアニメストアでもウォッチパーティーができる、完全無料の Google Chrome 向け拡張機能 d-party。";
+
+/** `openGraph` fields every page shares. */
+export const OPEN_GRAPH_BASE = {
+  siteName: SITE_NAME,
+  type: "website",
+  locale: "ja_JP",
+} as const;
 
 /**
  * A page's own `openGraph` replaces the inherited one, image included, so every
@@ -32,8 +42,7 @@ export interface PageMetadataInput {
   titleIsBranded?: boolean;
 }
 
-/** For public pages. The room lobby has its own (`app/anime-store/lobby/[roomId]/layout.tsx`). */
-
+/** For public pages. The room lobby has its own (`app/anime-store/lobby/[roomId]/page.tsx`). */
 export function pageMetadata({
   path,
   title,
@@ -47,12 +56,10 @@ export function pageMetadata({
     description,
     alternates: { canonical: path },
     openGraph: {
+      ...OPEN_GRAPH_BASE,
       title: socialTitle,
       description,
       url: path,
-      siteName: SITE_NAME,
-      type: "website",
-      locale: "ja_JP",
       images: [SITE_OG_IMAGE],
     },
     twitter: {

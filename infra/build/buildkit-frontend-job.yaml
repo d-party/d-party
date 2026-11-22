@@ -41,7 +41,6 @@ spec:
             - --frontend
             - dockerfile.v0
             # ロックファイルがルートにあるので、コンテキストはルート。
-
             - --opt
             - context=https://github.com/d-party/d-party.git#main
             - --opt

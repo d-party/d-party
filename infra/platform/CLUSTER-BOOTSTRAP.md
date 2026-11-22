@@ -64,7 +64,7 @@ worker を増強します（[§3.4](#34-ノード増強後から-worker-を足�
 > **2 台構成の注意**: control-plane も Pod を動かせる（k3s の server は既定で schedulable）ので、
 > 2 台でも d-party 一式（nginx/django/frontend/postgres/redis）は載ります。冗長性は低い構成
 > なので、本番可用性が要るなら worker 増強と各 `replicaCount` 引き上げを検討してください
-> （ただし **django は replicas=1 固定**。理由は [`../README.md` §2](../README.md)）。
+> （django も増やせる。既存の WebSocket が Pod 単位で切れる点は [`../README.md` §2](../README.md)）。
 
 ---
 
@@ -254,8 +254,8 @@ kubectl get nodes -o wide
 - 新ノードにも **`registries.yaml` を配置**（[§5.2](#52-各ノードの-containerd-ミラー設定)）。
   忘れるとそのノードの Pod だけ `ImagePullBackOff` になります。
 - ビルドを新ノードで走らせるなら **userns sysctl**（[§2.2](#22-rootless-buildkit-用の-userns-許可ビルドを走らせるノードのみ)）。
-- 可用性を上げるなら nginx/frontend の `replicaCount` を増やし、`podAntiAffinity` で
-  ノード分散（**django は replicas=1 のまま**）。
+- 可用性を上げるなら nginx / frontend / django の `replicaCount` を増やし、`podAntiAffinity` で
+  ノード分散。
 
 > control-plane を冗長化（HA, server 複数）したくなった場合は k3s embedded etcd 構成への
 > 移行が必要です（`--cluster-init`）。2 台→数台の増強段階では通常そこまで不要です。

@@ -6,6 +6,7 @@ k6 で nginx → django → Redis / PostgreSQL の組み上がったスタック
 ```
 lib/protocol.js        送信メッセージ（action / request_id）の組み立てと遅延計測の埋め込み
 lib/participant.js     1 WS 接続を Promise で扱う（connect / waitFor(action)）
+lib/scenario.js        シナリオ共通の設定（env）・メトリクス・タイマー（every / delay）
 scenarios/ws_party.js  1 VU = 1 ルーム。create → join → video / reaction → leave
 scenarios/ws_oneway.js 一方通行モード。host だけが配信し、非オーナーの操作はブロックされる
 scenarios/ws_timer.js  タイマー。host だけが配信し、spectate 参加者へ配信する
@@ -26,5 +27,5 @@ docker compose -f docker-compose.yml -f docker-compose.override.yml \
 LOADTEST_VUS=20 LOADTEST_ROOM_SIZE=5 LOADTEST_DURATION=2m docker compose ... run --rm k6
 
 docker run --rm -v "$PWD/loadtest:/loadtest" -w /loadtest \
-  grafana/k6:2.3.0 inspect /loadtest/scenarios/ws_party.js
+  grafana/k6:2.4.0 inspect /loadtest/scenarios/ws_party.js
 ```

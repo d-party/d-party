@@ -24,9 +24,10 @@ config:
 secret:
   # SECRET_KEY と POSTGRES_PASSWORD を持つ Secret。
   existingSecret: ""
-  # existingSecret 未指定時に chart が生成する平文（dev 用途のみ）。
-  SECRET_KEY: "change-me-please"
-  POSTGRES_PASSWORD: "change-me-please"
+  # existingSecret 未指定時に chart が Secret を生成するための平文（dev 用途のみ）。
+  # 既定値は持たない。どちらも未指定なら render を失敗させ、弱い値で起動させない。
+  SECRET_KEY: ""
+  POSTGRES_PASSWORD: ""
 
 # ── Django (ASGI / Channels) ────────────────────────────────────────────────
 django:
@@ -35,7 +36,8 @@ django:
     repository: ghcr.io/d-party/backend
     tag: "v0.0.0"          # 初期値。image-updater が semver で書き換える
     pullPolicy: IfNotPresent
-  # 2 以上にしてよい（close_active_sessions は古い行しか回収しない）。
+  # 2 以上にしてよい（close_active_sessions は古い行しか回収しない。セッションは 1 日以上
+  # 続かない前提）。
   replicaCount: 1
   # django だけを強いノードへ寄せるとき用。未設定ならグローバルの値を使う。
   nodeSelector: {}
@@ -72,10 +74,27 @@ django:
       memory: 512Mi
 
 # ── マイグレーション（Helm hook Job: post-install/post-upgrade）───────────────
+# backend イメージ（django.image）で migrate を実行する。
 migrate:
   enabled: true
-  # backend イメージで migrate を実行（django.image を流用）。
   backoffLimit: 2
+
+# ── 期限切れルームの強制クローズ（CronJob）───────────────────────────────────
+# backend イメージ（django.image）で close_expired_rooms を定期実行する。閉じられずに残った
+# ルームが統計に数えられ続けないよう、作成から maxAgeHours を超えたルームを在室中でも閉じる。
+closeExpiredRooms:
+  enabled: true
+  # 毎時 17 分（クラスタのタイムゾーン。毎時なのでずれても影響しない）。
+  schedule: "17 * * * *"
+  maxAgeHours: 48
+  backoffLimit: 1
+  activeDeadlineSeconds: 600
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
 
 # ── Next.js フロントエンド ───────────────────────────────────────────────────
 frontend:
@@ -110,7 +129,9 @@ frontend:
 nginx:
   image:
     repository: nginx
-    tag: "1.31"
+    # CVE-2026-123007（nginx2shell）の修正版以上に固定する（pullPolicy が IfNotPresent なので、
+    # マイナー版のタグだと古いイメージのまま動きうる）。
+    tag: "1.31.9"
     pullPolicy: IfNotPresent
   # RPi クラスタで他サービスと相乗りする前提のため既定 1。可用性が要るなら上げる。
   replicaCount: 1
@@ -196,7 +217,6 @@ networkPolicy:
 
 # ── PriorityClass（メモリ逼迫時に DB/Redis を優先して残す）────────────────────
 # 共有の PriorityClass が既にあるなら create=false にして名前だけ指定する。
-
 priorityClass:
   # true: 下記 2 つの PriorityClass を chart が生成して割り当てる。
   # false: 既存の PriorityClass 名を参照するだけ（name が空なら未指定）。
@@ -205,7 +225,7 @@ priorityClass:
   stateful:
     name: d-party-stateful
     value: 100000
-  # django / frontend / nginx / migrate 用（低め）。
+  # django / frontend / nginx / migrate / close-expired-rooms 用（低め）。
   app:
     name: d-party-app
     value: 10000

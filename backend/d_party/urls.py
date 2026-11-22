@@ -5,6 +5,12 @@ from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
+    # nginx が Django へ流すのは /admin/ 配下なので、その中に置く。admin.site.urls が
+    # /admin/ 以下をすべて拾うので、それより前に書く。
+    path(
+        "admin/passkey/",
+        include("django_otp_webauthn.urls", namespace="otp_webauthn"),
+    ),
     path("admin/", admin.site.urls),
     path("api/", include("api.urls")),
 ]
