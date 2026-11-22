@@ -24,7 +24,7 @@ d-party は **monorepo** です。サーバ・拡張機能・フロントエン�
 | `frontend/`  | ユーザー向けフロントエンド |
 | `infra/`     | k3s (Raspberry Pi) デプロイ設定 |
 | `loadtest/`  | k6 による WebSocket 負荷試験 |
-| ルート直下   | docker compose · nginx · postgres · redis の設定 |
+| ルート直下   | docker compose · nginx の設定 |
 
 `extension/` と `frontend/` は **pnpm workspace** の 2 パッケージで、
 ロックファイルはルートの `pnpm-lock.yaml` 1 本です。
@@ -97,7 +97,7 @@ uv run mypy .
 uv run pytest
 
 # インフラ（chart を触ったとき）
-helm lint infra/helm/d-party
+helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret
 ```
 
 `pre-commit install` を一度しておくと、backend の ruff と基本的な整形が

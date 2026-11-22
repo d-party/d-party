@@ -35,5 +35,5 @@
 ```bash
 pnpm run typecheck && pnpm run lint && pnpm run build   # extension + frontend（turbo 経由）
 cd backend && uv run pytest && uv run mypy .            # backend
-helm lint infra/helm/d-party                            # インフラ
+helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret                            # インフラ
 ```

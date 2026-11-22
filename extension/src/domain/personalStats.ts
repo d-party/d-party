@@ -2,6 +2,9 @@
 
 import { REACTION_TYPES, type ReactionType } from "./reactions";
 
+/** Do not rename: users' stats live under this `chrome.storage.sync` key. */
+export const PERSONAL_STATS_STORAGE_KEY = "personal_stats";
+
 export interface PersonalStats {
   roomsCreated: number;
   roomsJoined: number;
@@ -30,13 +33,12 @@ export function emptyStats(): PersonalStats {
 
 export function totalReactions(stats: PersonalStats): number {
   return REACTION_TYPES.reduce(
-    (sum, t) => sum + (stats.reactionsByType[t] ?? 0),
+    (sum, t) => sum + stats.reactionsByType[t],
     0,
   );
 }
 
 /** Missing or invalid fields become zero. */
-
 export function normalizeStats(value: unknown): PersonalStats {
   const base = emptyStats();
   if (!value || typeof value !== "object") return base;

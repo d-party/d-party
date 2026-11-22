@@ -1,4 +1,5 @@
 # 本番用。frontend は standalone、nginx が TLS を終端し、certbot が証明書を更新する。
+# 秘密値（SECRET_KEY / POSTGRES_PASSWORD）は git 管理外の .env.secret から注入する。
 #   ./init-letsencrypt.sh --staging        # 初回。確認後に --production
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile letsencrypt up -d
 
@@ -6,6 +7,8 @@ services:
   django:
     env_file:
       - ./.env.prod
+      # 本番の秘密値（git 管理外）。無ければ compose が起動を拒否する。
+      - ./.env.secret
     restart: unless-stopped
 
   frontend:
@@ -40,6 +43,42 @@ services:
         /docker-entrypoint.d/20-envsubst-on-templates.sh &&
         { while :; do sleep 6h & wait $${!}; nginx -c /etc/nginx/nginx.prod.conf -s reload; done; } &
         exec nginx -c /etc/nginx/nginx.prod.conf -g 'daemon off;'
+
+  # 再起動ポリシーが無いと、ホストや Docker の再起動後に DB だけ戻らない。
+  postgres:
+    env_file:
+      - ./.env.secret
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+
+  # 作成から 48 時間を超えたルームを 1 時間ごとに強制クローズする（統計に残り続けるのを防ぐ）。
+  # k3s では同じコマンドを Helm の CronJob が走らせる。
+  close-expired-rooms:
+    image: backend-django
+    container_name: close-expired-rooms
+    restart: unless-stopped
+    volumes:
+      - ./backend/:/usr/src/app/
+      - ./backend/.env.django:/env_files/.env.django
+      - ./.env.global:/env_files/.env.global
+    env_file:
+      - ./backend/.env.django
+      - ./.env.global
+      - ./.env.prod
+    depends_on:
+      django:
+        condition: service_healthy
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        trap exit TERM;
+        while :; do
+        python manage.py close_expired_rooms || true;
+        sleep 1h & wait $${!};
+        done;
 
   certbot:
     image: certbot/certbot:latest

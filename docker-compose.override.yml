@@ -43,7 +43,6 @@ services:
       # node:26-alpine は corepack を同梱しない。
       - npm install --global corepack@latest && corepack enable && pnpm install --frozen-lockfile --filter d-party-frontend... && exec pnpm dev -p 3000 -H 0.0.0.0
     # 初回は install とコンパイルで時間がかかる。
-
     healthcheck:
       start_period: 180s
 

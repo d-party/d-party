@@ -118,10 +118,14 @@ def _resample_per_day(
     ]
 
 
-def _mean_per_day(model) -> float:
-    """全期間の 1 日あたりの平均作成数。"""
-    rows = _resample_per_day(_per_day_counts(model))
+def _mean_per_day(rows: list[dict]) -> float:
+    """Mean of the daily counts over the window."""
     return sum(row["count"] for row in rows) / len(rows) if rows else 0.0
+
+
+def _mean_created_per_day(model) -> float:
+    """全期間の 1 日あたりの平均作成数。"""
+    return _mean_per_day(_resample_per_day(_per_day_counts(model)))
 
 
 class HealthCheckAPI(APIView):
@@ -320,7 +324,7 @@ class RoomCountParDayShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
         return {
             "label": "Room",
-            "message": f"{_mean_per_day(AnimeRoom):.2f}/day",
+            "message": f"{_mean_created_per_day(AnimeRoom):.2f}/day",
             "color": "brightgreen",
             "cacheSeconds": 86400,
         }
@@ -335,7 +339,7 @@ class UserCountParDayShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
         return {
             "label": "User",
-            "message": f"{_mean_per_day(AnimeUser):.2f}/day",
+            "message": f"{_mean_created_per_day(AnimeUser):.2f}/day",
             "color": "brightgreen",
             "cacheSeconds": 86400,
         }

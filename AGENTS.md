@@ -5,7 +5,7 @@ dアニメストアでの「同時視聴」サービスの monorepo。各ディ�
 
 | パス | 中身 | スタック |
 | --- | --- | --- |
-| `backend/` | Django バックエンド | Python 3.15 · Django 6 · Channels · DRF · PostgreSQL 16 · Redis 7 |
+| `backend/` | Django バックエンド | Python 3.15 · Django 6 · Channels · DRF · PostgreSQL 16 · Redis 8 |
 | `extension/` | ブラウザ拡張機能 | Manifest V3 · TypeScript · React 19 · rspack · Tailwind CSS v4 |
 | `frontend/` | 公開サイト | Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 |
 | `packages/ui/` | 共有 shadcn/ui プリミティブ | TypeScript · Radix · Tailwind CSS v4 |
@@ -57,13 +57,16 @@ docker-compose.prod.yml       prod（nginx が TLS 終端・certbot）
 docker-compose.loadtest.yml   k6（loadtest profile）
 .env.global                   全環境共通の env
 .env.dev / .env.prod          環境固有の env
-nginx/ postgres/ redis/       各サービスの設定
+.env.secret                   本番の秘密値（git 管理外。.env.secret.example 参照）
+nginx/                        nginx の設定（postgres/ は dev のデータ置き場）
 ```
 
 - frontend のビルドコンテキストはルート（`dockerfile: frontend/Dockerfile`）。
   ロックファイルがルートにあり、`frontend/` 単体では `--frozen-lockfile` を満たせない。
-- `DEBUG` / `MY_DOMAIN` などの環境固有値を `.env.global` に置かない。backend は
-  `.env.global` を `override=True` で読むので、本番の値が上書きされる。
+- `DEBUG` / `MY_DOMAIN` などの環境固有値を `.env.global` に置かない（dev と prod の両方で読まれる）。
+- 本番の秘密値（`SECRET_KEY` / `POSTGRES_PASSWORD`）は git 管理外の `.env.secret` に置き、
+  `docker-compose.prod.yml` が django と postgres へ注入する。リポジトリにある値は開発用。
+- backend の `manage.py` は `/env_files/*.env` を既存の環境変数を上書きせずに読む。
 
 ```bash
 docker compose up -d
@@ -125,7 +128,7 @@ PR でマージする。backend・frontend・拡張機能にまたがる変更�
 
 ```bash
 actionlint && shellcheck $(git ls-files '*.sh') && yamllint .
-helm lint infra/helm/d-party
+helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret
 pre-commit run --all-files
 cd backend && uv run ruff check . && uv run mypy . && uv run pytest
 pnpm run typecheck && pnpm run lint && pnpm run build

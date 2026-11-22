@@ -26,7 +26,7 @@ infra/
   helm/d-party/              ← d-party 単体の Helm chart（このリポジトリの本体）
     Chart.yaml values.yaml
     templates/               nginx · django · frontend · postgres · redis · migrate(hook)
-                             · networkpolicy · priorityclass · ingress(任意)
+                             · close-expired-rooms(CronJob) · networkpolicy · priorityclass · ingress(任意)
   platform/                  ← クラスタ共有の基盤（d-party 専用ではない。詳細は platform/README.md）
     registry.yaml            ← クラスタ内ローカルレジストリ（registry:2）＋ NodePort
     k3s-registries.yaml      ← ノードの /etc/rancher/k3s/registries.yaml スニペット
@@ -98,8 +98,8 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    NGINX[nginx<br/>Deployment x2<br/>HTTP ルーティング] -->|/| FE[frontend<br/>Next.js x2]
-    NGINX -->|/api /admin<br/>/anime-store/party WS| DJ[django<br/>ASGI/Channels x1]
+    NGINX[nginx<br/>Deployment<br/>HTTP ルーティング] -->|/| FE[frontend<br/>Next.js]
+    NGINX -->|/api /admin<br/>/anime-store/party WS| DJ[django<br/>ASGI/Channels]
     DJ --> PG[(postgres<br/>StatefulSet)]
     DJ --> RD[(redis<br/>Channels レイヤ)]
     NGINX -. initContainer .-> ST[collectstatic→emptyDir]
@@ -162,10 +162,17 @@ sequenceDiagram
 > 発火し `leave_party` が DB を後始末します。ハードクラッシュ（OOM / ノード障害 /
 > SIGKILL）では `disconnect` が走らず alive 行が残るため、起動時の
 > `close_active_sessions` が **`updated_at` が 1 日以上前の alive 行だけ**を回収します
-> （稼働中セッションは更新が新しいので消さない）。旧来の「全 alive 行を削除」設計と異なり
+> （`updated_at` は保存時にしか動かないので、「セッションは 1 日以上続かない」ことが前提）。
+> 回収したルームのリアクションは通常の終了と同じく `ReactionStat` へ畳み込みます。旧来の「全 alive 行を削除」設計と異なり
 > **複数レプリカでも他 Pod の生きたセッションを巻き込まない**ので、`replicaCount` を増やしても
-> 安全です（既定は RPi 想定で 1）。時間ベースの保持期間 cron は廃止しました（リアクションは
-> ルーム終了時に `ReactionStat` へ畳み込み）。
+> 安全です（既定は RPi 想定で 1）。リアクションはルーム終了時に `ReactionStat` へ
+> 畳み込みます。
+>
+> **ルームの寿命**：閉じられずに残ったルームが統計に数えられ続けないよう、CronJob
+> `<release>-close-expired-rooms` が毎時 `close_expired_rooms` を走らせ、**作成から 48 時間を
+> 超えたルームを在室中でも強制クローズ**します（`room_deleted` を配信）。間隔と閾値は
+> `closeExpiredRooms.schedule` / `closeExpiredRooms.maxAgeHours`、止めるなら
+> `closeExpiredRooms.enabled=false`。
 >
 > 完全な水平スケール時の残課題は `consumers.py` の `_pending_room_deletes`（猶予削除を
 > プロセスローカルの dict + asyncio.Task で持つ点）のみ。再参加が別ワーカーに着地すると
@@ -188,8 +195,11 @@ sequenceDiagram
 
 ### 3.2 イメージビルド（クラスタ内ビルド + ローカルレジストリ）
 
-backend / frontend イメージは **クラスタ内で ARM64 ネイティブにビルド**し、
-**クラスタ内ローカルレジストリ**へ push します（QEMU/クロスビルド不要、外部レジストリ不要）。
+chart の既定は GHCR のイメージ（`ghcr.io/d-party/{backend,frontend}`。`Release` ワークフローが
+amd64 / arm64 を push する）です。GHCR を使うならこの節は不要です。
+
+外部レジストリを使わない場合は、backend / frontend イメージを **クラスタ内で ARM64 ネイティブに
+ビルド**し、**クラスタ内ローカルレジストリ**へ push できます（QEMU/クロスビルド不要）。
 
 ```mermaid
 flowchart LR
@@ -198,7 +208,7 @@ flowchart LR
         REG -->|pull NodePort :30500| CRI[containerd<br/>各ノード]
         CRI --> WL[django / frontend Pod]
     end
-    GIT[上流 Git リポジトリ<br/>backend.git#main / frontend.git#main] -->|Git context| BK
+    GIT[上流 Git リポジトリ<br/>d-party.git#main] -->|Git context| BK
 ```
 
 イメージ名は全体で `registry.registry.svc.cluster.local:5000/<name>` に統一します。
@@ -237,9 +247,9 @@ kubectl -n registry get jobs -w
 > ```
 > （恒久化は `/etc/sysctl.d/` に記載）。Raspberry Pi OS では既定で利用可能なことが多いです。
 
-chart の既定 image 参照（`values.django.image` / `values.frontend.image`）は
-このローカルレジストリ（`registry.registry.svc.cluster.local:5000/...`、`pullPolicy: Always`）
-に設定済みです。GHCR 等の外部レジストリを使う場合は values で上書きしてください。
+ローカルレジストリのイメージを使うには、`django.image` / `frontend.image` の `repository`
+（`registry.registry.svc.cluster.local:5000/backend` など）・`tag`（`latest`）・
+`pullPolicy`（`Always`）を values で上書きしてください。
 
 ### 3.3 CD（Argo CD / GitOps）
 
@@ -252,15 +262,16 @@ kubectl apply -n argocd -f infra/argocd/application.example.yaml
 - `source.path = infra/helm/d-party` を指し、`config.MY_DOMAIN` と
   `secret.existingSecret` を values 上書きで注入。
 - `syncPolicy.automated`（prune + selfHeal）で Git を真実として自動同期。
-- イメージ tag の自動追従が必要なら **argocd-image-updater**（active maintained,
-  v1.2.x）を導入し、example の annotations で semver 追従させます。
+- イメージ tag の自動追従が必要なら **argocd-image-updater** を導入し、example の
+  annotations で semver 追従させます。annotations を読むのは v0.x 系で、v1.x は CRD 方式です
+  （[`argocd/README.md`](argocd/README.md)）。
 
 ### 3.4 手元での検証（helm 単体）
 
 ```bash
 # 構文・テンプレート検証（クラスタ不要）
-helm lint   infra/helm/d-party
-helm template d-party infra/helm/d-party | less
+helm lint   infra/helm/d-party --set secret.existingSecret=d-party-secret
+helm template d-party infra/helm/d-party --set secret.existingSecret=d-party-secret | less
 
 # クラスタへ直接入れる場合（GitOps を使わない暫定確認）
 helm upgrade --install d-party infra/helm/d-party \
@@ -269,7 +280,7 @@ helm upgrade --install d-party infra/helm/d-party \
   --set secret.existingSecret=d-party-secret
 ```
 
-マイグレーションは Helm hook Job（`pre-install`/`pre-upgrade`）で 1 回だけ自動実行されます。
+マイグレーションは Helm hook Job（`post-install`/`post-upgrade`）で 1 回だけ自動実行されます。
 
 ### 3.5 動作確認
 
@@ -288,13 +299,13 @@ kubectl -n d-party port-forward svc/d-party-nginx 8080:80
 |---|---|---|
 | K8s ディストロ | **k3s** | RPi 定番。CNCF 配下（SUSE/Rancher）、活発 |
 | GitOps/CD | **Argo CD** | CNCF *Graduated*、活発 |
-| イメージ tag 自動更新（任意） | **argocd-image-updater** | argoproj-labs、v1.2.x 継続リリース |
+| イメージ tag 自動更新（任意） | **argocd-image-updater** | argoproj-labs。注釈方式の v0.x 系を使う |
 | 公開／トンネル | **Cloudflare Tunnel (cloudflared)** | Cloudflare 公式、活発 |
 | クラスタ内ビルド | **moby/buildkit（rootless）** | Moby/CNCF 系、活発。daemonless で K8s Job 向き |
 | ローカルレジストリ | **registry:2（CNCF Distribution）** | CNCF プロジェクト、ARM64 提供、業界標準 |
 | DB | **postgres:16（公式）** | Docker 公式、ARM64 提供、長期メンテ |
 | キャッシュ/レイヤ | **redis:8.10（公式）** | Docker 公式、ARM64 提供 |
-| リバースプロキシ | **nginx:1.31（公式）** | Docker 公式 |
+| リバースプロキシ | **nginx:1.31.9（公式）** | Docker 公式 |
 | 永続化 | **local-path-provisioner** | k3s 同梱の既定 StorageClass |
 | 機微情報 | **SealedSecrets / SOPS**（運用リポジトリ） | 業界標準。Sealed Secrets は Bitnami の方針変更の影響を受けない |
 
@@ -469,7 +480,7 @@ kubectl -n d-party rollout status  deploy/d-party-django -w
 #  - 旧 Pod の preStop が走り、Endpoints から外れる
 #    kubectl -n d-party get endpoints d-party-django -w
 #  - 新 Pod が Ready になってから旧 Pod が Terminating に入る (maxUnavailable=0)
-#  - soak ログで「closed」が出たら、Chrome 拡張側の RoomSession が同 room へ再 join するか
+#  - soak ログに「closed」（1012）が出る。拡張機能は自動再接続しないので、共有リンクから入り直せるか
 #  - rollout 完了まで HTTP/API がエラーを返さない（5xx が混じらない）
 ```
 
@@ -495,7 +506,7 @@ k3d cluster delete d-party
 
 | 事象 | 原因 | 回避 |
 |---|---|---|
-| WS が ~100 秒で切れる | Cloudflare のアイドル切断 | クライアントから `ping_interval=20` 等で送信。`RoomSession` の再接続が前提 |
+| WS が ~100 秒で切れる | Cloudflare のアイドル切断 | クライアントから `ping_interval=20` 等で送信する（拡張機能は自動再接続しない） |
 | URL が毎回変わる | Quick Tunnel の仕様 | 検証専用と割り切る。継続利用は Named Tunnel に切替 |
 | Chrome 拡張の host_permissions に弾かれる | `manifest.json` の match が `d-party.net` 固定 | 検証時のみ `*://*.trycloudflare.com/*` を追記して再ビルド |
 | `502/521` が返る | nginx Pod がまだ Ready でない／Service 名ミス | `kubectl -n d-party get endpoints d-party-nginx` を確認 |
@@ -593,8 +604,8 @@ values を 1 行変えて push し、Argo CD が自動でローリング更新�
 
 ```bash
 # 1) values 変更 → commit → push
-sed -i 's/gunicornWorkers: 2/gunicornWorkers: 3/' infra/helm/d-party/values.yaml
-git commit -am "deploy: bump gunicornWorkers 2->3"
+sed -i 's/gunicornWorkers: 3/gunicornWorkers: 4/' infra/helm/d-party/values.yaml
+git commit -am "deploy: bump gunicornWorkers 3->4"
 git push
 
 # 2) Argo CD に手動 refresh を促す（既定 poll は 3 分）
@@ -604,7 +615,7 @@ kubectl -n argocd patch application d-party --type merge \
 # 3) Pod が入れ替わるのを観察
 kubectl -n d-party get pods -l app.kubernetes.io/component=django -w
 
-# 4) 反映確認（GUNICORN_CMD_ARGS に --workers 3 が入る）
+# 4) 反映確認（GUNICORN_CMD_ARGS に --workers 4 が入る）
 kubectl -n d-party get pod -l app.kubernetes.io/component=django \
   -o jsonpath='{.items[0].spec.containers[0].env[?(@.name=="GUNICORN_CMD_ARGS")].value}{"\n"}'
 ```

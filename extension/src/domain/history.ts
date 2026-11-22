@@ -34,7 +34,6 @@ export interface OperationMeta {
 }
 
 /** Wire `operation` → icon and label. Null for operations not shown in the UI. */
-
 export function describeOperation(operation: string): OperationMeta | null {
   if (operation.startsWith("ratechange")) {
     const value = operation.slice("ratechange".length);

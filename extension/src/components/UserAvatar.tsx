@@ -1,4 +1,6 @@
-import { DEFAULT_USER_ICON, USER_ICONS } from "./userIcons";
+import { DEFAULT_USER_ICON } from "@/domain/settings";
+
+import { USER_ICONS } from "./userIcons";
 
 /**
  * A map lookup, not a function call, so lint does not see it as creating a component during render.
@@ -6,7 +8,6 @@ import { DEFAULT_USER_ICON, USER_ICONS } from "./userIcons";
  * `constructor` or `__proto__` would otherwise be rendered as a component. The check stays in the
  * ternary's test so both branches remain plain map lookups.
  */
-
 export function UserAvatar({
   iconKey,
   className,

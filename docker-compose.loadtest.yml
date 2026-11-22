@@ -3,7 +3,7 @@
 
 services:
   k6:
-    image: grafana/k6:2.3.0
+    image: grafana/k6:2.4.0
     container_name: k6
     profiles: ["loadtest"]
     # マウントした ./loadtest（uid 1000）へ結果を書けるようにする。
@@ -19,11 +19,12 @@ services:
       PING_INTERVAL_MS: ${LOADTEST_PING_INTERVAL_MS:-1000}
       REACTION_INTERVAL_MS: ${LOADTEST_REACTION_INTERVAL_MS:-1500}
       ROOM_LOAD_MS: ${LOADTEST_ROOM_LOAD_MS:-8000}
+      # DEBUG=0 のスタックは Origin を検証する。空なら送らない。
+      ORIGIN: ${LOADTEST_ORIGIN:-}
     depends_on:
       django:
         condition: service_healthy
     # シナリオは LOADTEST_SCENARIO（ws_party.js / ws_oneway.js / ws_timer.js）。
-
     command:
       - run
       - --summary-export=/loadtest/results/summary.json

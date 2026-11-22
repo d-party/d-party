@@ -6,9 +6,13 @@ import {
   type Settings,
 } from "@/domain/settings";
 
+import { onSyncKeysChanged } from "./onSyncKeysChanged";
+
+const ALL_KEYS: readonly string[] = Object.values(STORAGE_KEYS);
+
 export class ChromeStorageSettingsRepository {
   async getAll(): Promise<Settings> {
-    const stored = await chrome.storage.sync.get(Object.values(STORAGE_KEYS));
+    const stored = await chrome.storage.sync.get([...ALL_KEYS]);
     return {
       autoAnotherTab: bool(
         stored[STORAGE_KEYS.autoAnotherTab],
@@ -55,11 +59,7 @@ export class ChromeStorageSettingsRepository {
   }
 
   onChange(listener: (settings: Settings) => void): () => void {
-    const handler = () => {
-      void this.getAll().then(listener);
-    };
-    chrome.storage.sync.onChanged.addListener(handler);
-    return () => chrome.storage.sync.onChanged.removeListener(handler);
+    return onSyncKeysChanged(ALL_KEYS, () => this.getAll().then(listener));
   }
 }
 
@@ -73,15 +73,12 @@ function str(value: unknown, fallback: string): string {
 
 function strArray(value: unknown, fallback: string[]): string[] {
   if (!Array.isArray(value)) return fallback;
-  const items = value.filter((v): v is string => typeof v === "string");
-  return items;
+  return value.filter((v) => typeof v === "string");
 }
 
 function reactionDisplay(
   value: unknown,
   fallback: ReactionDisplayMode,
 ): ReactionDisplayMode {
-  return REACTION_DISPLAY_MODES.includes(value as ReactionDisplayMode)
-    ? (value as ReactionDisplayMode)
-    : fallback;
+  return REACTION_DISPLAY_MODES.find((mode) => mode === value) ?? fallback;
 }

@@ -78,6 +78,7 @@ LOADTEST_SCENARIO=ws_timer.js LOADTEST_ROOM_SIZE=4 \
 | `LOADTEST_PING_INTERVAL_MS` | `1000` | 各参加者の video_operation 間隔 |
 | `LOADTEST_REACTION_INTERVAL_MS` | `1500` | reaction 間隔 |
 | `LOADTEST_ROOM_LOAD_MS` | `8000` | 1 ルームの負荷フェーズ長 |
+| `LOADTEST_ORIGIN` | （空） | ハンドシェイクの `Origin`。`DEBUG=0` のスタックを叩くときに `https://<D_ANIME_STORE_DOMAIN>` を渡す |
 
 ## 既知の注意点（コードベース由来）
 

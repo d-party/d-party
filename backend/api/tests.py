@@ -11,18 +11,6 @@ from streamer.factories import AnimeRoomFactory, AnimeUserFactory
 from streamer.models import AnimeReaction, ReactionStat
 
 
-def _clear_reaction_tables() -> None:
-    """Drop reaction rows so reaction-count assertions are deterministic.
-
-    The test DB uses a ``MIRROR`` config, so rows committed by ``transaction=True``
-    tests (e.g. the consumer folding test) are not flushed between runs. Called in
-    ``setUp`` it runs inside the per-test transaction and is rolled back afterwards,
-    so it only hides that committed pollution for the duration of one test.
-    """
-    ReactionStat.objects.all().delete()
-    AnimeReaction.objects.all().delete(hard=True)
-
-
 class TestHealthCheckAPI(APITestCase):
     def setUp(self) -> None:
         self.client = APIClient()
@@ -101,7 +89,11 @@ class TestAnimeStoreLobbyResolveAPI(APITestCase):
         assert response.data["part_id"] == "654321"
         assert response.data["room_id"] == str(room.room_id)
         assert response.data["title"] == "鬼滅の刃 - 第1話 - 残酷"
-        assert "partId=654321" in response.data["redirect_url"]
+        # 拡張機能は転送先の URL から ``party`` と ``room_id`` を読んで参加する。
+        assert response.data["redirect_url"] == (
+            f"https://{settings.D_ANIME_STORE_DOMAIN}/animestore/sc_d_pc"
+            f"?partId=654321&party=join&room_id={room.room_id}"
+        )
 
     @pytest.mark.django_db
     def test_lobby_resolve_not_found_404(self):
@@ -141,7 +133,6 @@ class TestStatsPeriodScope(APITestCase):
 
     def setUp(self) -> None:
         self.client = APIClient()
-        _clear_reaction_tables()
 
     @staticmethod
     def _make_reaction(room, reaction_type, when):
@@ -153,11 +144,7 @@ class TestStatsPeriodScope(APITestCase):
 
     @pytest.mark.django_db
     def test_user_all_count_respects_days(self):
-        """40 日前のユーザーは 30 日窓では数えず 365 日窓では数える。
-
-        テスト DB は ``MIRROR`` 設定で他テストの行が残りうるため、絶対値ではなく
-        「40 日前ユーザーを 1 人足すと 365 日窓だけ +1 される」差分で検証する。
-        """
+        """40 日前のユーザーは 30 日窓では数えず 365 日窓では数える。"""
         from streamer.models import AnimeUser
 
         AnimeUserFactory()  # recent（auto_now_add で created_at=now）
@@ -169,13 +156,13 @@ class TestStatsPeriodScope(APITestCase):
 
         c30 = self.client.get(endpoint, {"days": "30"}).data["data"]["count"]
         c365 = self.client.get(endpoint, {"days": "365"}).data["data"]["count"]
-        assert c30 >= 1  # recent は 30 日窓に入る
-        assert c365 - c30 >= 1  # 40 日前ユーザーは 365 日窓のみに入る
+        assert c30 == 1  # recent だけ
+        assert c365 == 2  # 40 日前のユーザーも入る
 
     @pytest.mark.django_db
     def test_reaction_counts_come_from_reactionstat_and_live(self):
         """リアクション集計は ReactionStat（畳み込み済み）と alive ルームの合算。"""
-        today = timezone.now().date()
+        today = timezone.localdate()
         ReactionStat.objects.create(date=today, reaction_type="S", count=5)
         live_room = AnimeRoomFactory()  # alive
         self._make_reaction(live_room, "S", timezone.now())
@@ -198,11 +185,10 @@ class TestStatsCache(APITestCase):
     def setUp(self) -> None:
         self.client = APIClient()
         self.endpoint = "/api/v1/statistics/anime-store/anime-reaction-all-count"
-        _clear_reaction_tables()
 
     @pytest.mark.django_db
     def test_response_is_cached(self):
-        today = timezone.now().date()
+        today = timezone.localdate()
         ReactionStat.objects.create(date=today, reaction_type="S", count=3)
 
         first = self.client.get(self.endpoint, {"days": "30"})
@@ -217,7 +203,6 @@ class TestReactionCountShieldsAPI(APITestCase):
     def setUp(self) -> None:
         self.client = APIClient()
         self.endpoint = "/api/shields/total-reaction"
-        _clear_reaction_tables()
 
     @pytest.mark.django_db
     def test_counts_folded_and_live_reactions(self):

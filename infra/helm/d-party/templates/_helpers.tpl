@@ -38,6 +38,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "d-party.nginx.fullname" -}}{{ include "d-party.fullname" . }}-nginx{{- end -}}
 {{- define "d-party.postgres.fullname" -}}{{ include "d-party.fullname" . }}-postgres{{- end -}}
 {{- define "d-party.redis.fullname" -}}{{ include "d-party.fullname" . }}-redis{{- end -}}
+{{- define "d-party.closeExpiredRooms.fullname" -}}{{ include "d-party.fullname" . }}-close-expired-rooms{{- end -}}
 
 {{/* 機微値を載せる Secret 名（existingSecret 優先） */}}
 {{- define "d-party.secretName" -}}
@@ -59,8 +60,8 @@ PriorityClass 名を解決する（stateful / app）。name が空なら何も�
 {{- define "d-party.priorityClassName.app" -}}{{ .Values.priorityClass.app.name }}{{- end -}}
 
 {{/*
-Django/Frontend/migrate が共通で読む env（DB/Redis ホストはコンポーネント名から導出）。
-envFrom(ConfigMap+Secret) に加えて、ここで接続ホストを env として注入する。
+backend イメージを使うコンテナ（django / migrate / collectstatic）が読む接続先の env。
+ホストはコンポーネント名から、ポート・ユーザー・DB 名は values から導出する。
 */}}
 {{- define "d-party.connectionEnv" -}}
 - name: DATABASE_HOST
