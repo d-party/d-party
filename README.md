@@ -23,13 +23,13 @@
 | streamer/format.py                                      |       55 |        0 |        2 |        0 |    100% |           |
 | streamer/management/\_\_init\_\_.py                     |        0 |        0 |        0 |        0 |    100% |           |
 | streamer/management/commands/\_\_init\_\_.py            |        0 |        0 |        0 |        0 |    100% |           |
-| streamer/management/commands/close\_active\_sessions.py |       16 |        0 |        0 |        0 |    100% |           |
-| streamer/management/commands/close\_expired\_rooms.py   |       42 |        3 |        8 |        2 |     90% |42, 61-62, 92-\>91 |
+| streamer/management/commands/close\_active\_sessions.py |       20 |        0 |        2 |        0 |    100% |           |
+| streamer/management/commands/close\_expired\_rooms.py   |       42 |        0 |        8 |        0 |    100% |           |
 | streamer/mixins.py                                      |       38 |        0 |        4 |        0 |    100% |           |
 | streamer/models.py                                      |       62 |        0 |        0 |        0 |    100% |           |
 | streamer/routing.py                                     |        3 |        0 |        0 |        0 |    100% |           |
 | streamer/util.py                                        |        9 |        0 |        2 |        0 |    100% |           |
-| **TOTAL**                                               | **1015** |    **3** |  **156** |    **3** | **99%** |           |
+| **TOTAL**                                               | **1019** |    **0** |  **158** |    **1** | **99%** |           |
 
 
 ## Setup coverage badge
