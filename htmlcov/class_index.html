@@ -11,7 +11,7 @@
 <header>
     <div class="content">
         <h1>Coverage report:
-            <span class="pc_cov">91%</span>
+            <span class="pc_cov">99%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -27,6 +27,8 @@
                         <kbd>s</kbd>
                         <kbd>m</kbd>
                         <kbd>x</kbd>
+                        <kbd>b</kbd>
+                        <kbd>p</kbd>
                         <kbd>c</kbd>
                         &nbsp; change column sorting
                     </p>
@@ -55,20 +57,35 @@
         </h2>
         <p class="text">
             <a class="nav" href="https://coverage.readthedocs.io/en/7.17.3">coverage.py v7.17.3</a>,
-            created at 2026-11-22 07:19 +0000
+            created at 2026-11-22 15:43 +0000
         </p>
     </div>
 </header>
 <main id="index">
     <table class="index" data-sortable>
         <thead>
+            <tr class="tablehead grouphead">
+                <th class="spacer">&nbsp;</th>
+                <th class="spacer">&nbsp;</th>
+                <th class="spacer">&nbsp;</th>
+                <th class="left" colspan="4">Statements</th>
+                <th class="spacer">&nbsp;</th>
+                <th class="left" colspan="3">Branches</th>
+                <th class="spacer">&nbsp;</th>
+                <th>Total</th>
+            </tr>
             <tr class="tablehead" title="Click to sort">
                 <th id="file" class="name" aria-sort="none" data-shortcut="f">File<span class="arrows"></span></th>
                 <th id="region" class="name" aria-sort="none" data-default-sort-order="ascending" data-shortcut="n">class<span class="arrows"></span></th>
                 <th class="spacer">&nbsp;</th>
+                <th id="statements_coverage" aria-sort="none" data-default-sort-order="descending">coverage<span class="arrows"></span></th>
                 <th id="statements" aria-sort="none" data-default-sort-order="descending" data-shortcut="s">statements<span class="arrows"></span></th>
                 <th id="missing" aria-sort="none" data-default-sort-order="descending" data-shortcut="m">missing<span class="arrows"></span></th>
                 <th id="excluded" aria-sort="none" data-default-sort-order="descending" data-shortcut="x">excluded<span class="arrows"></span></th>
+                <th class="spacer">&nbsp;</th>
+                <th id="branches_coverage" aria-sort="none" data-default-sort-order="descending">coverage<span class="arrows"></span></th>
+                <th id="branches" aria-sort="none" data-default-sort-order="descending" data-shortcut="b">branches<span class="arrows"></span></th>
+                <th id="partial" aria-sort="none" data-default-sort-order="descending" data-shortcut="p">partial<span class="arrows"></span></th>
                 <th class="spacer">&nbsp;</th>
                 <th id="coverage" aria-sort="none" data-shortcut="c">coverage<span class="arrows"></span></th>
             </tr>
@@ -78,7 +95,12 @@
                 <td class="name"><a href="z_10fae538ba4e8521_apps_py.html">api<span class="sep">/</span>apps.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_apps_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="4 4">100%</td>
                 <td>4</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -88,7 +110,12 @@
                 <td class="name"><a href="z_10fae538ba4e8521_serializers_py.html">api<span class="sep">/</span>serializers.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_serializers_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="30 30">100%</td>
                 <td>30</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -98,7 +125,12 @@
                 <td class="name"><a href="z_10fae538ba4e8521_urls_py.html">api<span class="sep">/</span>urls.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_urls_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="3 3">100%</td>
                 <td>3</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -108,7 +140,12 @@
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t182">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t182"><data value='HealthCheckAPI'>HealthCheckAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="1 1">100%</td>
                 <td>1</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -118,77 +155,117 @@
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t192">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t192"><data value='ChromeExtensionVersionCheckAPI'>ChromeExtensionVersionCheckAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="7 7">100%</td>
                 <td>7</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="7 7">100%</td>
+                <td data-ratio="4 4">100%</td>
+                <td>4</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="11 11">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t238">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t238"><data value='AnimeActiveUserPerDayAPI'>AnimeActiveUserPerDayAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="7 7">100%</td>
                 <td>7</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="7 7">100%</td>
+                <td data-ratio="2 2">100%</td>
+                <td>2</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="9 9">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t256">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t256"><data value='AnimeActiveRoomPerDayAPI'>AnimeActiveRoomPerDayAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="7 7">100%</td>
                 <td>7</td>
-                <td>1</td>
+                <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="6 7">86%</td>
+                <td data-ratio="2 2">100%</td>
+                <td>2</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="9 9">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t274">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t274"><data value='AnimeRoomReactionCountAPI'>AnimeRoomReactionCountAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="8 8">100%</td>
                 <td>8</td>
-                <td>1</td>
+                <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="7 8">88%</td>
+                <td data-ratio="2 2">100%</td>
+                <td>2</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="10 10">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t296">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t296"><data value='AnimeRoomReactionAllCountAPI'>AnimeRoomReactionAllCountAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="8 8">100%</td>
                 <td>8</td>
-                <td>1</td>
+                <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="7 8">88%</td>
+                <td data-ratio="2 2">100%</td>
+                <td>2</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="10 10">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t315">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t315"><data value='AnimeUserAllCountAPI'>AnimeUserAllCountAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="8 8">100%</td>
                 <td>8</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="8 8">100%</td>
+                <td data-ratio="2 2">100%</td>
+                <td>2</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="10 10">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t334">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t334"><data value='AnimeRoomAllCountAPI'>AnimeRoomAllCountAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="8 8">100%</td>
                 <td>8</td>
-                <td>1</td>
+                <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="7 8">88%</td>
+                <td data-ratio="2 2">100%</td>
+                <td>2</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="10 10">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t353">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t353"><data value='AnimeUserAliveCountAPI'>AnimeUserAliveCountAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="1 1">100%</td>
                 <td>1</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -198,7 +275,12 @@
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t363">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t363"><data value='AnimeRoomAliveCountAPI'>AnimeRoomAliveCountAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="1 1">100%</td>
                 <td>1</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -208,17 +290,27 @@
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t373">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t373"><data value='ShieldsView'>_ShieldsView</data></a></td>
                 <td class="spacer">&nbsp;</td>
-                <td>2</td>
+                <td data-ratio="1 1">100%</td>
                 <td>1</td>
                 <td>0</td>
+                <td>1</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="1 2">50%</td>
+                <td data-ratio="0 0">100%</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="1 1">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t386">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t386"><data value='RoomCountShieldsAPI'>RoomCountShieldsAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="1 1">100%</td>
                 <td>1</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -228,7 +320,12 @@
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t391">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t391"><data value='RoomCountParDayShieldsAPI'>RoomCountParDayShieldsAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="3 3">100%</td>
                 <td>3</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -238,7 +335,12 @@
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t403">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t403"><data value='UserCountShieldsAPI'>UserCountShieldsAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="1 1">100%</td>
                 <td>1</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -248,7 +350,12 @@
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t408">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t408"><data value='UserCountParDayShieldsAPI'>UserCountParDayShieldsAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="3 3">100%</td>
                 <td>3</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -258,7 +365,12 @@
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t420">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t420"><data value='ReactionCountShieldsAPI'>ReactionCountShieldsAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="2 2">100%</td>
                 <td>2</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -268,87 +380,147 @@
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t426">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html#t426"><data value='AnimeStoreLobbyResolveAPI'>AnimeStoreLobbyResolveAPI</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="10 10">100%</td>
                 <td>10</td>
-                <td>1</td>
+                <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="9 10">90%</td>
+                <td data-ratio="2 2">100%</td>
+                <td>2</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="12 12">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html">api<span class="sep">/</span>views.py</a></td>
                 <td class="name"><a href="z_10fae538ba4e8521_views_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="143 143">100%</td>
                 <td>143</td>
-                <td>1</td>
+                <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="142 143">99%</td>
+                <td data-ratio="22 22">100%</td>
+                <td>22</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="165 165">100%</td>
+            </tr>
+            <tr class="region">
+                <td class="name"><a href="z_6f9138c731eeec9f_asgi_py.html">d_party<span class="sep">/</span>asgi.py</a></td>
+                <td class="name"><a href="z_6f9138c731eeec9f_asgi_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="14 14">100%</td>
+                <td>14</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="2 2">100%</td>
+                <td>2</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="16 16">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6f9138c731eeec9f_dashboard_py.html">d_party<span class="sep">/</span>dashboard.py</a></td>
                 <td class="name"><a href="z_6f9138c731eeec9f_dashboard_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="29 29">100%</td>
                 <td>29</td>
-                <td>19</td>
+                <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="10 29">34%</td>
+                <td data-ratio="6 6">100%</td>
+                <td>6</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="35 35">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6f9138c731eeec9f_settings_py.html">d_party<span class="sep">/</span>settings.py</a></td>
                 <td class="name"><a href="z_6f9138c731eeec9f_settings_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="51 51">100%</td>
                 <td>51</td>
-                <td>3</td>
+                <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="48 51">94%</td>
+                <td data-ratio="8 8">100%</td>
+                <td>8</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="59 59">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6f9138c731eeec9f_urls_py.html">d_party<span class="sep">/</span>urls.py</a></td>
                 <td class="name"><a href="z_6f9138c731eeec9f_urls_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="7 7">100%</td>
                 <td>7</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="2 2">100%</td>
                 <td>2</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="5 7">71%</td>
+                <td data-ratio="9 9">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6771cd11f63e06d1_admin_py.html#t33">streamer<span class="sep">/</span>admin.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_admin_py.html#t33"><data value='LogicalDeletionModelAdmin'>LogicalDeletionModelAdmin</data></a></td>
                 <td class="spacer">&nbsp;</td>
-                <td>1</td>
+                <td data-ratio="1 1">100%</td>
                 <td>1</td>
                 <td>0</td>
+                <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="0 1">0%</td>
+                <td data-ratio="0 0">100%</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="1 1">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6771cd11f63e06d1_admin_py.html#t46">streamer<span class="sep">/</span>admin.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_admin_py.html#t46"><data value='AnimeRoomAdmin'>AnimeRoomAdmin</data></a></td>
                 <td class="spacer">&nbsp;</td>
-                <td>3</td>
+                <td data-ratio="3 3">100%</td>
                 <td>3</td>
                 <td>0</td>
+                <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="0 3">0%</td>
+                <td data-ratio="0 0">100%</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="3 3">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6771cd11f63e06d1_admin_py.html">streamer<span class="sep">/</span>admin.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_admin_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="55 55">100%</td>
                 <td>55</td>
-                <td>2</td>
+                <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="53 55">96%</td>
+                <td data-ratio="0 0">100%</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="55 55">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6771cd11f63e06d1_apps_py.html">streamer<span class="sep">/</span>apps.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_apps_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="4 4">100%</td>
                 <td>4</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -358,57 +530,72 @@
                 <td class="name"><a href="z_6771cd11f63e06d1_consumers_py.html#t99">streamer<span class="sep">/</span>consumers.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_consumers_py.html#t99"><data value='AnimePartyConsumer'>AnimePartyConsumer</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="213 213">100%</td>
                 <td>213</td>
-                <td>30</td>
+                <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="183 213">86%</td>
+                <td data-ratio="65 66">98%</td>
+                <td>66</td>
+                <td>1</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="278 279">99%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6771cd11f63e06d1_consumers_py.html">streamer<span class="sep">/</span>consumers.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_consumers_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="120 120">100%</td>
                 <td>120</td>
-                <td>10</td>
+                <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="110 120">92%</td>
+                <td data-ratio="8 8">100%</td>
+                <td>8</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="128 128">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6771cd11f63e06d1_cron_py.html">streamer<span class="sep">/</span>cron.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_cron_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="13 13">100%</td>
                 <td>13</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="13 13">100%</td>
-            </tr>
-            <tr class="region">
-                <td class="name"><a href="z_6771cd11f63e06d1_factories_py.html">streamer<span class="sep">/</span>factories.py</a></td>
-                <td class="name"><a href="z_6771cd11f63e06d1_factories_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
-                <td class="spacer">&nbsp;</td>
-                <td>25</td>
-                <td>0</td>
+                <td data-ratio="4 4">100%</td>
+                <td>4</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="25 25">100%</td>
+                <td data-ratio="17 17">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6771cd11f63e06d1_fields_py.html#t25">streamer<span class="sep">/</span>fields.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_fields_py.html#t25"><data value='EncryptedCharField'>EncryptedCharField</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="8 8">100%</td>
                 <td>8</td>
-                <td>2</td>
+                <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="6 8">75%</td>
+                <td data-ratio="4 4">100%</td>
+                <td>4</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="12 12">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6771cd11f63e06d1_fields_py.html">streamer<span class="sep">/</span>fields.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_fields_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="15 15">100%</td>
                 <td>15</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -418,17 +605,27 @@
                 <td class="name"><a href="z_6771cd11f63e06d1_format_py.html#t64">streamer<span class="sep">/</span>format.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_format_py.html#t64"><data value='Option'>Option</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="3 3">100%</td>
                 <td>3</td>
-                <td>1</td>
+                <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="2 3">67%</td>
+                <td data-ratio="2 2">100%</td>
+                <td>2</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="5 5">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6771cd11f63e06d1_format_py.html">streamer<span class="sep">/</span>format.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_format_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="52 52">100%</td>
                 <td>52</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -438,7 +635,12 @@
                 <td class="name"><a href="z_785f157c137619d7_close_active_sessions_py.html#t18">streamer<span class="sep">/</span>management<span class="sep">/</span>commands<span class="sep">/</span>close_active_sessions.py</a></td>
                 <td class="name"><a href="z_785f157c137619d7_close_active_sessions_py.html#t18"><data value='Command'>Command</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="8 8">100%</td>
                 <td>8</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -448,7 +650,12 @@
                 <td class="name"><a href="z_785f157c137619d7_close_active_sessions_py.html">streamer<span class="sep">/</span>management<span class="sep">/</span>commands<span class="sep">/</span>close_active_sessions.py</a></td>
                 <td class="name"><a href="z_785f157c137619d7_close_active_sessions_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="8 8">100%</td>
                 <td>8</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -458,47 +665,72 @@
                 <td class="name"><a href="z_785f157c137619d7_close_expired_rooms_py.html#t65">streamer<span class="sep">/</span>management<span class="sep">/</span>commands<span class="sep">/</span>close_expired_rooms.py</a></td>
                 <td class="name"><a href="z_785f157c137619d7_close_expired_rooms_py.html#t65"><data value='Command'>Command</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="12 12">100%</td>
                 <td>12</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="12 12">100%</td>
+                <td data-ratio="5 6">83%</td>
+                <td>6</td>
+                <td>1</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="17 18">94%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_785f157c137619d7_close_expired_rooms_py.html">streamer<span class="sep">/</span>management<span class="sep">/</span>commands<span class="sep">/</span>close_expired_rooms.py</a></td>
                 <td class="name"><a href="z_785f157c137619d7_close_expired_rooms_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="27 30">90%</td>
                 <td>30</td>
                 <td>3</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="27 30">90%</td>
+                <td data-ratio="1 2">50%</td>
+                <td>2</td>
+                <td>1</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="28 32">88%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6771cd11f63e06d1_mixins_py.html#t21">streamer<span class="sep">/</span>mixins.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_mixins_py.html#t21"><data value='LogicalDeletionQuerySet'>LogicalDeletionQuerySet</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="6 6">100%</td>
                 <td>6</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="2 2">100%</td>
                 <td>2</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="4 6">67%</td>
+                <td data-ratio="8 8">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6771cd11f63e06d1_mixins_py.html#t42">streamer<span class="sep">/</span>mixins.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_mixins_py.html#t42"><data value='LogicalDeletionMixin'>LogicalDeletionMixin</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="10 10">100%</td>
                 <td>10</td>
-                <td>5</td>
+                <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="5 10">50%</td>
+                <td data-ratio="2 2">100%</td>
+                <td>2</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="12 12">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6771cd11f63e06d1_mixins_py.html">streamer<span class="sep">/</span>mixins.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_mixins_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="22 22">100%</td>
                 <td>22</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -508,7 +740,12 @@
                 <td class="name"><a href="z_6771cd11f63e06d1_models_py.html#t15">streamer<span class="sep">/</span>models.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_models_py.html#t15"><data value='AnimeRoomQuerySet'>AnimeRoomQuerySet</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="1 1">100%</td>
                 <td>1</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -518,7 +755,12 @@
                 <td class="name"><a href="z_6771cd11f63e06d1_models_py.html#t37">streamer<span class="sep">/</span>models.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_models_py.html#t37"><data value='AnimeRoom'>AnimeRoom</data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="2 2">100%</td>
                 <td>2</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
@@ -528,31 +770,61 @@
                 <td class="name"><a href="z_6771cd11f63e06d1_models_py.html#t83">streamer<span class="sep">/</span>models.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_models_py.html#t83"><data value='AnimeUser'>AnimeUser</data></a></td>
                 <td class="spacer">&nbsp;</td>
-                <td>1</td>
+                <td data-ratio="1 1">100%</td>
                 <td>1</td>
                 <td>0</td>
+                <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="0 1">0%</td>
+                <td data-ratio="0 0">100%</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="1 1">100%</td>
             </tr>
             <tr class="region">
                 <td class="name"><a href="z_6771cd11f63e06d1_models_py.html">streamer<span class="sep">/</span>models.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_models_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="58 58">100%</td>
                 <td>58</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
                 <td data-ratio="58 58">100%</td>
             </tr>
             <tr class="region">
+                <td class="name"><a href="z_6771cd11f63e06d1_routing_py.html">streamer<span class="sep">/</span>routing.py</a></td>
+                <td class="name"><a href="z_6771cd11f63e06d1_routing_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="3 3">100%</td>
+                <td>3</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="0 0">100%</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="3 3">100%</td>
+            </tr>
+            <tr class="region">
                 <td class="name"><a href="z_6771cd11f63e06d1_util_py.html">streamer<span class="sep">/</span>util.py</a></td>
                 <td class="name"><a href="z_6771cd11f63e06d1_util_py.html"><data value=''><span class='no-noun'>(no class)</span></data></a></td>
                 <td class="spacer">&nbsp;</td>
+                <td data-ratio="9 9">100%</td>
                 <td>9</td>
                 <td>0</td>
                 <td>0</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="9 9">100%</td>
+                <td data-ratio="2 2">100%</td>
+                <td>2</td>
+                <td>0</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="11 11">100%</td>
             </tr>
         </tbody>
         <tfoot>
@@ -560,24 +832,29 @@
                 <td class="name">Total</td>
                 <td class="name">&nbsp;</td>
                 <td class="spacer">&nbsp;</td>
-                <td>1024</td>
-                <td>91</td>
-                <td>0</td>
+                <td data-ratio="1012 1015">99%</td>
+                <td>1015</td>
+                <td>3</td>
+                <td>1</td>
                 <td class="spacer">&nbsp;</td>
-                <td data-ratio="933 1024">91%</td>
+                <td data-ratio="153 156">98%</td>
+                <td>156</td>
+                <td>3</td>
+                <td class="spacer">&nbsp;</td>
+                <td data-ratio="1165 1171">99%</td>
             </tr>
         </tfoot>
     </table>
     <p id="no_rows">
         No items found using the specified filter.
     </p>
-        <p>54 empty classes skipped.</p>
+        <p>48 empty classes skipped.</p>
 </main>
 <footer>
     <div class="content">
         <p>
             <a class="nav" href="https://coverage.readthedocs.io/en/7.17.3">coverage.py v7.17.3</a>,
-            created at 2026-11-22 07:19 +0000
+            created at 2026-11-22 15:43 +0000
         </p>
     </div>
     <aside class="hidden">
