@@ -7,10 +7,18 @@ on:
       - main
     paths:
       - "backend/**"
+      # streamer/test_protocol_contract.py が backend の値と突き合わせるファイル。
+      - "extension/src/domain/protocol.ts"
+      - "extension/src/domain/reactions.ts"
+      - "frontend/src/components/stats/StatsDashboard.tsx"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     paths:
       - "backend/**"
+      # streamer/test_protocol_contract.py が backend の値と突き合わせるファイル。
+      - "extension/src/domain/protocol.ts"
+      - "extension/src/domain/reactions.ts"
+      - "frontend/src/components/stats/StatsDashboard.tsx"
       - ".github/workflows/backend-ci.yml"
   workflow_dispatch:
 

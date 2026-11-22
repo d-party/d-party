@@ -4,7 +4,7 @@
 
 | ワークフロー | name | 内容 | paths |
 | --- | --- | --- | --- |
-| `backend-ci.yml` | `Backend/CI` | ruff · pytest · mypy · openapi（`openapi.json` の drift）· license-check | `backend/**` |
+| `backend-ci.yml` | `Backend/CI` | ruff · pytest · mypy · openapi（`openapi.json` の drift）· license-check | `backend/**` + 契約テストが読む TypeScript（`protocol.ts` · `reactions.ts` · `StatsDashboard.tsx`） |
 | `backend-build.yml` | `Backend/Build` | hadolint · build → dockle → migrate → 起動 → API 応答 | `backend/**` |
 | `frontend-ci.yml` | `Frontend/CI` | 生成物の drift · typecheck · lint · license-check | `frontend/**` `packages/**` `backend/openapi.json` + workspace 設定 |
 | `frontend-build.yml` | `Frontend/Build` | next build · storybook · イメージ build → 起動 → ページ疎通 | 同上 |
