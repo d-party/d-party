@@ -23,6 +23,7 @@ dependencies = [
     "python-dotenv>=1.0",
     "cryptography>=44.0",
     "drf-spectacular>=0.30.0",
+    "django-otp-webauthn>=0.10",
 ]
 
 [dependency-groups]

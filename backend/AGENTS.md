@@ -26,7 +26,7 @@ streamer/       同時視聴のコア
   management/commands/close_active_sessions.py   起動時の ghost 回収
   management/commands/close_expired_rooms.py     48 時間を超えたルームの強制クローズ（cron）
 api/            DRF（統計 · shields バッジ · バージョン確認 · ロビー解決）
-templates/admin/ 管理画面トップ（Unfold ダッシュボード）
+templates/admin/ 管理画面トップ（Unfold ダッシュボード）· ログイン画面とパスキー一覧への差し込み
 entrypoint.sh   close_active_sessions → runserver / gunicorn
 conftest.py     テストでは InMemoryChannelLayer を使う
 manage.py       /env_files/*.env があれば読む
@@ -59,6 +59,16 @@ compose・nginx・env はルートが持ち、`backend/` は build context と�
   `close_expired_rooms` が強制クローズする（統計に alive のまま残さない）。ホストの `delete_room` と同じく
   リアクションを畳み込み、ユーザーとルームを論理削除し、`room_deleted` を配信する。起動時ではなく
   cron で走らせる（k3s は Helm の CronJob、compose の本番は `close-expired-rooms` サービス）。
+- **管理画面のパスキー**: django-otp-webauthn。パスワードのログインも残している。
+  - URL は `/admin/passkey/`。nginx が Django へ流すのは `/admin/` 配下だけなので外へ出さない。
+    `urls.py` では `admin.site.urls` より前に置く。
+  - RP ID は `MY_DOMAIN`。変えると登録済みのパスキーはすべて使えなくなる。dev（`localhost`）と
+    本番のパスキーは別物。
+  - 登録は管理画面の「パスキー」一覧から。登録済みのパスキーがあるアカウントへの追加は、
+    パスキーでログインしたセッションからしかできない（ライブラリの仕様）。パスキーを失くしたら、
+    パスワードで入って一覧から古い行を消すと登録し直せる。
+  - テンプレートは Unfold のものをコピーせず、同名で継承してブロックだけ埋める
+    （`login.html` の `login_after`）。要素の id は django-otp-webauthn のスクリプトとの契約。
 
 ## コマンド
 
