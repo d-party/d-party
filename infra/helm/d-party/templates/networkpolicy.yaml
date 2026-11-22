@@ -2,8 +2,8 @@
 # postgres / redis への ingress を、同一 release のうち実際に接続するコンポーネントだけに絞る。
 # from.podSelector は同一 namespace 内でマッチするため、他 namespace / 他サービス
 # からの接続は（policyType: Ingress を当てた時点で）既定遮断される。
-#   postgres … django と migrate Job
-#   redis    … django（Channels レイヤとキャッシュ）
+#   postgres … django と migrate Job と close-expired-rooms CronJob
+#   redis    … django（Channels レイヤとキャッシュ）と close-expired-rooms CronJob（room_deleted の配信）
 # nginx / frontend は DB にも Redis にも触れないので許可しない。
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -27,7 +27,7 @@ spec:
             matchExpressions:
               - key: app.kubernetes.io/component
                 operator: In
-                values: ["django", "migrate"]
+                values: ["django", "migrate", "close-expired-rooms"]
       ports:
         - protocol: TCP
           port: {{ .Values.postgres.service.port }}
@@ -51,7 +51,10 @@ spec:
         - podSelector:
             matchLabels:
               {{- include "d-party.selectorLabels" . | nindent 14 }}
-              app.kubernetes.io/component: django
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: ["django", "close-expired-rooms"]
       ports:
         - protocol: TCP
           port: {{ .Values.redis.service.port }}

@@ -129,7 +129,6 @@
 }
 
 /* On document.body (see showTooltip). JS sets left/top from the button's rect. */
-
 .dparty-tooltip {
     position: fixed;
     transform: translate(-50%, calc(-100% - 8px));
