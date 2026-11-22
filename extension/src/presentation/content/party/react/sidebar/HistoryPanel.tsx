@@ -17,7 +17,7 @@ import {
   UserMinus,
   UserPlus,
 } from "lucide-react";
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { UserAvatar } from "@/components/UserAvatar";
 import type { HistoryIcon } from "@/domain/history";
@@ -52,7 +52,7 @@ export function HistoryPanel({
 }: {
   state: SidebarState;
 }): React.JSX.Element {
-  const [filter, setFilter] = useState<string>(ALL_FILTER);
+  const [filter, setFilter] = useState(ALL_FILTER);
   const [page, setPage] = useState(0);
   const [perPage, setPerPage] = useState(8);
   const listRef = useRef<HTMLDivElement>(null);
@@ -86,28 +86,26 @@ export function HistoryPanel({
   );
 
   // サイドバーの高さに 1 ページ分の行数を合わせ、スクロールを出さない。
-  const recompute = useCallback(() => {
-    const container = listRef.current;
-    if (!container) return;
-    const containerHeight = container.clientHeight;
-    const row = container.querySelector("li");
-    if (!row || containerHeight <= 0) return;
-    const rowHeight = row.getBoundingClientRect().height;
-    if (rowHeight <= 0) return;
-    const fit = Math.floor(
-      (containerHeight + ROW_GAP_PX) / (rowHeight + ROW_GAP_PX),
-    );
-    setPerPage(Math.max(1, fit));
-  }, []);
-
+  // 行が 0 → 1 件になると測れるようになるので、件数が変わるたびに測り直す。
   useLayoutEffect(() => {
-    recompute();
     const container = listRef.current;
     if (!container) return;
-    const observer = new ResizeObserver(() => recompute());
+    const recompute = (): void => {
+      const containerHeight = container.clientHeight;
+      const row = container.querySelector("li");
+      if (!row || containerHeight <= 0) return;
+      const rowHeight = row.getBoundingClientRect().height;
+      if (rowHeight <= 0) return;
+      const fit = Math.floor(
+        (containerHeight + ROW_GAP_PX) / (rowHeight + ROW_GAP_PX),
+      );
+      setPerPage(Math.max(1, fit));
+    };
+    recompute();
+    const observer = new ResizeObserver(recompute);
     observer.observe(container);
     return () => observer.disconnect();
-  }, [recompute, visible.length]);
+  }, [visible.length]);
 
   const totalPages = Math.max(1, Math.ceil(visible.length / perPage));
   const currentPage = Math.min(page, totalPages - 1);

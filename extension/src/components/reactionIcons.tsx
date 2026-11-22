@@ -176,7 +176,7 @@ import { GiSharkFin } from "react-icons/gi";
 
 const FALLBACK_REACTION_ICON = "FaQuestion";
 
-export const REACTION_ICONS: Record<string, IconType> = {
+const REACTION_ICONS: Record<string, IconType> = {
   FaAppleWhole,
   FaBaby,
   FaBacon,
@@ -357,7 +357,10 @@ export function ReactionIcon({
   className?: string;
 }): React.JSX.Element {
   const Icon =
-    (iconKey && REACTION_ICONS[iconKey]) ||
-    REACTION_ICONS[FALLBACK_REACTION_ICON];
+    REACTION_ICONS[
+      iconKey && Object.hasOwn(REACTION_ICONS, iconKey)
+        ? iconKey
+        : FALLBACK_REACTION_ICON
+    ];
   return <Icon className={className} aria-hidden />;
 }

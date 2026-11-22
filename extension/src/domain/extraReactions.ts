@@ -12,7 +12,7 @@ export interface ExtraReaction {
   reactIcon: string;
 }
 
-export const EXTRA_REACTIONS: ExtraReaction[] = [
+export const EXTRA_REACTIONS: readonly ExtraReaction[] = [
   { id: "1f44e", label: "よくないね", reactIcon: "FaThumbsDown" },
   { id: "270c", label: "ピース", reactIcon: "FaHandPeace" },
   { id: "1f596", label: "バルカン", reactIcon: "FaHandSpock" },
@@ -215,5 +215,9 @@ export const EXTRA_REACTIONS: ExtraReaction[] = [
   { id: "1f988", label: "サメ", reactIcon: "GiSharkFin" },
 ];
 
-export const EXTRA_REACTION_BY_ID: Record<string, ExtraReaction> =
-  Object.fromEntries(EXTRA_REACTIONS.map((r) => [r.id, r]));
+const EXTRA_REACTION_BY_ID = new Map(EXTRA_REACTIONS.map((r) => [r.id, r]));
+
+/** 保存済みの id が同梱から外れていることがあるので、undefined を返しうる。 */
+export function findExtraReaction(id: string): ExtraReaction | undefined {
+  return EXTRA_REACTION_BY_ID.get(id);
+}
