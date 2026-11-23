@@ -322,8 +322,10 @@ DB が小さい（数十 MB）うちは、`pg_upgrade` より dump / restore の
    ```
 
 6. テーブルごとの行数を dump と比べ、`manage.py migrate --check` が通ることを確かめる。
-7. 自動同期を戻す（`application.yaml` の `syncPolicy` を当て直す）。django の replicas と
-   CronJob は chart の値に戻り、PostSync の migrate は空振りで終わる。
+7. 自動同期を戻す（`application.yaml` の `syncPolicy` を当て直す）。django の replicas は
+   chart の値に戻り、PostSync の migrate は空振りで終わる。CronJob の `suspend` は chart が
+   持たない欄なので server-side apply では戻らない。手で戻す:
+   `kubectl -n d-party patch cronjob d-party-close-expired-rooms -p '{"spec":{"suspend":false}}'`
 8. 数週間様子を見てから、ボリュームの中の旧版のディレクトリ `<旧>` を消す。
 
 **切り戻し**（7 より前）: StatefulSet の image と PGDATA を旧版に戻し、django を戻す。旧版の
