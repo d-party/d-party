@@ -58,10 +58,13 @@ services:
       retries: 12
       start_period: 30s
   postgres:
-    image: postgres:16
+    image: postgres:18
     container_name: postgres
     volumes:
-      - "./postgres/data:/var/lib/postgresql/data"
+      # postgres:18 からはデータを /var/lib/postgresql/<版>/docker に置き、/var/lib/postgresql を
+      # マウントする形になった（/var/lib/postgresql/data にマウントすると起動しない）。
+      # 16 のときの ./postgres/data は使わなくなる。中身を移す手順は infra/README.md §3.6。
+      - "./postgres/data18:/var/lib/postgresql"
     env_file: *env_file
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]

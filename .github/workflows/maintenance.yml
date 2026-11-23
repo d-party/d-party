@@ -44,7 +44,7 @@ jobs:
     # backend の pytest 用。
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18
         env:
           POSTGRES_DB: d_party
           POSTGRES_USER: d_party
