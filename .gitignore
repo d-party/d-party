@@ -31,11 +31,7 @@ storybook-static/
 
 # ── Secrets / local env ──────────────────────────────────────────────────
 .env
-.env.secret
 *.local
 
 # ── Logs / data ──────────────────────────────────────────────────────────
 *.log
-
-# ── Let's Encrypt（証明書・秘密鍵・webroot は実行時生成。コミットしない）──
-/certbot/

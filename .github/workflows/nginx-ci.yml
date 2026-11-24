@@ -1,7 +1,6 @@
 name: Nginx/CI
 
-# テンプレートを envsubst で展開してから nginx -t にかける。prod は証明書を読むので
-# ダミーの自己署名証明書と dhparam を作る。
+# テンプレートを envsubst で展開してから nginx -t にかける。
 on:
   pull_request:
     paths:
@@ -37,35 +36,12 @@ jobs:
         with:
           persist-credentials: false
 
-      # nginx -t は証明書を実際に読むので、正しい PEM が要る。
-      - name: Prepare dummy TLS assets (prod template)
-        run: |
-          mkdir -p certs/live/"${MY_DOMAIN}"
-          openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
-            -keyout certs/live/"${MY_DOMAIN}"/privkey.pem \
-            -out certs/live/"${MY_DOMAIN}"/fullchain.pem \
-            -subj "/CN=${MY_DOMAIN}"
-          openssl dhparam -out certs/ssl-dhparams.pem 2048
-          : > certs/options-ssl-nginx.conf
-
-      - name: Validate dev template (templates/http.conf.template)
+      - name: Validate the template (templates/http.conf.template)
         run: |
           docker run --rm \
             -e MY_DOMAIN -e DJANGO_UPSTREAM -e FRONTEND_UPSTREAM \
             -v "$PWD/nginx/templates/http.conf.template:/etc/nginx/templates/default.conf.template:ro" \
             -v "$PWD/nginx/mime.types:/etc/nginx/mime.types:ro" \
-            --entrypoint sh "$NGINX_IMAGE" -c '
-              envsubst "\$MY_DOMAIN \$DJANGO_UPSTREAM \$FRONTEND_UPSTREAM" \
-                < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
-              nginx -t'
-
-      - name: Validate prod template (templates-prod/default.conf.template)
-        run: |
-          docker run --rm \
-            -e MY_DOMAIN -e DJANGO_UPSTREAM -e FRONTEND_UPSTREAM \
-            -v "$PWD/nginx/templates-prod/default.conf.template:/etc/nginx/templates/default.conf.template:ro" \
-            -v "$PWD/nginx/mime.types:/etc/nginx/mime.types:ro" \
-            -v "$PWD/certs:/etc/letsencrypt:ro" \
             --entrypoint sh "$NGINX_IMAGE" -c '
               envsubst "\$MY_DOMAIN \$DJANGO_UPSTREAM \$FRONTEND_UPSTREAM" \
                 < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf

@@ -197,41 +197,15 @@ Next の `.next/cache` は `pnpm-lock.yaml`、uv は `backend/uv.lock` です。
 
 ### 環境変数
 
-環境変数は次の env ファイルに分けてあり、どれを読むかは compose ファイルの組み合わせで決まります。
+compose が読む環境変数は次の env ファイルに分けてあります。どちらも開発用の値で、本番（k3s）の
+値は Helm の values と Secret が与えます。
 
 | ファイル | 用途 | 主なキー |
 | --- | --- | --- |
-| `.env.global` | dev / prod 共有 | `POSTGRES_*` · `*_UPSTREAM` · `TZ` · `D_ANIME_STORE_DOMAIN` |
-| `.env.dev` | 開発のみ | `DEBUG=1` · `MY_DOMAIN=localhost` · `NEXT_PUBLIC_*`（http / ws） |
-| `.env.prod` | 本番のみ | `DEBUG=0` · `MY_DOMAIN=d-party.net` · `CERTBOT_EMAIL` · `NEXT_PUBLIC_*`（https / wss） |
-| `.env.secret` | 本番のみ（git 管理外） | `SECRET_KEY` · `POSTGRES_PASSWORD`（`.env.secret.example` をコピーして作る） |
-
-`.env.global` は dev と prod の両方で読まれます。`DEBUG` や `MY_DOMAIN` のように環境ごとに
-変わる値は置かないでください。
+| `.env.global` | 全サービス共通 | `POSTGRES_*` · `*_UPSTREAM` · `TZ` · `D_ANIME_STORE_DOMAIN` |
+| `.env.dev` | 接続先など | `DEBUG=1` · `MY_DOMAIN=localhost` · `NEXT_PUBLIC_*`（http / ws） |
 
 ## 本番デプロイ
-
-### A. docker compose + Let's Encrypt（単一ホスト）
-
-nginx が TLS を終端し、certbot（webroot / http-01）が証明書を取得・更新します。
-
-```bash
-# .env.prod の MY_DOMAIN と CERTBOT_EMAIL を実値にし、秘密値を用意してから
-cp .env.secret.example .env.secret && chmod 600 .env.secret   # 値を書き換える
-./init-letsencrypt.sh --staging      # 先にテスト用の証明書で確認する
-./init-letsencrypt.sh --production
-
-docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-    --profile letsencrypt up -d
-```
-
-certbot は 12 時間ごとに `renew` を実行し、nginx は 6 時間ごとに reload して新しい証明書を
-読み込みます。証明書と秘密鍵は `./certbot/` に置かれます（gitignore 済み）。
-
-`close-expired-rooms` サービスは 1 時間ごとに `close_expired_rooms` を実行し、作成から
-48 時間を過ぎたルームを閉じます。閉じられないまま残ったルームが統計に入るのを防ぐためです。
-
-### B. k3s (Raspberry Pi) + Helm + Argo CD
 
 Raspberry Pi の k3s クラスタに Helm chart をデプロイし、Argo CD で同期します。外部からの
 アクセスは Cloudflare Tunnel 経由で、TLS も Cloudflare 側で終端します。設定は

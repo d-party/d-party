@@ -53,19 +53,16 @@ pnpm run api:generate
 ```
 docker-compose.yml            nginx · django · frontend · postgres · redis
 docker-compose.override.yml   dev（既定。frontend は pnpm dev）
-docker-compose.prod.yml       prod（nginx が TLS 終端・certbot）
 docker-compose.loadtest.yml   k6（loadtest profile）
-.env.global                   全環境共通の env
-.env.dev / .env.prod          環境固有の env
-.env.secret                   本番の秘密値（git 管理外。.env.secret.example 参照）
+.env.global                   全サービス共通の env
+.env.dev                      開発環境の env（DEBUG / MY_DOMAIN / NEXT_PUBLIC_*）
 nginx/                        nginx の設定（postgres/ は dev のデータ置き場）
 ```
 
 - frontend のビルドコンテキストはルート（`dockerfile: frontend/Dockerfile`）。
   ロックファイルがルートにあり、`frontend/` 単体では `--frozen-lockfile` を満たせない。
-- `DEBUG` / `MY_DOMAIN` などの環境固有値を `.env.global` に置かない（dev と prod の両方で読まれる）。
-- 本番の秘密値（`SECRET_KEY` / `POSTGRES_PASSWORD`）は git 管理外の `.env.secret` に置き、
-  `docker-compose.prod.yml` が django と postgres へ注入する。リポジトリにある値は開発用。
+- compose は開発用。本番は k3s（`infra/`）で動かす。リポジトリにある `SECRET_KEY` /
+  `POSTGRES_PASSWORD` は開発用の値。
 - backend の `manage.py` は `/env_files/*.env` を既存の環境変数を上書きせずに読む。
 
 ```bash

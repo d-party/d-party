@@ -65,7 +65,7 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
 - **ルームの寿命**: 作成（`created_at`）から 48 時間を超えたルームは、在室中でも
   `close_expired_rooms` が強制クローズする（統計に alive のまま残さない）。ホストの `delete_room` と同じく
   リアクションを畳み込み、ユーザーとルームを論理削除し、`room_deleted` を配信する。起動時ではなく
-  cron で走らせる（k3s は Helm の CronJob、compose の本番は `close-expired-rooms` サービス）。
+  cron で走らせる（k3s では Helm の CronJob）。
 - **管理画面のパスキー**: django-otp-webauthn。パスワードのログインも残している。
   - URL は `/admin/passkey/`。nginx が Django へ流すのは `/admin/` 配下だけなので外へ出さない。
     `urls.py` では `admin.site.urls` より前に置く。

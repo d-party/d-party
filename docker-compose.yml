@@ -7,7 +7,6 @@ services:
     image: nginx:1.31.9
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - "./nginx/:/etc/nginx/"
       - "./backend/static:/static"
@@ -44,7 +43,7 @@ services:
       retries: 12
       start_period: 60s
   frontend:
-    # image / build は override.yml（dev）と prod.yml が与える。
+    # image は override.yml が与える。
     container_name: frontend
     expose:
       - "3000"

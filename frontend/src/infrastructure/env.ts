@@ -2,7 +2,7 @@
  * Every environment variable the app reads is read here.
  *
  * Backend location, in priority order:
- *   1) `NEXT_PUBLIC_*` baked at build time (dev and compose-prod)
+ *   1) `NEXT_PUBLIC_*` baked at build time (dev)
  *   2) the browser's own origin — nginx serves both, so k3s images need no build args
  *   3) the local default during SSR (server requests use `BACKEND_INTERNAL_ORIGIN`)
  */
