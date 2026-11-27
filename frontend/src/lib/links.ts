@@ -7,6 +7,8 @@ export const MICROSOFT_EDGE_URL = "https://www.microsoft.com/ja-jp/edge";
 
 export const D_ANIME_STORE_URL = "https://animestore.docomo.ne.jp/animestore/";
 
+export const DMM_TV_URL = "https://tv.dmm.com/vod/";
+
 export const GITHUB_ORG_URL = "https://github.com/d-party";
 
 export const GITHUB_REPO_URL = `${GITHUB_ORG_URL}/d-party`;

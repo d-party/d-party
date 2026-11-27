@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import {
   CHROME_WEBSTORE_URL,
   D_ANIME_STORE_URL,
+  DMM_TV_URL,
   GOOGLE_CHROME_URL,
   MICROSOFT_EDGE_URL,
 } from "@/lib/links";
@@ -23,7 +24,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/usage",
   title: "使い方",
   description:
-    "d-party でウォッチパーティーを始めるまでのステップガイド。Chrome / Edge への拡張機能のインストールから、dアニメストアで作品を開き、ルームのリンクを友だちに共有して一緒に視聴するまでを画像つきで解説します。",
+    "d-party でウォッチパーティーを始めるまでのステップガイド。Chrome / Edge への拡張機能のインストールから、dアニメストア・DMM TV で作品を開き、ルームのリンクを友だちに共有して一緒に視聴するまでを画像つきで解説します。",
 });
 
 type Step = {
@@ -59,12 +60,12 @@ const STEPS: Step[] = [
     ),
   },
   {
-    title: "dアニメストアを契約",
+    title: "dアニメストア・DMM TV を契約",
     description: (
       <>
-        もしもまだであれば、dアニメストアのアカウントを作成してください。dアニメストア
-        for Prime Video や dアニメストア
-        ニコニコ支店では使えません。本家本元の
+        d-party は dアニメストアと DMM TV で使えます。もしもまだであれば、
+        一緒に観たいサービスのアカウントを作成してください。「dアニメストア for Prime
+        Video」や「dアニメストア ニコニコ支店」では使えません。本家本元の
         <a
           href={D_ANIME_STORE_URL}
           target="_blank"
@@ -73,7 +74,16 @@ const STEPS: Step[] = [
         >
           dアニメストア
         </a>
-        のアカウントを作成してサブスクリプションを契約してください。
+        のアカウントを作成してサブスクリプションを契約してください。DMM TV は
+        <a
+          href={DMM_TV_URL}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="text-primary underline-offset-4 hover:underline"
+        >
+          DMM TV
+        </a>
+        で、観たい作品を視聴できる状態にしておいてください。
       </>
     ),
     media: (
@@ -87,9 +97,9 @@ const STEPS: Step[] = [
     ),
   },
   {
-    title: "dアニメストアにログイン",
+    title: "dアニメストア・DMM TV にログイン",
     description:
-      "dアニメストアにログインしてください。特に久しぶりの人はログインが切れてしまっていることがあります。念のためトップページからログインできることを確認しましょう。",
+      "使うサービス（dアニメストア・DMM TV）にログインしてください。特に久しぶりの人はログインが切れてしまっていることがあります。念のためトップページからログインできることを確認しましょう。",
     media: (
       <Image
         src="/img/usage/step3-login.png"
@@ -123,12 +133,15 @@ const STEPS: Step[] = [
     title: "一緒に視聴したいアニメのページに移動",
     description: (
       <>
-        次に、一緒に視聴したいアニメのページに移動します。すると
+        次に、一緒に視聴したいアニメのページに移動します。dアニメストアでは
         <PartyPopper className="mx-1 inline size-4 align-text-bottom" />と
         <Play className="mx-1 inline size-4 align-text-bottom" />
         が各話ごとに表示されているはずです。
         <PartyPopper className="mx-1 inline size-4 align-text-bottom" />
         をクリックしてプレイヤーを別タブで表示しましょう。すると普段のプレイヤーの右横にd-partyのサイドバーが表示されます。
+        DMM TV では、作品ページのお気に入り・シェアの並びに表示される
+        <PartyPopper className="mx-1 inline size-4 align-text-bottom" />
+        をクリックすると、同じタブで再生ページが開き、d-partyのサイドバーが表示されます。
       </>
     ),
     media: (

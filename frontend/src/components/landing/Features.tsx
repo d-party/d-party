@@ -40,7 +40,7 @@ const FEATURES: Feature[] = [
     icon: Gift,
     title: "完全無料・広告なし",
     description:
-      "料金も広告も一切なし。dアニメストアや DMM TV を利用していれば、追加コストゼロで使えます。",
+      "料金も広告も一切なし。dアニメストア・DMM TV を利用していれば、追加コストゼロで使えます。",
   },
   {
     icon: Zap,
@@ -71,7 +71,7 @@ export function Features(): React.JSX.Element {
     <section className="mx-auto max-w-5xl px-4 pb-16 pt-4">
       <div className="mx-auto max-w-2xl text-center">
         <h2 className="text-3xl font-bold tracking-tight">
-          dアニメストアを同時視聴で、もっと楽しく
+          dアニメストア・DMM TV を同時視聴で、もっと楽しく
         </h2>
         <p className="mt-3 text-muted-foreground">
           d-partyは次のような機能を提供しています。

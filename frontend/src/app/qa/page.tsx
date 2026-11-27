@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Faq, type FaqEntry } from "@/components/qa/Faq";
 import {
   D_ANIME_STORE_URL,
+  DMM_TV_URL,
   FEEDBACK_FORM_URL,
   GITHUB_ORG_URL,
   GITHUB_SPONSORS_URL,
@@ -14,14 +15,19 @@ export const metadata: Metadata = pageMetadata({
   path: "/qa",
   title: "Q&A",
   description:
-    "d-party のよくある質問と回答。料金、対応ブラウザ、dアニメストアの契約、同時視聴できる人数、うまく同期しないときの対処法などをまとめています。",
+    "d-party のよくある質問と回答。料金、対応サービスとブラウザ、dアニメストア・DMM TV の契約、同時視聴できる人数、うまく同期しないときの対処法などをまとめています。",
 });
 
 const ENTRIES: FaqEntry[] = [
   {
     question: "d-party は無料ですか？",
     answer:
-      "はい、完全無料・広告なしで使えます。別途必要なのは dアニメストアの月額利用料のみで、d-party に課金はありません。",
+      "はい、完全無料・広告なしで使えます。別途必要なのは、観るサービス（dアニメストア・DMM TV）の利用料のみで、d-party に課金はありません。",
+  },
+  {
+    question: "どの動画配信サービスで使えますか？",
+    answer:
+      "dアニメストアと DMM TV で使えます。どちらも作品の再生ページで、再生の同期・リアクション・サイドバーが使えます。拡張機能なしで再生状況を見られるタイマー画面と、「別タブで動画を開く」やピクチャーインピクチャーのボタンなどの便利機能は、いまのところ dアニメストアだけです。",
   },
   {
     question: "対応しているブラウザは？",
@@ -29,10 +35,11 @@ const ENTRIES: FaqEntry[] = [
       "PC 版の Google Chrome および Microsoft Edge に対応しています（どちらも Chrome 拡張機能が動作します）。スマートフォン版や、その他のブラウザでは利用できません。",
   },
   {
-    question: "dアニメストアの契約は必要ですか？",
+    question: "dアニメストア・DMM TV の契約は必要ですか？",
     answer: (
       <>
-        必要です。本家本元の{" "}
+        必要です。動画は各自のブラウザで再生するので、参加者それぞれが観るサービスを
+        利用できる必要があります。dアニメストアは本家本元の{" "}
         <a
           href={D_ANIME_STORE_URL}
           target="_blank"
@@ -42,7 +49,16 @@ const ENTRIES: FaqEntry[] = [
           dアニメストア
         </a>
         のアカウントが必要で、「dアニメストア for Prime
-        Video」や「dアニメストア ニコニコ支店」では利用できません。
+        Video」や「dアニメストア ニコニコ支店」では利用できません。DMM TV は{" "}
+        <a
+          href={DMM_TV_URL}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="text-primary underline-offset-4 hover:underline"
+        >
+          DMM TV
+        </a>{" "}
+        で、その作品を視聴できる状態にしておいてください。
       </>
     ),
   },

@@ -11,10 +11,10 @@ import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata({
   path: "/",
-  title: "d-party — dアニメストアで友だちと同時視聴",
+  title: "d-party — dアニメストア・DMM TV で友だちと同時視聴",
   titleIsBranded: true,
   description:
-    "dアニメストアの作品を友だちと同時視聴できる、完全無料の Chrome 拡張機能 d-party。再生・一時停止・シークが自動で同期し、リアクションで一緒に盛り上がれます。インストールしてルームのリンクを共有するだけ。",
+    "dアニメストア・DMM TV の作品を友だちと同時視聴できる、完全無料の Chrome 拡張機能 d-party。再生・一時停止・シークが自動で同期し、リアクションで一緒に盛り上がれます。インストールしてルームのリンクを共有するだけ。",
 });
 
 const STEPS = [
@@ -24,7 +24,7 @@ const STEPS = [
   },
   {
     title: "アニメを開く",
-    text: "dアニメストアや DMM TV で一緒に観たい作品のプレイヤーを開く。",
+    text: "dアニメストア・DMM TV で一緒に観たい作品のプレイヤーを開く。",
   },
   { title: "リンクを共有", text: "生成されたルームリンクを友達に送るだけ。" },
   {
