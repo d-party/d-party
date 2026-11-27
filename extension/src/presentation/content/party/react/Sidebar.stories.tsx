@@ -56,6 +56,7 @@ export const ShareTab: Story = {
     const store = new SidebarStore();
     store.setMode("join");
     store.setJoined(true);
+    store.setConnectionStatus("connected");
     store.setShareLink(SAMPLE_URL);
     store.setShareTitle(SAMPLE_TITLE);
     store.updateUsers(SAMPLE_USERS);
@@ -70,6 +71,7 @@ export const HistoryTab: Story = {
     const store = new SidebarStore();
     store.setMode("join");
     store.setJoined(true);
+    store.setConnectionStatus("connected");
     store.updateUsers(SAMPLE_USERS);
     store.addHistory({
       direction: "system",
@@ -121,6 +123,7 @@ export const UsersTab: Story = {
     const store = new SidebarStore();
     store.setMode("join");
     store.setJoined(true);
+    store.setConnectionStatus("connected");
     store.updateUsers(SAMPLE_USERS);
     store.setSelfUserId("1");
     store.setActiveTab("users");
@@ -134,6 +137,7 @@ export const ControlTab: Story = {
     const store = new SidebarStore();
     store.setMode("join");
     store.setJoined(true);
+    store.setConnectionStatus("connected");
     store.updateUsers(SAMPLE_USERS);
     store.setSelfUserId("2");
     store.setActiveTab("control");
@@ -147,6 +151,7 @@ export const OwnerControlTab: Story = {
     const store = new SidebarStore();
     store.setMode("join");
     store.setJoined(true);
+    store.setConnectionStatus("connected");
     store.updateUsers(SAMPLE_USERS);
     store.setSelfUserId("1");
     store.setActiveTab("control");
@@ -160,6 +165,7 @@ export const Collapsed: Story = {
     const store = new SidebarStore();
     store.setMode("join");
     store.setJoined(true);
+    store.setConnectionStatus("connected");
     store.setCollapsed(true);
     return frame(store);
   },
