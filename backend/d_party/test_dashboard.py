@@ -12,7 +12,12 @@ from d_party.dashboard import (
     dashboard_callback,
     environment_callback,
 )
-from streamer.factories import AnimeRoomFactory, AnimeUserFactory
+from streamer.factories import (
+    AnimeRoomFactory,
+    AnimeUserFactory,
+    DmmRoomFactory,
+    DmmUserFactory,
+)
 from streamer.models import AnimeReaction, AnimeRoom, ReactionStat
 
 
@@ -98,6 +103,32 @@ def test_dashboard_cards_count_alive_rooms_and_users():
         "累計リアクション": "1,234",
     }
     assert context["dp_reaction_breakdown"][0]["label"] == "smile"
+
+
+@pytest.mark.django_db
+def test_dashboard_cards_count_every_service_with_a_breakdown():
+    AnimeUserFactory()
+    dmm_room = DmmRoomFactory()
+    DmmUserFactory(room_id=dmm_room)
+    DmmUserFactory(room_id=dmm_room)
+    DmmUserFactory(room_id=dmm_room).delete()
+    DmmRoomFactory().delete()
+
+    context = dashboard_callback(None, {})
+
+    cards = {card["title"]: card for card in context["dp_cards"]}
+    assert cards["アクティブなルーム"]["value"] == 2
+    assert cards["アクティブなルーム"]["description"] == (
+        "現在 alive な視聴ルーム（dアニメストア 1 · DMM TV 1）"
+    )
+    assert cards["接続中ユーザー"]["value"] == 3
+    assert cards["接続中ユーザー"]["description"] == (
+        "現在 alive な参加ユーザー（dアニメストア 1 · DMM TV 2）"
+    )
+    assert cards["本日作成ルーム"]["value"] == 3
+    assert cards["本日作成ルーム"]["description"] == (
+        "論理削除済みを含む本日の作成数（dアニメストア 1 · DMM TV 2）"
+    )
 
 
 @pytest.mark.django_db

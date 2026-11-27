@@ -296,6 +296,8 @@ class DmmReactionStat(BaseReactionStat):
 class Service:
     """1 つの動画配信サービスが使う具象モデルの組。"""
 
+    # 管理画面などで人に見せるサービス名。
+    label: str
     room: type[BaseRoom]
     user: type[BaseUser]
     reaction: type[BaseReaction]
@@ -310,6 +312,7 @@ class Service:
 
 
 ANIME_STORE = Service(
+    label="dアニメストア",
     room=AnimeRoom,
     user=AnimeUser,
     reaction=AnimeReaction,
@@ -317,6 +320,7 @@ ANIME_STORE = Service(
     reaction_stat=ReactionStat,
 )
 DMM_TV = Service(
+    label="DMM TV",
     room=DmmRoom,
     user=DmmUser,
     reaction=DmmReaction,
