@@ -9,6 +9,9 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { Announcements } from "@/components/Announcements";
+import type { Announcement } from "@/domain/announcement";
+import { fetchActiveAnnouncements } from "@/infrastructure/api/announcements";
 import {
   Tabs,
   TabsContent,
@@ -44,7 +47,14 @@ const HIDDEN_WHEN_INACTIVE =
 const REFERENCE_PANEL = HIDDEN_WHEN_INACTIVE;
 const OVERLAY_PANEL = `absolute inset-0 overflow-y-auto ${HIDDEN_WHEN_INACTIVE}`;
 
-export function PopupApp(): React.JSX.Element {
+export interface PopupAppProps {
+  /** 配信中のアナウンスの取得（Storybook で差し替える）。 */
+  loadAnnouncements?: () => Promise<Announcement[]>;
+}
+
+export function PopupApp({
+  loadAnnouncements = fetchActiveAnnouncements,
+}: PopupAppProps): React.JSX.Element {
   const { settings, update } = useSettings();
   const [tab, setTab] = useState<string>(TABS[0].value);
   const reduce = useReducedMotion();
@@ -71,6 +81,8 @@ export function PopupApp(): React.JSX.Element {
           </div>
         </div>
       </header>
+
+      <Announcements load={loadAnnouncements} itemClassName="px-4 pt-3" />
 
       <Tabs value={tab} onValueChange={setTab} className="gap-0">
         <TooltipProvider delayDuration={300}>
