@@ -128,8 +128,9 @@ def link_errors(message: str) -> list[str]:
 def validate_message(message: str) -> None:
     """本文の検査（モデルのフィールドの validator）。生の文字列の長さは ``max_length`` が見る。"""
     errors = link_errors(message)
+    # 書き方に誤りがあると、そのリンクは URL ごと数えてしまうので、文字数は直した後に見る。
     length = display_length(message)
-    if length > DISPLAY_MAX_LENGTH:
+    if not errors and length > DISPLAY_MAX_LENGTH:
         errors.append(
             f"表示される文字数は {DISPLAY_MAX_LENGTH} 文字までです（今は {length} 文字。"
             "リンクはテキストだけを数え、URL は数えません）。"

@@ -200,10 +200,20 @@ def test_validate_rejects_long_display_text():
     ]
 
 
-def test_validate_reports_every_problem():
-    message = "あ" * DISPLAY_MAX_LENGTH + "[a](http://x)[](https://x)[b]("
+def test_validate_reports_every_link_problem():
+    message = "[a](http://x)[](https://x)[b]("
 
-    assert len(_errors(message)) == 4
+    assert len(_errors(message)) == 3
+
+
+def test_validate_checks_display_length_after_links_are_fixed():
+    # 誤ったリンクは URL ごと数えてしまうので、文字数のエラーは出さない。
+    message = "あ" * (DISPLAY_MAX_LENGTH - 5) + "[a](http://d-party.net/)"
+
+    errors = _errors(message)
+
+    assert len(errors) == 1
+    assert "の URL はリンクにできません" in errors[0]
 
 
 @pytest.mark.parametrize(
