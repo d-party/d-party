@@ -34,6 +34,11 @@ def test_production_hardening(load_settings):
         "www.d-party.example",
         "django",
     ]
+    # サブドメインをワイルドカードで信頼しない。
+    assert loaded["CSRF_TRUSTED_ORIGINS"] == [
+        "https://d-party.example",
+        "https://www.d-party.example",
+    ]
     assert loaded["SESSION_COOKIE_SECURE"] is True
     assert loaded["CSRF_COOKIE_SECURE"] is True
     assert loaded["SECURE_PROXY_SSL_HEADER"] == ("HTTP_X_FORWARDED_PROTO", "https")
