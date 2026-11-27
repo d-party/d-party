@@ -8,7 +8,7 @@ import type { AnnouncementLevelEnum } from './announcementLevelEnum';
 
 export interface Announcement {
   readonly id: number;
-  /** 拡張機能に出す一言（60 文字まで）。 */
+  /** 本文（管理画面で入力した生の文字列）。Markdown のインラインリンク `[テキスト](URL)` を含むことがある（ほかの Markdown は含めない）。リンクとして描画してよいのは、URL が https:// で始まってホストがあり、空白・制御文字・バックスラッシュ・ユーザー情報を含まず、テキストが空でないものだけ。それ以外は元の文字列のまま出す。HTML として解釈しないこと。 */
   readonly message: string;
   /**
      * 「重要」は拡張機能で目立つ色で出す（メンテナンスなど）。

@@ -50,6 +50,10 @@ rspack のエントリは `background` · `content-store` · `content-party` · 
   `chrome.storage.local` の `dismissedAnnouncementIds` に残し、両方で二度と出さない。
   見た目は控えめなテキスト行で、重要（`warning`）は色だけに頼らず警告アイコンと「重要」の文字で
   お知らせ（`info`）と区別する。
+  - 本文の `[テキスト](URL)` は `domain/announcementText.ts` が読み、React の `<a>` とテキストで
+    組む（`dangerouslySetInnerHTML` は使わない）。リンクにするのは `https://` の URL だけで、
+    規則は backend の `announcements/links.py` と同じ。満たさないものは書いたままの文字で出す。
+    `<a>` は `target="_blank"` と `rel="noopener noreferrer"` で新しいタブに開く。
 
 ## ビルドと読み込み
 

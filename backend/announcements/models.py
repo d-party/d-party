@@ -13,12 +13,25 @@ from django.db import models
 from django.db.models import F, Q
 from django.utils import timezone
 
-from . import versions
+from . import links, versions
 from .versions import ExtensionVersionField
 
-# 本文の上限（文字数）。拡張機能のポップアップ（幅 360px）とサイドバー（幅 320px）に
-# 2〜3 行で収まる長さ。
-MESSAGE_MAX_LENGTH = 60
+# 本文の上限（文字数）。表示される文字数（リンクはテキストだけを数え、URL は数えない）と、
+# URL を含む生の文字列の 2 つで制限する。書き方と数え方は ``links.py``。
+MESSAGE_DISPLAY_MAX_LENGTH = links.DISPLAY_MAX_LENGTH
+MESSAGE_RAW_MAX_LENGTH = links.RAW_MAX_LENGTH
+
+MESSAGE_HELP_TEXT = (
+    "拡張機能に出す一言。"
+    f"表示される文字数で {MESSAGE_DISPLAY_MAX_LENGTH} 文字まで"
+    "（リンクは [ ] の中のテキストだけを数え、URL は数えない）。"
+    f"URL を含めた全体は {MESSAGE_RAW_MAX_LENGTH} 文字まで。"
+    "リンクは [テキスト](URL) と書く（例: [詳しくはこちら](https://d-party.net/)）。"
+    "URL は https:// で始まるものだけ。ほかの Markdown は使えず、そのまま文字で出る。"
+    "リンクに対応していない古い拡張機能では [テキスト](URL) がそのまま出るので、"
+    "リンクを使うときは「対象バージョンの下限」を、リンクに対応した最初の版"
+    "（GitHub のリリースノートで「アナウンスのリンク」を含む版）以上にする。"
+)
 
 ENDS_BEFORE_STARTS = "配信期限は配信開始より後にしてください。"
 MAX_VERSION_BELOW_MIN = "対象バージョンの上限は下限以上にしてください。"
@@ -66,8 +79,9 @@ class AnnouncementQuerySet(models.QuerySet):
 class Announcement(models.Model):
     message = models.CharField(
         "本文",
-        max_length=MESSAGE_MAX_LENGTH,
-        help_text=f"拡張機能に出す一言（{MESSAGE_MAX_LENGTH} 文字まで）。",
+        max_length=MESSAGE_RAW_MAX_LENGTH,
+        validators=[links.validate_message],
+        help_text=MESSAGE_HELP_TEXT,
     )
     level = models.CharField(
         "種別",
