@@ -24,7 +24,8 @@ src/
     content/party/   プレイヤーページ（サイドバー・プレイヤー・リアクション）
     content/version/ ロビーでのバージョン確認
     popup/           設定 UI
-  manual/          frontend の利用マニュアル（/docs）を撮るための Storybook の場面（Manual/*）。架空のデータだけを使う
+  manual/          frontend の利用マニュアル（/docs）を撮るための Storybook の場面（Manual/*）。架空のデータだけを使い、
+                   ダークモード（prefers-color-scheme: dark）で撮る
 ```
 
 rspack のエントリは `background` · `content-store` · `content-party` · `content-version` ·

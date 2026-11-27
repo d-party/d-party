@@ -64,6 +64,9 @@ pnpm storybook
 - 画像は `public/img/docs/*.webp`（WebP・2 倍解像度）で、寸法は `components/docs/images.ts` に持つ。
   スクリーンショットはすべて架空のデータ（作品「星降る町の喫茶店」第 3 話、参加者「さくら」（オーナー）
   「たけし」「ゆうき」、2026-11-27 21 時台の JST）で撮る。撮り直すときもこの設定に合わせる。
+  アナウンスも架空の文言（`extension/src/manual/fixtures.tsx` の `MANUAL_ANNOUNCEMENTS`）を使う。
+- UI はダークモードで撮る（playwright の `colorScheme: "dark"`）。拡張機能はライトの配色も持っているが、
+  マニュアルにはライトの画面を載せず、ライト / ダークの切り替えも説明しない。
   拡張機能の画面は extension の Storybook `Manual/*`（`extension/src/manual/`）を、
   ロビーとタイマーは API と WebSocket を playwright の route でモックして撮る。
 - 拡張機能の画面（サイドバー・ポップアップ）を変えたら、マニュアルの記述と画像も見直す。

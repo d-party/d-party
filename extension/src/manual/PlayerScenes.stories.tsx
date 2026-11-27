@@ -646,7 +646,7 @@ export const Failed: Story = {
 /** 接続状態バッジ 4 種（ラベルを常に表示）。 */
 export const Badges: Story = {
   render: () => (
-    <div className="flex flex-col gap-2 bg-neutral-200 p-4 [&_[role=status]>span:last-child]:ml-1.5 [&_[role=status]>span:last-child]:max-w-[8rem] [&_[role=status]>span:last-child]:opacity-100">
+    <div className="flex flex-col gap-2 bg-background p-4 [&_[role=status]>span:last-child]:ml-1.5 [&_[role=status]>span:last-child]:max-w-[8rem] [&_[role=status]>span:last-child]:opacity-100">
       {(["idle", "connected", "failed", "maintenance"] as const).map((status) => (
         <BadgeRow key={status} status={status} />
       ))}

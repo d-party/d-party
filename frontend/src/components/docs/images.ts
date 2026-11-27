@@ -1,6 +1,6 @@
 /** `public/img/docs/` のスクリーンショット。架空のデータで撮影している。 */
 export const DOC_IMAGES = {
-  "badge-states": { src: "/img/docs/badge-states.webp", width: 720, height: 480 },
+  "badge-states": { src: "/img/docs/badge-states.webp", width: 704, height: 480 },
   "lobby-checking": { src: "/img/docs/lobby-checking.webp", width: 2048, height: 1152 },
   "lobby-no-extension": { src: "/img/docs/lobby-no-extension.webp", width: 2048, height: 1152 },
   "lobby-not-found": { src: "/img/docs/lobby-not-found.webp", width: 2048, height: 1152 },
@@ -21,7 +21,7 @@ export const DOC_IMAGES = {
   "popup-reactions": { src: "/img/docs/popup-reactions.webp", width: 720, height: 1196 },
   "popup-settings": { src: "/img/docs/popup-settings.webp", width: 720, height: 1196 },
   "popup-stats": { src: "/img/docs/popup-stats.webp", width: 720, height: 1196 },
-  "popup-sync-settings": { src: "/img/docs/popup-sync-settings.webp", width: 720, height: 1708 },
+  "popup-sync-settings": { src: "/img/docs/popup-sync-settings.webp", width: 720, height: 1706 },
   "popup-utility-settings": { src: "/img/docs/popup-utility-settings.webp", width: 720, height: 1196 },
   "reaction-badge": { src: "/img/docs/reaction-badge.webp", width: 2560, height: 1440 },
   "reaction-left": { src: "/img/docs/reaction-left.webp", width: 2560, height: 1440 },

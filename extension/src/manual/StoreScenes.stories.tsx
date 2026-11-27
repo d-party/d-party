@@ -1,6 +1,7 @@
 /**
  * 利用マニュアル用: 作品ページのエピソード一覧に d-party のボタンが付いた様子。
- * 一覧は架空の配信サイトで、ボタンだけ content-store と同じ CSS（public/css/style.css）を当てる。
+ * 一覧は架空の配信サイト（マニュアルの画像はダークで揃えるので暗い配色）で、ボタンだけ
+ * content-store と同じ CSS（public/css/style.css）を当てる。
  */
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
@@ -52,33 +53,33 @@ function OverlayButton({
 
 function StorePage(): React.JSX.Element {
   return (
-    <div className="min-h-screen bg-neutral-100 font-sans text-neutral-800">
-      <header className="flex h-14 items-center gap-3 border-b border-neutral-200 bg-white px-6">
-        <div className="size-7 rounded-md bg-neutral-300" />
-        <span className="text-sm font-semibold text-neutral-500">
+    <div className="min-h-screen bg-neutral-950 font-sans text-neutral-100">
+      <header className="flex h-14 items-center gap-3 border-b border-neutral-800 bg-neutral-900 px-6">
+        <div className="size-7 rounded-md bg-neutral-700" />
+        <span className="text-sm font-semibold text-neutral-400">
           アニメ配信サイト（イメージ）
         </span>
       </header>
       <main className="mx-auto max-w-5xl px-6 py-6">
-        <section className="flex gap-6 rounded-lg bg-white p-5 shadow-sm">
+        <section className="flex gap-6 rounded-lg bg-neutral-900 p-5 shadow-sm">
           <NightCafeArt variant={0} className="h-36 w-64 shrink-0 rounded-md" />
           <div>
             <h1 className="text-2xl font-bold">{WORK_TITLE}</h1>
-            <p className="mt-2 text-sm leading-relaxed text-neutral-500">
+            <p className="mt-2 text-sm leading-relaxed text-neutral-400">
               流れ星が毎晩降る小さな町。丘の上の喫茶店「ほしふる珈琲」には、願いごとを抱えたお客さんが今夜もやってくる。
             </p>
           </div>
         </section>
-        <h2 className="mb-3 mt-6 text-sm font-semibold text-neutral-500">エピソード</h2>
+        <h2 className="mb-3 mt-6 text-sm font-semibold text-neutral-400">エピソード</h2>
         <div className="grid grid-cols-4 gap-4">
           {EPISODES.map((ep, i) => (
             <div key={ep.no} className="itemModule list">
-              <section className="clearfix rounded-lg bg-white pb-12 shadow-sm">
+              <section className="clearfix rounded-lg bg-neutral-900 pb-12 shadow-sm">
                 <NightCafeArt variant={i} className="aspect-video w-full rounded-t-lg" />
                 <div className="px-3 pt-2">
-                  <p className="text-xs text-neutral-500">{ep.no}</p>
+                  <p className="text-xs text-neutral-400">{ep.no}</p>
                   <p className="text-sm font-semibold">{ep.sub}</p>
-                  <p className="mt-0.5 text-xs text-neutral-400">{ep.min}</p>
+                  <p className="mt-0.5 text-xs text-neutral-500">{ep.min}</p>
                 </div>
                 <div className="dparty-overlay">
                   <OverlayButton variant="play" tooltip="別タブで再生">
