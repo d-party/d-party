@@ -31,32 +31,32 @@ interface FontBytes {
   coverage: Coverage;
 }
 
-async function readFontBytes(): Promise<FontBytes | null> {
-  try {
-    const [regular, bold] = await Promise.all([
-      readFile(join(FONT_DIR, "NotoSansJP-Regular.ttf")),
-      readFile(join(FONT_DIR, "NotoSansJP-Bold.ttf")),
-    ]);
-    const coverage = intersect(fontCoverage(regular), fontCoverage(bold));
-    if (coverage.length === 0) {
-      console.error("OG fonts: no readable cmap; using the default font");
-      return null;
-    }
-    return { regular, bold, coverage };
-  } catch (error) {
-    console.error("OG fonts: failed to read; using the default font", error);
-    return null;
+/** The bundled fonts are there but cannot be used: a deploy bug, not retried. */
+class UnusableFontsError extends Error {}
+
+async function readFontBytes(): Promise<FontBytes> {
+  const [regular, bold] = await Promise.all([
+    readFile(join(FONT_DIR, "NotoSansJP-Regular.ttf")),
+    readFile(join(FONT_DIR, "NotoSansJP-Bold.ttf")),
+  ]);
+  const coverage = intersect(fontCoverage(regular), fontCoverage(bold));
+  if (coverage.length === 0) {
+    throw new UnusableFontsError("OG fonts: no readable cmap");
   }
+  return { regular, bold, coverage };
 }
 
-// The files are read (and their cmap parsed) once. A failure is retried on the
-// next call.
-let bytesPromise: Promise<FontBytes | null> | null = null;
+// The files are read (and their cmap parsed) once. A read error is retried on
+// the next call; unusable fonts are not (re-reading 11 MB per request would not
+// help). Without the fonts the card is not drawn at all: next/og's default font
+// lacks the card's Japanese strings and would fetch fonts for them on every
+// request, adding them to a loader that is never freed.
+let bytesPromise: Promise<FontBytes> | null = null;
 
-function loadFontBytes(): Promise<FontBytes | null> {
-  bytesPromise ??= readFontBytes().then((bytes) => {
-    if (!bytes) bytesPromise = null;
-    return bytes;
+function loadFontBytes(): Promise<FontBytes> {
+  bytesPromise ??= readFontBytes().catch((error: unknown) => {
+    if (!(error instanceof UnusableFontsError)) bytesPromise = null;
+    throw error;
   });
   return bytesPromise;
 }
@@ -88,22 +88,19 @@ function buffersFor(bytes: FontBytes, text: string): [Buffer, Buffer] {
 }
 
 export interface OgCardFonts {
-  /** For `ImageResponse`; `undefined` falls back to next/og's own font. */
-  fonts: OgFont[] | undefined;
+  /** For `ImageResponse`. */
+  fonts: OgFont[];
   /** The room title, cut down to what `fonts` can draw (see `ogSafeTitle`). */
   title: string;
 }
 
-// Without the bundled fonts, next/og's default font draws printable ASCII.
-const ASCII: Coverage = [[0x20, 0x7e]];
-
 /**
  * Fonts for one card, and `title` made safe to draw with them. Anything a user
  * can set must go through here, or next/og fetches fonts for it and keeps them.
+ * Rejects when the bundled fonts cannot be read (the route answers 500).
  */
 export async function loadOgCardFonts(title = ""): Promise<OgCardFonts> {
   const bytes = await loadFontBytes();
-  if (!bytes) return { fonts: undefined, title: ogSafeTitle(title, ASCII) };
   const safe = ogSafeTitle(title, bytes.coverage);
   const [regular, bold] = buffersFor(bytes, safe);
   return {

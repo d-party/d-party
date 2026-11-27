@@ -164,12 +164,19 @@ export function ogSafeTitle(title: string, coverage: Coverage): string {
   const parts = title
     .split(" - ")
     .slice(0, MAX_PARTS)
-    .map((part) =>
-      keepCovered(
-        [...part.trim()].slice(0, PART_MAX_CHARS).join(""),
-        coverage,
-      ).trim(),
-    );
+    .map((part) => {
+      // Line breaks and tabs become spaces instead of being dropped (words
+      // would run together), and the cut is made before filtering.
+      const cut = [...part.replace(/\s+/g, " ").trim()]
+        .slice(0, PART_MAX_CHARS)
+        .join("");
+      // Dropping a character can join "A ❤- B" into a new " - ", which
+      // `RoomOgImage` would split on.
+      return keepCovered(cut, coverage)
+        .replace(/ +/g, " ")
+        .replaceAll(" - ", " ")
+        .trim();
+    });
   if (!parts[0]) return "";
   return parts.filter(Boolean).join(" - ");
 }
