@@ -96,7 +96,7 @@ export function PopupApp({
         </div>
       </header>
 
-      <Announcements load={loadAnnouncements} itemClassName="px-4 pt-3" />
+      <Announcements load={loadAnnouncements} itemClassName="px-4" />
 
       <Tabs value={tab} onValueChange={changeTab} className="min-h-0 gap-0">
         <TooltipProvider delayDuration={300}>

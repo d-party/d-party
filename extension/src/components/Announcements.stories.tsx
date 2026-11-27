@@ -21,20 +21,20 @@ const meta: Meta<typeof Announcements> = {
   title: "Components/Announcements",
   component: Announcements,
   parameters: { layout: "centered" },
-  args: { itemClassName: "px-4 pt-3" },
+  args: { itemClassName: "px-4" },
 };
 
 export default meta;
 
 type Story = StoryObj<typeof Announcements>;
 
-/** 通常のお知らせ。× で閉じると、以後は出ない。 */
+/** 通常のお知らせ。小さな点 ＋ 灰色の文字。× で閉じると、以後は出ない。 */
 export const Info: Story = {
   args: { load: loadOf(SAMPLE_INFO) },
   decorators: [withChromeMock()],
 };
 
-/** 重要（メンテナンスなど）。色とアイコンで区別する。 */
+/** 重要（メンテナンスなど）。色だけでなく、警告アイコンと「重要」の文字で区別する。 */
 export const Warning: Story = {
   args: { load: loadOf(SAMPLE_WARNING) },
   decorators: [withChromeMock()],
@@ -46,7 +46,7 @@ export const Stacked: Story = {
   decorators: [withChromeMock()],
 };
 
-/** 本文の上限（60 文字）。 */
+/** 本文の上限（60 文字）。省略せず折り返して全文を出す。 */
 export const LongestMessage: Story = {
   args: {
     load: loadOf({ ...SAMPLE_INFO, message: "あいうえおかきくけこ".repeat(6) }),

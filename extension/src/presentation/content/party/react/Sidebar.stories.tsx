@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { loadOf, SAMPLE_WARNING } from "@/components/announcementSamples";
+import {
+  loadOf,
+  SAMPLE_INFO,
+  SAMPLE_WARNING,
+} from "@/components/announcementSamples";
 import type { Announcement } from "@/domain/announcement";
 import type { User } from "@/domain/protocol";
 import { installChromeMock } from "@/presentation/popup/storybookChromeMock";
@@ -194,5 +198,20 @@ export const ShareTabWithAnnouncement: Story = {
     store.updateUsers(SAMPLE_USERS);
     store.setActiveTab("share");
     return frame(store, loadOf(SAMPLE_WARNING));
+  },
+};
+
+/** 重要とお知らせが同時に配信されているとき（入室後）。 */
+export const ShareTabWithAnnouncements: Story = {
+  render: () => {
+    installChromeMock();
+    const store = new SidebarStore();
+    store.setMode("join");
+    store.setJoined(true);
+    store.setShareLink(SAMPLE_URL);
+    store.setShareTitle(SAMPLE_TITLE);
+    store.updateUsers(SAMPLE_USERS);
+    store.setActiveTab("share");
+    return frame(store, loadOf(SAMPLE_WARNING, SAMPLE_INFO));
   },
 };

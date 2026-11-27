@@ -46,6 +46,8 @@ rspack のエントリは `background` · `content-store` · `content-party` · 
   ヘッダーの下に出す。ポップアップは backend を直接、content script は background 経由
   （`{ type: "announcements" }`）で取る。取得の失敗は空として扱い何も出さない。× で閉じた ID は
   `chrome.storage.local` の `dismissedAnnouncementIds` に残し、両方で二度と出さない。
+  見た目は控えめなテキスト行で、重要（`warning`）は色だけに頼らず警告アイコンと「重要」の文字で
+  お知らせ（`info`）と区別する。
 
 ## ビルドと読み込み
 

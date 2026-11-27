@@ -143,7 +143,7 @@ function Panel({
         </div>
       </header>
       {loadAnnouncements && (
-        <Announcements load={loadAnnouncements} itemClassName="px-2 pt-2" />
+        <Announcements load={loadAnnouncements} itemClassName="px-2" />
       )}
 
       {state.mode === "create" && !state.joined ? (

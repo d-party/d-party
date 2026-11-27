@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Megaphone, TriangleExclamationPoint, X } from "lucide-react";
+import { TriangleExclamationPoint, X } from "lucide-react";
 
 import type { Announcement } from "@/domain/announcement";
 import { cn } from "@d-party/ui";
@@ -16,8 +16,8 @@ export interface AnnouncementsProps {
 }
 
 /**
- * 配信中のアナウンスをカードで出す（ポップアップはタブの上、サイドバーはヘッダーの下）。
- * 何も無いとき・取得に失敗したときは何も描かない。
+ * 配信中のアナウンスを控えめなテキスト行で出す（ポップアップはタブの上、サイドバーは
+ * ヘッダーの下）。何も無いとき・取得に失敗したときは何も描かない。
  */
 export function Announcements({
   load,
@@ -38,7 +38,7 @@ export function Announcements({
           }
           className={cn("shrink-0 overflow-hidden", itemClassName)}
         >
-          <AnnouncementCard
+          <AnnouncementRow
             announcement={announcement}
             onDismiss={() => dismiss(announcement.id)}
           />
@@ -48,8 +48,12 @@ export function Announcements({
   );
 }
 
-/** 種別は色だけでなくアイコンでも区別する（重要は三角の警告、お知らせはメガホン）。 */
-function AnnouncementCard({
+/**
+ * 1 件 = 1 行（下線で区切る）。お知らせは小さな点 ＋ 灰色の文字。重要は見落とされないよう、
+ * 色だけに頼らず、点の代わりに三角の警告アイコンを置き、本文の頭に「重要」と書き、本文を
+ * 灰色ではなく通常の文字色にする。
+ */
+function AnnouncementRow({
   announcement: { message, level },
   onDismiss,
 }: {
@@ -57,32 +61,42 @@ function AnnouncementCard({
   onDismiss: () => void;
 }): React.JSX.Element {
   const warning = level === "warning";
-  const Icon = warning ? TriangleExclamationPoint : Megaphone;
   return (
     <div
       role="note"
       aria-label={LEVEL_LABEL[level]}
-      className={cn(
-        "flex items-start gap-2 rounded-lg border py-2 pr-1.5 pl-3 text-xs leading-relaxed shadow-sm",
-        warning
-          ? "border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100"
-          : "border-border bg-card text-card-foreground",
-      )}
+      className="flex items-start gap-2 border-b border-border py-2 text-xs leading-relaxed"
     >
-      <Icon
-        className={cn(
-          "mt-0.5 size-4 shrink-0",
-          warning ? "text-amber-600 dark:text-amber-400" : "text-primary",
-        )}
+      {/* 1 行目の高さに合わせて中央に置く（本文が折り返しても先頭行にそろう）。 */}
+      <span
+        className="flex h-[1.625em] w-3.5 shrink-0 items-center justify-center"
         aria-hidden
-      />
-      <p className="min-w-0 flex-1 break-words">{message}</p>
+      >
+        {warning ? (
+          <TriangleExclamationPoint className="size-3.5 text-amber-600 dark:text-amber-400" />
+        ) : (
+          <span className="size-1.5 rounded-full bg-primary" />
+        )}
+      </span>
+      <p
+        className={cn(
+          "min-w-0 flex-1 break-words",
+          warning ? "text-foreground" : "text-muted-foreground",
+        )}
+      >
+        {warning && (
+          <span className="mr-1.5 font-bold text-amber-700 dark:text-amber-400">
+            重要
+          </span>
+        )}
+        {message}
+      </p>
       <button
         type="button"
         onClick={onDismiss}
         aria-label="このお知らせを閉じる"
         title="閉じる（次からは表示しません）"
-        className="-my-0.5 shrink-0 rounded p-1 text-current/60 transition-colors hover:bg-black/5 hover:text-current dark:hover:bg-white/10"
+        className="-my-0.5 shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
         <X className="size-3.5" aria-hidden />
       </button>
