@@ -67,6 +67,10 @@ REST_FRAMEWORK = {
     # REST API はすべて公開（認証・権限なし）。スキーマにも認証を載せない。
     "DEFAULT_AUTHENTICATION_CLASSES": [],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    # JSON だけを返す。既定に入っている Browsable API（HTML の画面とフォーム）は出さない。
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    # 受け取るのも JSON だけ（フォームやファイルのアップロードは受けない）。
+    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 

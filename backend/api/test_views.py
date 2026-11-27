@@ -167,3 +167,18 @@ class TestResamplePerDay:
 
     def test_mean_of_no_rows_is_zero(self):
         assert _mean_per_day([]) == 0.0
+
+
+def test_browser_request_gets_json_not_the_browsable_api(client):
+    # ブラウザの Accept（text/html 優先）でも、DRF の Browsable API は返さない。
+    response = client.get(
+        STATS + "anime-room-alive-count",
+        HTTP_ACCEPT="text/html,application/xhtml+xml,*/*;q=0.8",
+    )
+
+    assert response.status_code == 200
+    assert response["Content-Type"] == "application/json"
+
+
+def test_format_suffix_cannot_select_the_browsable_api(client):
+    assert client.get(STATS + "anime-room-alive-count?format=api").status_code == 404
