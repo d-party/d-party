@@ -29,7 +29,7 @@ export default function ReactionsPage(): React.JSX.Element {
         </p>
         <DocFigure
           name="reaction-normal"
-          alt="動画の上にいいね・拍手・笑顔・お気に入り（ハート）・すいせい（流れ星）の絵文字が浮かび上がっている"
+          alt="動画の上にいいね・拍手・笑顔・お気に入り（ハート）・すいせい（彗星）の絵文字が浮かび上がっている"
           caption="リアクションが表示されたところ（通常表示）"
         />
         <DefinitionList

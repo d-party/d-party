@@ -154,7 +154,7 @@ export default function InvitePage(): React.JSX.Element {
         </p>
         <DocFigure
           name="timer"
-          alt="タイマー画面。「同期中」の表示、作品名「星降る町の喫茶店 - 第3話 - 流れ星のブレンド」、大きな再生位置 08:43、「再生中」の表示"
+          alt="タイマー画面。「同期中」の表示、作品名「星降る町の喫茶店 - 第3話 - 流れ星のブレンド | dアニメストア」、大きな再生位置 08:43、「再生中」の表示"
           caption="タイマー画面。ホストの再生に合わせて時間が進みます。"
         />
         <DocSubheading>ポップアップ表示</DocSubheading>

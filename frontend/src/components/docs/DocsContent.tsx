@@ -143,13 +143,14 @@ export function DocFigure({
   alt,
   caption,
   maxWidth,
-  priority = false,
+  preload = false,
 }: {
   name: DocImageName;
   alt: string;
   caption?: React.ReactNode;
   maxWidth?: number;
-  priority?: boolean;
+  /** ページの先頭の画像（LCP）だけ true にする。 */
+  preload?: boolean;
 }): React.JSX.Element {
   const image = DOC_IMAGES[name];
   return (
@@ -166,12 +167,13 @@ export function DocFigure({
           title="画像を原寸で開く"
           className="block"
         >
+          <span className="sr-only">（原寸の画像を新しいタブで開く）</span>
           <Image
             src={image.src}
             width={image.width}
             height={image.height}
             alt={alt}
-            priority={priority}
+            preload={preload}
             sizes={maxWidth ? `${maxWidth}px` : "(min-width: 1024px) 768px, 100vw"}
             className="h-auto w-full"
           />

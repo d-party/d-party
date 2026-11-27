@@ -75,7 +75,7 @@ export default function SyncPage(): React.JSX.Element {
         />
         <p>
           操作した人以外には「『たけし』さんが停止」「『ゆうき』さんがスキップ」「『ゆうき』さんが×1.25 倍速」「『さくら』さんが次のエピソード」のような通知が出て、サイドバーの{" "}
-          <DocLink href={`${docPath("room")}#tabs`}>履歴</DocLink> にも残ります。
+          <DocLink href={`${docPath("room")}#tabs`}>履歴</DocLink> にも残ります（前の話への移動と、サムネイルからの移動は同期だけされ、通知は出ません）。
         </p>
         <Callout variant="note" title="同期されないもの">
           <p>

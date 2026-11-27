@@ -19,7 +19,7 @@ export default function SettingsPage(): React.JSX.Element {
   return (
     <DocArticle
       slug="settings"
-      lead="ブラウザのツールバーにある d-party のアイコンを押すと、設定のポップアップが開きます。変更はその場で保存され、開いている dアニメストアのページにもすぐに反映されます。"
+      lead="ブラウザのツールバーにある d-party のアイコンを押すと、設定のポップアップが開きます。変更はその場で保存され、多くの設定は開いている dアニメストアのページにもすぐに反映されます（表示名とアイコンは次にルームへ入ったときから）。"
     >
       <DocSection id="popup" title="ポップアップの構成">
         <p>

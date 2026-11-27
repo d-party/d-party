@@ -38,7 +38,7 @@ export default function DocsIndexPage(): React.JSX.Element {
         name="player-watching"
         alt="dアニメストアのプレイヤーの右側に d-party のサイドバーが表示され、参加者の操作履歴が並んでいる画面"
         caption="視聴中の画面。プレイヤーの右に d-party のサイドバー、下のコントロールバーにシンクとリアクションのボタンが加わります（画面はイメージです）。"
-        priority
+        preload
       />
 
       <section className="mt-10 space-y-4">
@@ -106,7 +106,7 @@ export default function DocsIndexPage(): React.JSX.Element {
           プライバシーについて
         </h2>
         <p className="leading-relaxed text-muted-foreground">
-          d-party はアカウント登録なしで使えます。ルームを作成・参加すると、ポップアップで設定した表示名とアイコン、見ている作品のタイトルと再生状態（再生 / 一時停止・再生位置・速度）、送ったリアクションが d-party のサーバーに送られ、ルームの参加者へ配信されます。表示名やルームの情報は、ルームを運営するためにサーバーに保存されます。
+          d-party はアカウント登録なしで使えます。ルームを作成・参加すると、ポップアップで設定した表示名とアイコン、見ている作品のタイトルと話の ID、再生状態（再生 / 一時停止・再生位置・速度）、送ったリアクションが d-party のサーバーに送られ、ルームの参加者へ配信されます。表示名やルームの情報は、ルームを運営するためにサーバーに保存されます。
           dアニメストアのログイン情報や決済情報、動画そのものは送りません。そのほかの設定とポップアップの「統計」はブラウザ（Chrome の拡張機能用ストレージ）に保存され、d-party のサーバーには送られません。
         </p>
         <Callout variant="note" title="招待リンクを知っている人について">
