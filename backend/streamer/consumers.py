@@ -2,6 +2,7 @@
 
 import asyncio
 import functools
+import json
 import logging
 
 from django.http import Http404
@@ -46,8 +47,37 @@ from .models import PART_ID_MAX_LENGTH, AnimeRoom, AnimeUser, ReactionType
 logger = logging.getLogger(__name__)
 
 # RFC 6455 の close code。
+CLOSE_NORMAL = 1000
 CLOSE_POLICY_VIOLATION = 1008
 CLOSE_INTERNAL_ERROR = 1011
+
+# 1 フレームの文字数の上限。本番は uvicorn の ws_max_size（d_party/workers.py の
+# WS_MAX_SIZE。こちらはバイト数）が先に切るが、dev の runserver や設定漏れでも
+# json.loads に巨大な入力を渡さない。
+MAX_FRAME_LENGTH = 64 * 1024
+
+
+def _frame_content(text_data: str | None) -> dict | None:
+    """フレームを action のメッセージとして読む。読めなければ ``None``。
+
+    ``self`` キーは DCRF が ``handle_action(**content)`` に展開したときに引数の束縛で
+    TypeError になり、``action`` が文字列でないと ``available_actions`` の検索で落ちる。
+    どちらも ``handle_action`` の try より前なので、ここで弾く。
+    """
+    if not text_data or len(text_data) > MAX_FRAME_LENGTH:
+        return None
+    try:
+        content = json.loads(text_data)
+    # JSONDecodeError と整数の桁数の上限は ValueError。RecursionError は念のため
+    # （上の文字数では json の C 実装は再帰の上限に届かない）。
+    except ValueError, RecursionError:
+        return None
+    if not isinstance(content, dict) or "self" in content:
+        return None
+    if not isinstance(content.get("action", ""), str):
+        return None
+    return content
+
 
 # 最後の 1 人が抜けてもこの秒数はルームを残す。ホストのリロードや瞬断で
 # ゲストの共有リンクが failed_join にならないようにするため。予約はプロセスごとに
@@ -122,12 +152,43 @@ class AnimePartyConsumer(AsyncAPIConsumer):
         self._user: AnimeUser | None = None
         # Setting のキャッシュ。メッセージごとに DB を引かないため。setting_send で更新する。
         self._setting = RoomSetting()
+        # 閉じた後も、同じ読み込みで届いていたフレームは処理されうる。二重に閉じない。
+        self._closing = False
 
     async def connect(self):
         await self.accept()
 
     async def disconnect(self, close_code):
         await self._leave()
+
+    async def receive(self, text_data=None, bytes_data=None, **kwargs):
+        """壊れたフレームでも、後始末をしてから接続を閉じる。
+
+        基底クラスは、JSON として読めない・オブジェクトでない・バイナリのフレームで
+        ``handle_action`` より前に例外を投げる。それだと ``handle_exception`` を通らず、
+        ``disconnect`` も呼ばれないので、在室者の行が alive のまま残る。
+        """
+        if self._closing:
+            return
+        content = _frame_content(text_data)
+        if content is None:
+            # フレームの中身はログへ出さない。
+            logger.warning(
+                "malformed websocket frame (%s, %d chars)",
+                "binary" if text_data is None else "text",
+                len(text_data or bytes_data or ""),
+            )
+            await self._abort(CLOSE_POLICY_VIOLATION)
+            return
+        try:
+            await self.receive_json(content, **kwargs)
+        # 上で弾けなかったものの受け皿。ここを抜けると disconnect が呼ばれない。
+        except Exception as exc:
+            # handle_exception が後始末を始めた後に（切断済みの close などで）出た例外は、
+            # もう一度記録して閉じ直さない。
+            if self._closing:
+                raise
+            await self.handle_exception(exc, action=None, request_id=None)
 
     async def handle_exception(self, exc, action, request_id):
         """想定外の例外では、後始末をしてから接続を閉じる。
@@ -149,6 +210,11 @@ class AnimePartyConsumer(AsyncAPIConsumer):
         else:
             logger.error("unhandled error in action %s", action, exc_info=exc)
             code = CLOSE_INTERNAL_ERROR
+        await self._abort(code)
+
+    async def _abort(self, code: int) -> None:
+        """退室の後始末をしてから、``code`` で接続を閉じる。以後のフレームは ``receive`` が捨てる。"""
+        self._closing = True
         try:
             await self._leave()
         finally:
@@ -217,8 +283,8 @@ class AnimePartyConsumer(AsyncAPIConsumer):
 
     @action()
     async def leave(self, **payload):
-        # 後始末は disconnect が行う。
-        await self.close()
+        # close の後に届いた配信で送信が落ちると disconnect が呼ばれないので、先に後始末する。
+        await self._abort(CLOSE_NORMAL)
 
     @_member_action(VideoOperationRequest)
     async def video_operation(self, room, user, request: VideoOperationRequest):
@@ -311,18 +377,28 @@ class AnimePartyConsumer(AsyncAPIConsumer):
 
     # --- channel layer からの配信（``format.py`` の封筒の ``type``） ---------------
 
+    # 閉じた後に届いた配信は送らない（close の後の send は ASGI サーバが例外にする）。
+
     async def room_send(self, data: dict):
+        if self._closing:
+            return
         await self.send_json(data["response"])
 
     async def setting_send(self, data: dict):
+        if self._closing:
+            return
         self._setting = RoomSetting.model_validate(data["response"])
         await self.send_json(data["response"])
 
     async def group_send(self, data: dict):
+        if self._closing:
+            return
         if self.channel_name != data["sender_channel_name"]:
             await self.send_json(data["response"])
 
     async def host_send(self, data: dict):
+        if self._closing:
+            return
         user = self._user
         if user is None or self.channel_name == data["sender_channel_name"]:
             return
@@ -331,6 +407,8 @@ class AnimePartyConsumer(AsyncAPIConsumer):
             await self.send_json(data["response"])
 
     async def user_send(self, data: dict):
+        if self._closing:
+            return
         user = self._user
         if user is None or self.channel_name == data["sender_channel_name"]:
             return
