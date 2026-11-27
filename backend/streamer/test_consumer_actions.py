@@ -220,6 +220,57 @@ async def test_sync_response_reaches_only_the_addressed_user():
         await communicator.disconnect()
 
 
+@pytest.mark.parametrize("one_way", [False, True], ids=["normal", "one_way"])
+async def test_sync_response_from_a_guest_is_dropped(one_way):
+    host, created, [(attacker, _), (victim, victim_user)] = await _room_with_guests(
+        "a", "b"
+    )
+    if one_way:
+        await host.send_json_to(
+            {"action": "update_setting", "one_way": True, "request_id": 2}
+        )
+        for communicator in (host, attacker, victim):
+            await _recv_until(communicator, "room_setting")
+
+    # ほかのゲスト宛ても、ホスト宛ても届かない。
+    for to_user in (victim_user, created["user"]):
+        await attacker.send_json_to(
+            {
+                "action": "sync_response",
+                "to_user": to_user,
+                "option": OPTION,
+                "request_id": 3,
+            }
+        )
+
+    assert await victim.receive_nothing()
+    assert await host.receive_nothing()
+    for communicator in (host, attacker, victim):
+        await communicator.disconnect()
+
+
+async def test_sync_response_from_a_promoted_host_is_delivered():
+    host, _, [(successor, _), (asker, asker_user)] = await _room_with_guests("a", "b")
+    await host.disconnect()
+    await _recv_until(successor, "server_message")  # host_change
+    await _drain(successor)
+    await _drain(asker)
+
+    await successor.send_json_to(
+        {
+            "action": "sync_response",
+            "to_user": asker_user,
+            "option": OPTION,
+            "request_id": 2,
+        }
+    )
+
+    response = await _recv_until(asker, "sync_response")
+    assert response["option"]["part_id"] == OPTION["part_id"]
+    for communicator in (successor, asker):
+        await communicator.disconnect()
+
+
 async def test_operation_notification_is_broadcast_to_the_others():
     host, created, [(guest, guest_user)] = await _room_with_guests("guest")
 

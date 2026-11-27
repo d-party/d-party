@@ -55,6 +55,10 @@ export class RoomSession {
   private static readonly HEARTBEAT_MS = 5000;
   // 手動の sync のときだけトーストを出す（join 直後の自動 sync では出さない）。
   private pendingManualSyncToast = false;
+  // 自分が出した sync_request への応答だけを適用する。要求していない sync_response で
+  // 他人に再生を動かされないように（サーバもホスト以外からの sync_response は捨てる）。
+  private syncRequestedAt: number | null = null;
+  private static readonly SYNC_RESPONSE_TIMEOUT_MS = 10000;
   // 接続時間のうち、まだ統計へ足していない区間の開始時刻。
   private connectedAt: number | null = null;
   // タブを閉じると切断ハンドラが走らないことがあるので、定期的に書き出す。
@@ -235,6 +239,7 @@ export class RoomSession {
 
   requestSync(opts: { manual?: boolean } = {}): void {
     if (opts.manual ?? true) this.pendingManualSyncToast = true;
+    this.syncRequestedAt = now();
     this.send({ action: "sync_request", request_id: now() });
     this.deps.guard.allow();
   }
@@ -413,6 +418,13 @@ export class RoomSession {
         this.sendSyncResponse(message.user);
         break;
       case "sync_response":
+        if (
+          this.syncRequestedAt === null ||
+          now() - this.syncRequestedAt > RoomSession.SYNC_RESPONSE_TIMEOUT_MS
+        ) {
+          break;
+        }
+        this.syncRequestedAt = null;
         this.deps.guard.suppress();
         this.lastRemoteApplyAt = now();
         player.onAction("sync", message.option);

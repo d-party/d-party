@@ -251,7 +251,14 @@ class AnimePartyConsumer(AsyncAPIConsumer):
 
     @_member_action(SyncResponseRequest)
     async def sync_response(self, room, user, request: SyncResponseRequest):
-        """sync_request の送り主（``to_user``）へホストの再生状態を返す。"""
+        """sync_request の送り主（``to_user``）へホストの再生状態を返す。
+
+        ホストだけが送れる。ゲストからも通すと、一方通行（``one_way``）のルームでも
+        宛先を選んで他人の再生を動かせてしまう。
+        """
+        await repository.refresh(user)
+        if not user.is_host:
+            return
         await self._broadcast(
             room,
             SyncResponse(option=request.option),
