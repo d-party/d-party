@@ -16,7 +16,7 @@ export async function fetchActiveAnnouncements(): Promise<Announcement[]> {
     const rows: unknown =
       response.status === 200 ? response.data?.data : undefined;
     if (!Array.isArray(rows)) return [];
-    return rows.map(({ id, message, level }) => ({
+    return rows.filter(isRow).map(({ id, message, level }) => ({
       id,
       message,
       // 知らない種別（backend が先に増えた場合）は通常のお知らせとして出す。
@@ -25,6 +25,15 @@ export async function fetchActiveAnnouncements(): Promise<Announcement[]> {
   } catch {
     return [];
   }
+}
+
+/** 形の合わない行は捨てる（本文が文字列でないと描画で落ちる）。 */
+function isRow(
+  row: unknown,
+): row is { id: number; message: string; level: unknown } {
+  if (typeof row !== "object" || row === null) return false;
+  const { id, message } = row as Record<string, unknown>;
+  return Number.isInteger(id) && typeof message === "string";
 }
 
 /**

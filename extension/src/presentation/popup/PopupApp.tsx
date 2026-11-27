@@ -47,6 +47,13 @@ const HIDDEN_WHEN_INACTIVE =
 const REFERENCE_PANEL = HIDDEN_WHEN_INACTIVE;
 const OVERLAY_PANEL = `absolute inset-0 overflow-y-auto ${HIDDEN_WHEN_INACTIVE}`;
 
+/**
+ * Chrome caps a popup at 600px and scrolls the whole document beyond that. When
+ * announcements push the popup past it, the panels shrink and scroll instead, so
+ * the header, the announcements, the tabs and the footer stay in view.
+ */
+const POPUP_MAX_HEIGHT = "max-h-[600px]";
+
 export interface PopupAppProps {
   /** 配信中のアナウンスの取得（Storybook で差し替える）。 */
   loadAnnouncements?: () => Promise<Announcement[]>;
@@ -64,9 +71,9 @@ export function PopupApp({
       initial={reduce ? false : { opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className="flex min-h-[480px] flex-col bg-background text-foreground"
+      className={`flex min-h-[480px] ${POPUP_MAX_HEIGHT} flex-col bg-background text-foreground`}
     >
-      <header className="border-b-2 border-red-600 bg-neutral-950 px-5 py-4 text-white">
+      <header className="shrink-0 border-b-2 border-red-600 bg-neutral-950 px-5 py-4 text-white">
         <div className="flex items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20 backdrop-blur">
             <Users className="size-5 text-red-600" aria-hidden />
@@ -84,9 +91,9 @@ export function PopupApp({
 
       <Announcements load={loadAnnouncements} itemClassName="px-4 pt-3" />
 
-      <Tabs value={tab} onValueChange={setTab} className="gap-0">
+      <Tabs value={tab} onValueChange={setTab} className="min-h-0 gap-0">
         <TooltipProvider delayDuration={300}>
-          <TabsList className="mx-4 mt-3 w-auto">
+          <TabsList className="mx-4 mt-3 w-auto shrink-0">
             {TABS.map(({ value, label, icon }) => (
               <IconTab
                 key={value}
@@ -99,7 +106,11 @@ export function PopupApp({
           </TabsList>
         </TooltipProvider>
 
-        <div className="relative">
+        {/* The 統計 panel is in the flow, so it scrolls with this box; the
+            overlays fill the box and scroll on their own. */}
+        <div
+          className={`relative min-h-0 ${tab === "stats" ? "overflow-y-auto" : "overflow-hidden"}`}
+        >
           <TabsContent value="settings" forceMount className={OVERLAY_PANEL}>
             <main className="p-4">
               <SettingsPanel settings={settings} update={update} />
@@ -129,7 +140,7 @@ export function PopupApp({
         </div>
       </Tabs>
 
-      <footer className="mt-auto px-4 pb-3 pt-3 text-center text-[11px] text-muted-foreground">
+      <footer className="mt-auto shrink-0 px-4 pb-3 pt-3 text-center text-[11px] text-muted-foreground">
         v{chrome.runtime.getManifest().version} · powered by U-Not
       </footer>
     </motion.div>

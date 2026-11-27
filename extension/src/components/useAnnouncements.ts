@@ -58,7 +58,11 @@ export function useAnnouncements(
     }
     return () => {
       active = false;
-      unsubscribe();
+      try {
+        unsubscribe();
+      } catch {
+        // storage が使えなくなった後（拡張機能の再読み込み）でも、閉じる処理で落とさない。
+      }
     };
   }, []);
 
