@@ -33,7 +33,8 @@ export const USERS: User[] = [SAKURA, TAKESHI, YUUKI];
 
 /**
  * 運営からのアナウンス（架空）。撮影日 2026-11-27（金）の翌週のメンテナンス予告と、
- * このマニュアルの公開のお知らせ。本文は backend の上限（60 文字）に収める。
+ * 年末年始の混雑の短いお知らせ。マニュアルの公開はお知らせで告知しない方針なので、
+ * マニュアルやまだない機能の告知は書かない。本文は backend の上限（60 文字）に収める。
  * `MANUAL_ANNOUNCEMENTS` は backend の並び（開始が新しい順）で、画面に出るのは先頭の 1 件。
  */
 export const MAINTENANCE_NOTICE: Announcement = {
@@ -41,12 +42,12 @@ export const MAINTENANCE_NOTICE: Announcement = {
   level: "warning",
   message: "12月3日（木）2:00〜6:00 はメンテナンスのため同時視聴を利用できません",
 };
-export const MANUAL_NOTICE: Announcement = {
+export const CONGESTION_NOTICE: Announcement = {
   id: 102,
   level: "info",
-  message: "利用マニュアルを公開しました。「情報」タブの「使い方」から開けます",
+  message: "年末年始は混雑のため、つながりにくくなることがあります",
 };
-export const MANUAL_ANNOUNCEMENTS: Announcement[] = [MAINTENANCE_NOTICE, MANUAL_NOTICE];
+export const MANUAL_ANNOUNCEMENTS: Announcement[] = [MAINTENANCE_NOTICE, CONGESTION_NOTICE];
 
 /** `announcements` をすぐ返す `load`（何も渡さなければアナウンスなし）。 */
 export function announcementsOf(
