@@ -63,9 +63,12 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
   `anime_user is None` を必ずガードする。フロントのオリジンから張るので `asgi.py` で `MY_DOMAIN` を許可している。
 - **ルーム設定（`Setting`）**: create 時にすべて `False` で作る。変更はオーナー限定の
   `update_setting` で、`room_setting` をサーバから push する（クライアントからの read は無い）。
-  - `one_way`：非オーナーの `video_operation` を捨てる
+  - `one_way`：非オーナーの `video_operation` と `operation_notification` を捨てる
   - `owner_leave_delete`：オーナー退室でルームを消す
   - `disable_reaction`：配信も保存もしない
+- **再生状態の問い合わせ**: `sync_request` はホストへだけ届き、`sync_response` はホストからしか
+  受け付けない（設定に関係なく）。ゲストから通すと、宛先を選んで他人の再生を動かせる。
+  ホストかどうかは接続が持つ値ではなく、`repository.refresh` した DB の値で判定する。
 - **ghost の回収**: graceful でない停止で alive のまま残った行は、起動時の
   `close_active_sessions` が `updated_at` が 1 日以上前のものだけ論理削除する（別 Pod の稼働中セッションを巻き込まない）。
 - **ルームの寿命**: 作成（`created_at`）から 48 時間を超えたルームは、在室中でも
