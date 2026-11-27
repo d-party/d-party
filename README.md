@@ -12,7 +12,7 @@
 | d\_party/\_\_init\_\_.py                                |        0 |        0 |        0 |        0 |    100% |           |
 | d\_party/asgi.py                                        |       12 |        0 |        2 |        0 |    100% |           |
 | d\_party/dashboard.py                                   |       23 |        0 |        2 |        0 |    100% |           |
-| d\_party/settings.py                                    |       57 |        0 |       10 |        0 |    100% |           |
+| d\_party/settings.py                                    |       59 |        0 |       10 |        0 |    100% |           |
 | d\_party/urls.py                                        |        7 |        0 |        2 |        0 |    100% |           |
 | streamer/\_\_init\_\_.py                                |        0 |        0 |        0 |        0 |    100% |           |
 | streamer/admin.py                                       |       58 |        0 |        0 |        0 |    100% |           |
@@ -30,7 +30,7 @@
 | streamer/repository.py                                  |       75 |        0 |       12 |        0 |    100% |           |
 | streamer/routing.py                                     |        3 |        0 |        0 |        0 |    100% |           |
 | streamer/util.py                                        |        9 |        0 |        2 |        0 |    100% |           |
-| **TOTAL**                                               |  **957** |    **5** |  **132** |    **4** | **99%** |           |
+| **TOTAL**                                               |  **959** |    **5** |  **132** |    **4** | **99%** |           |
 
 
 ## Setup coverage badge
