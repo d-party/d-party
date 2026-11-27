@@ -15,6 +15,7 @@ STATS = "/api/v1/statistics/anime-store/"
 DAYS_ENDPOINTS = [
     "active-user-per-day",
     "active-room-per-day",
+    "hourly-average-user",
     "anime-reaction-count",
     "anime-reaction-all-count",
     "anime-room-all-count",
@@ -81,6 +82,69 @@ def test_per_day_series_covers_every_day_of_the_window(client):
         {"day": str(today - datetime.timedelta(days=1)), "count": 0},
         {"day": str(today), "count": 2},
     ]
+
+
+class TestHourlyAverageUser:
+    """入室時刻だけで時間帯ごとの 1 日あたり平均を出す。"""
+
+    @pytest.fixture
+    def now(self, monkeypatch):
+        # 「今」を TIME_ZONE の 14:30 に固定する（localtime / localdate も now() から作られる）。
+        fixed = datetime.datetime(
+            2026, 11, 27, 14, 30, tzinfo=timezone.get_current_timezone()
+        )
+        monkeypatch.setattr(timezone, "now", lambda: fixed)
+        return fixed
+
+    @staticmethod
+    def _enter_at(now, days_ago: int, hour: int, minute: int = 0) -> None:
+        user = AnimeUserFactory()
+        entered = now.replace(hour=hour, minute=minute) - datetime.timedelta(
+            days=days_ago
+        )
+        AnimeUser.objects.filter(pk=user.pk).update(created_at=entered)
+
+    def test_counts_entries_per_hour_over_the_days_each_hour_occurred(
+        self, client, now
+    ):
+        for days_ago, hour, minute in [
+            (2, 10, 15),
+            (2, 10, 45),
+            (1, 10, 5),
+            (1, 23, 30),
+            (0, 9, 0),
+            (0, 14, 10),
+        ]:
+            self._enter_at(now, days_ago, hour, minute)
+        # 退室しても入室時刻で数える。
+        AnimeUser.objects.filter(created_at__hour=23).first().delete()
+
+        data = client.get(STATS + "hourly-average-user", {"days": 7}).json()["data"]
+        averages = {row["hour"]: row["average"] for row in data}
+
+        # 最初の入室が 2 日前なので 3 日間。15 時以降は今日がまだ来ていないので 2 日間。
+        assert [row["hour"] for row in data] == list(range(24))
+        assert averages[10] == 1.0
+        assert averages[9] == 0.33
+        assert averages[14] == 0.33
+        assert averages[23] == 0.5
+        assert averages[0] == 0.0
+
+    def test_days_limits_the_window_and_its_length(self, client, now):
+        self._enter_at(now, 9, 20)
+        self._enter_at(now, 0, 8)
+
+        week = client.get(STATS + "hourly-average-user", {"days": 7}).json()["data"]
+        month = client.get(STATS + "hourly-average-user", {"days": 30}).json()["data"]
+
+        # 7 日だと今日だけ（1 日）、30 日だと 9 日前から（20 時台は今日を除く 9 日）。
+        assert (week[8]["average"], week[20]["average"]) == (1.0, 0.0)
+        assert (month[8]["average"], month[20]["average"]) == (0.1, 0.11)
+
+    def test_empty_database_returns_zero_for_every_hour(self, client, now):
+        data = client.get(STATS + "hourly-average-user").json()["data"]
+
+        assert data == [{"hour": hour, "average": 0.0} for hour in range(24)]
 
 
 @pytest.mark.parametrize(
