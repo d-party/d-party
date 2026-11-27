@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import {
+  BookOpen,
   ChevronDown,
   Download,
   Mail,
@@ -192,6 +194,19 @@ export default function UsagePage(): React.JSX.Element {
           </li>
         ))}
       </ol>
+
+      <div className="mt-10 flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-6 text-center">
+        <p className="font-semibold">もっと詳しく知りたいときは</p>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          サイドバーの見方、再生の同期のしくみ、リアクション、設定、困ったときの対処までをスクリーンショットつきでまとめています。
+        </p>
+        <Button asChild variant="secondary">
+          <Link href="/docs">
+            <BookOpen />
+            利用マニュアルを見る
+          </Link>
+        </Button>
+      </div>
     </section>
   );
 }

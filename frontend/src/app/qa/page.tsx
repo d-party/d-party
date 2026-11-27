@@ -179,6 +179,16 @@ export default function QaPage(): React.JSX.Element {
       <header className="mb-10 text-center">
         <h1 className="text-3xl font-bold tracking-tight">Q&amp;A</h1>
         <p className="mt-3 text-muted-foreground">よくある質問と回答</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          詳しい操作方法やトラブルの対処は{" "}
+          <Link
+            href="/docs"
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            利用マニュアル
+          </Link>{" "}
+          をご覧ください。
+        </p>
       </header>
 
       <Faq entries={ENTRIES} />
