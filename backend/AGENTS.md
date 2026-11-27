@@ -74,6 +74,9 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
   - 登録は管理画面の「パスキー」一覧から。登録済みのパスキーがあるアカウントへの追加は、
     パスキーでログインしたセッションからしかできない（ライブラリの仕様）。パスキーを失くしたら、
     パスワードで入って一覧から古い行を消すと登録し直せる。
+  - ログイン試行のロック（django-axes、本番だけ有効）はユーザー名と IP の組で効く。IP は
+    Cloudflare の `CF-Connecting-IP` から取る（`d_party/client_ip.py`）。Cloudflare を通らずに
+    nginx へ届く経路を作ると、このヘッダーを偽ってロックを回避できるので作らない。
   - テンプレートは Unfold のものをコピーせず、同名で継承してブロックだけ埋める
     （`login.html` の `login_after`）。要素の id は django-otp-webauthn のスクリプトとの契約。
 - **CSP**: `settings.py` の `SECURE_CSP_REPORT_ONLY`（今は Report-Only。ブロックはしない）。
