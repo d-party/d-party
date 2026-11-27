@@ -264,6 +264,24 @@ gate_nginx() {
 }
 
 # ── infra ────────────────────────────────────────────────────────────────────
+# 検査は infra-ci.yml と揃える。秘密値は既定を持たないので、外部 Secret 名か平文を渡す。
+helm_lint() {
+  helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret
+}
+
+helm_template_generated_secret() {
+  helm template d-party infra/helm/d-party \
+    --set secret.SECRET_KEY=ci --set secret.POSTGRES_PASSWORD=ci >/dev/null
+}
+
+# 秘密値なしで render できてしまったら失敗。
+helm_template_no_secret_rejected() {
+  if helm template d-party infra/helm/d-party >/dev/null 2>&1; then
+    echo "秘密値なしで render できてしまう"
+    return 1
+  fi
+}
+
 helm_template_prod() {
   helm template d-party infra/helm/d-party \
     --set config.MY_DOMAIN=d-party.example \
@@ -275,8 +293,9 @@ gate_infra() {
     skip "infra: helm" "helm が無い"
     return
   fi
-  step "infra: helm lint" . helm lint infra/helm/d-party
-  step "infra: helm template (defaults)" . helm template d-party infra/helm/d-party
+  step "infra: helm lint" . helm_lint
+  step "infra: helm template (chart-generated secret)" . helm_template_generated_secret
+  step "infra: helm template (no secret is rejected)" . helm_template_no_secret_rejected
   step "infra: helm template (existingSecret + domain)" . helm_template_prod
 }
 
