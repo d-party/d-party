@@ -219,3 +219,53 @@ async def test_an_exception_escaping_receive_json_still_cleans_up(monkeypatch):
     await _recv_until(host, "leave")
     assert not await _is_alive(AnimeUser, guest_user["user_id"])
     await host.disconnect()
+
+
+async def test_an_error_while_cleaning_up_is_logged_once(monkeypatch, caplog):
+    """切断済みの相手への close が落ちても、受け皿で二重に記録・後始末しない。"""
+    host, _, guest, guest_user = await _room_with_guest()
+
+    class ClientDisconnectedError(OSError):
+        pass
+
+    async def gone(self, *args, **kwargs):
+        raise ClientDisconnectedError
+
+    # どちらもゲストの接続しか呼ばない（ホストへの配信は group の送信で、close もしない）。
+    monkeypatch.setattr(AnimePartyConsumer, "_reply", gone)
+    monkeypatch.setattr(AnimePartyConsumer, "close", gone)
+    await guest.send_json_to({"action": "user_list", "request_id": 2})
+
+    with pytest.raises(ClientDisconnectedError):
+        await guest.receive_output()
+    errors = [r for r in caplog.records if r.levelname == "ERROR"]
+    assert len(errors) == 1
+    left = await _recv_until(host, "leave")
+    assert left["user"]["user_id"] == guest_user["user_id"]
+    assert not await _is_alive(AnimeUser, guest_user["user_id"])
+    monkeypatch.undo()
+    await host.disconnect()
+
+
+@pytest.mark.parametrize(
+    "handler", ["room_send", "setting_send", "group_send", "host_send", "user_send"]
+)
+async def test_channel_messages_after_the_close_are_not_sent(handler, monkeypatch):
+    """close の後に届いた配信は送らない（ASGI サーバは close の後の send を例外にする）。"""
+    consumer = AnimePartyConsumer()
+    consumer._closing = True
+    sent = []
+
+    async def record(self, content, close=False):
+        sent.append(content)
+
+    monkeypatch.setattr(AnimePartyConsumer, "send_json", record)
+    await getattr(consumer, handler)(
+        {
+            "response": {"action": "room_setting"},
+            "sender_channel_name": "other",
+            "to_user": {"user_id": "x"},
+        }
+    )
+
+    assert sent == []

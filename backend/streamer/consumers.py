@@ -47,6 +47,7 @@ from .models import PART_ID_MAX_LENGTH, AnimeRoom, AnimeUser, ReactionType
 logger = logging.getLogger(__name__)
 
 # RFC 6455 の close code。
+CLOSE_NORMAL = 1000
 CLOSE_POLICY_VIOLATION = 1008
 CLOSE_INTERNAL_ERROR = 1011
 
@@ -182,7 +183,11 @@ class AnimePartyConsumer(AsyncAPIConsumer):
         try:
             await self.receive_json(content, **kwargs)
         # 上で弾けなかったものの受け皿。ここを抜けると disconnect が呼ばれない。
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
+            # handle_exception が後始末を始めた後に（切断済みの close などで）出た例外は、
+            # もう一度記録して閉じ直さない。
+            if self._closing:
+                raise
             await self.handle_exception(exc, action=None, request_id=None)
 
     async def handle_exception(self, exc, action, request_id):
@@ -278,8 +283,8 @@ class AnimePartyConsumer(AsyncAPIConsumer):
 
     @action()
     async def leave(self, **payload):
-        # 後始末は disconnect が行う。
-        await self.close()
+        # close の後に届いた配信で送信が落ちると disconnect が呼ばれないので、先に後始末する。
+        await self._abort(CLOSE_NORMAL)
 
     @_member_action(VideoOperationRequest)
     async def video_operation(self, room, user, request: VideoOperationRequest):
@@ -372,18 +377,28 @@ class AnimePartyConsumer(AsyncAPIConsumer):
 
     # --- channel layer からの配信（``format.py`` の封筒の ``type``） ---------------
 
+    # 閉じた後に届いた配信は送らない（close の後の send は ASGI サーバが例外にする）。
+
     async def room_send(self, data: dict):
+        if self._closing:
+            return
         await self.send_json(data["response"])
 
     async def setting_send(self, data: dict):
+        if self._closing:
+            return
         self._setting = RoomSetting.model_validate(data["response"])
         await self.send_json(data["response"])
 
     async def group_send(self, data: dict):
+        if self._closing:
+            return
         if self.channel_name != data["sender_channel_name"]:
             await self.send_json(data["response"])
 
     async def host_send(self, data: dict):
+        if self._closing:
+            return
         user = self._user
         if user is None or self.channel_name == data["sender_channel_name"]:
             return
@@ -392,6 +407,8 @@ class AnimePartyConsumer(AsyncAPIConsumer):
             await self.send_json(data["response"])
 
     async def user_send(self, data: dict):
+        if self._closing:
+            return
         user = self._user
         if user is None or self.channel_name == data["sender_channel_name"]:
             return
