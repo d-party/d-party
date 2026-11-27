@@ -167,7 +167,7 @@ export default function SettingsPage(): React.JSX.Element {
 
       <DocSection id="info" title="情報タブ">
         <p>
-          d-party のホームページ、使い方ページ、dアニメストアのトップ、Chrome ウェブストア（レビューの投稿もここから）、開発を支援する GitHub Sponsors へのリンクがあります。
+          d-party のホームページ、この利用マニュアル（<Ui>使い方</Ui>）、dアニメストアのトップ、Chrome ウェブストア（レビューの投稿もここから）、開発を支援する GitHub Sponsors へのリンクがあります。
         </p>
         <DocFigure
           name="popup-info"

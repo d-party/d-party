@@ -6,7 +6,6 @@ import { SITE_URL } from "@/infrastructure/env";
 /** 検索に載せる公開ページ。ルームごとのロビーは載せない。 */
 const PUBLIC_PATHS = [
   "/",
-  "/usage",
   DOCS_PATH,
   ...DOC_CHAPTERS.map((chapter) => docPath(chapter.slug)),
   "/qa",

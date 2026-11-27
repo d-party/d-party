@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, ShieldCheck } from "lucide-react";
+import { BookOpen, ChevronRight, Download, ShieldCheck } from "lucide-react";
 
 import { DOC_CHAPTERS, docPath } from "@/components/docs/chapters";
 import {
@@ -11,27 +11,47 @@ import {
   Steps,
   Ui,
 } from "@/components/docs/DocsContent";
+import { Button } from "@/components/ui/button";
+import {
+  CHROME_WEBSTORE_URL,
+  D_ANIME_STORE_URL,
+  GOOGLE_CHROME_URL,
+  MICROSOFT_EDGE_URL,
+} from "@/lib/links";
 import { pageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = pageMetadata({
   path: "/docs",
-  title: "利用マニュアル",
+  title: "使い方（利用マニュアル）",
   description:
-    "d-party の詳しい利用マニュアル。拡張機能のインストール、ルームの作り方と招待、サイドバーの見方、再生の同期のしくみ、リアクション、設定、退室、よくあるトラブルまでをスクリーンショットつきで解説します。",
+    "d-party の使い方。Chrome / Edge への拡張機能のインストールから、dアニメストアでのルームの作り方と招待、サイドバーの見方、再生の同期のしくみ、リアクション、設定、退室、よくあるトラブルまでをスクリーンショットつきで解説します。",
 });
 
 export default function DocsIndexPage(): React.JSX.Element {
   return (
     <article className="min-w-0">
       <header className="mb-8 border-b border-border pb-6">
-        <p className="text-sm font-medium text-primary">d-party</p>
+        <p className="text-sm font-medium text-primary">d-party の使い方</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight">利用マニュアル</h1>
         <p className="mt-3 leading-relaxed text-muted-foreground">
           d-party は、dアニメストアの動画を友だちと「同時に」見るための PC 向けブラウザ拡張機能です。
           このマニュアルでは、インストールからルームの作成・招待、視聴中の画面の見方、困ったときの対処までを順に説明します。
-          ざっと流れだけ知りたい場合は{" "}
-          <DocLink href="/usage">使い方</DocLink> のページもどうぞ。
+          まずは下の「3 分でわかる流れ」で全体をつかみ、詳しいことは各章をご覧ください。
         </p>
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+          <Button asChild>
+            <a href={CHROME_WEBSTORE_URL} target="_blank" rel="noreferrer noopener">
+              <Download />
+              Chrome ウェブストアで入手
+            </a>
+          </Button>
+          <Button asChild variant="secondary">
+            <Link href={docPath("getting-started")}>
+              <BookOpen />
+              はじめる準備から読む
+            </Link>
+          </Button>
+        </div>
       </header>
 
       <DocFigure
@@ -44,9 +64,19 @@ export default function DocsIndexPage(): React.JSX.Element {
       <section className="mt-10 space-y-4">
         <h2 className="text-2xl font-semibold tracking-tight">3 分でわかる流れ</h2>
         <Steps>
-          <Step title="拡張機能を入れる">
+          <Step title="PC のブラウザと dアニメストアを用意する">
             <p className="text-muted-foreground">
-              PC の Google Chrome か Microsoft Edge に d-party をインストールします。参加する人も全員必要です。
+              PC 版の <DocLink href={GOOGLE_CHROME_URL}>Google Chrome</DocLink> か{" "}
+              <DocLink href={MICROSOFT_EDGE_URL}>Microsoft Edge</DocLink>{" "}
+              を使います（スマートフォンでは使えません）。本家の{" "}
+              <DocLink href={D_ANIME_STORE_URL}>dアニメストア</DocLink>{" "}
+              を契約し、ログインしておきます。一緒に見る人も全員必要です。
+              → <DocLink href={`${docPath("getting-started")}#requirements`}>必要なもの</DocLink>
+            </p>
+          </Step>
+          <Step title="拡張機能を入れて、表示名を決める">
+            <p className="text-muted-foreground">
+              Chrome ウェブストアから d-party をインストールします。ツールバーの d-party のアイコンから表示名とアイコンを決めておくと、ルームでだれがだれか分かりやすくなります。
               → <DocLink href={docPath("getting-started")}>はじめる準備</DocLink>
             </p>
           </Step>

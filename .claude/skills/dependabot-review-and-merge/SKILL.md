@@ -214,7 +214,8 @@ turbo run typecheck lint build --force
 
 ```bash
 cd frontend && PORT=3111 pnpm start &
-for p in / /usage /qa /privacy /stats /anime-store/lobby/test-room-123 /nope; do
+# /usage は /docs への 308（旧「使い方」の転送）が正しい
+for p in / /docs /usage /qa /privacy /stats /anime-store/lobby/test-room-123 /nope; do
   curl -s -o /dev/null -w "$p %{http_code}\n" "http://127.0.0.1:3111$p"
 done
 # 拡張機能との DOM 契約が生きているか（これが壊れるとルーム遷移が死ぬ）

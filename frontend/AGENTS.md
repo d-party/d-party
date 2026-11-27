@@ -1,6 +1,6 @@
 # AGENTS.md — frontend
 
-公開サイト（LP · 使い方 · 利用マニュアル · Q&A · 統計 · ルームのロビー · タイマー）。
+公開サイト（LP · 利用マニュアル（使い方） · Q&A · 統計 · ルームのロビー · タイマー）。
 
 - Next.js 16（App Router · Turbopack）· React 19 · TypeScript（strict）· Tailwind CSS v4 · shadcn/ui
 - primitive と `cn` は `@d-party/ui`。`Button` だけ `src/components/ui/button.tsx` に自前で持つ。
@@ -11,7 +11,7 @@
 
 ```
 src/
-  app/                          ページ（/ · usage · docs/* · stats · qa · privacy · anime-store/lobby/[roomId] · not-found）
+  app/                          ページ（/ · docs/* · stats · qa · privacy · anime-store/lobby/[roomId] · not-found）
                                 + opengraph-image / twitter-image
   components/
     landing/ layout/ motion/ qa/ stats/
@@ -56,6 +56,9 @@ pnpm storybook
 
 ## 利用マニュアル `/docs`
 
+- 「使い方」はこのマニュアルに一本化している。旧 `/usage` は `next.config.ts` の `redirects` で
+  `/docs` へ 308 で転送する。インストール済みの拡張機能（初回インストール時のタブ・ポップアップの
+  「使い方」）が開くので、転送は消さないこと。サイト内のリンクは `/docs` を直接指す。
 - 章の並び・タイトル・説明は `components/docs/chapters.ts` の 1 か所。目次・前後リンク・メタデータ・
   sitemap はここから作る。章を足すときは `app/docs/<slug>/page.tsx` と一緒にここへ足す。
 - 画像は `public/img/docs/*.webp`（WebP・2 倍解像度）で、寸法は `components/docs/images.ts` に持つ。

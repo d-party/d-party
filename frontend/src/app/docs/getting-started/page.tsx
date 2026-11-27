@@ -67,10 +67,10 @@ export default function GettingStartedPage(): React.JSX.Element {
           <Step title={<>「Chrome に追加」を押す</>}>
             <p>確認のダイアログで拡張機能を追加します。インストールはすぐに終わり、ブラウザの再起動は要りません。インストールの前から開いていた dアニメストアのタブは、再読み込みすると d-party が使えるようになります。</p>
           </Step>
-          <Step title="使い方ページが開く">
+          <Step title="利用マニュアルが開く">
             <p>
-              初めてインストールしたときだけ、d-party の <DocLink href="/usage">使い方</DocLink>{" "}
-              ページが新しいタブで自動的に開きます。開けばインストールは完了です。
+              初めてインストールしたときだけ、この <DocLink href="/docs">利用マニュアル</DocLink>{" "}
+              のトップページが新しいタブで自動的に開きます。開けばインストールは完了です。
             </p>
           </Step>
           <Step title="ツールバーに固定する（おすすめ）">

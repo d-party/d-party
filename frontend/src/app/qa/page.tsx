@@ -78,10 +78,10 @@ const ENTRIES: FaqEntry[] = [
         必要です。リンクを開くと自動的にプレイヤーが開くため、参加者も事前に d-party
         をインストールしておく必要があります。手順は{" "}
         <Link
-          href="/usage"
+          href="/docs/getting-started"
           className="text-primary underline-offset-4 hover:underline"
         >
-          使い方ページ
+          利用マニュアルの「はじめる準備」
         </Link>{" "}
         をご覧ください。
       </>
