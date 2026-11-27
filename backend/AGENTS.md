@@ -69,9 +69,9 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
   - `owner_leave_delete`：オーナー退室でルームを消す
   - `disable_reaction`：配信も保存もしない
 - **ghost の回収**: graceful でない停止で alive のまま残った行は、起動時の
-  `close_active_sessions` が `updated_at` が 1 日以上前のものだけ論理削除する（別 Pod の稼働中セッションを巻き込まない）。
+  `close_active_sessions` が全サービス（`SERVICES`）について `updated_at` が 1 日以上前のものだけ論理削除する（別 Pod の稼働中セッションを巻き込まない）。
 - **ルームの寿命**: 作成（`created_at`）から 48 時間を超えたルームは、在室中でも
-  `close_expired_rooms` が強制クローズする（統計に alive のまま残さない）。ホストの `delete_room` と同じく
+  `close_expired_rooms` が全サービス（`SERVICES`）について強制クローズする（統計に alive のまま残さない）。ホストの `delete_room` と同じく
   リアクションを畳み込み、ユーザーとルームを論理削除し、`room_deleted` を配信する。起動時ではなく
   cron で走らせる（k3s では Helm の CronJob）。
 - **管理画面のパスキー**: django-otp-webauthn。パスワードのログインも残している。

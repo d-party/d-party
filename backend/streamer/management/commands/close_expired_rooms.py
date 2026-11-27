@@ -3,12 +3,13 @@
 A room normally ends when its host deletes it or when it stays empty past the
 grace period. Rooms that miss both paths stay ``alive`` and keep counting as
 active in the statistics, so this command closes every room created more than
-``--hours`` ago (48 by default), whether or not anyone is still connected.
+``--hours`` ago (48 by default), whether or not anyone is still connected,
+for every streaming service in ``SERVICES`` (dアニメストア and DMM TV).
 
 Closing a room is the same as a host delete: the room's reactions are folded
-into ``ReactionStat``, its users and the room are logically deleted, and
-``room_deleted`` is pushed to whoever is still connected. Meant to run from
-cron; safe to run repeatedly and concurrently.
+into its service's reaction stats, its users and the room are logically
+deleted, and ``room_deleted`` is pushed to whoever is still connected. Meant to
+run from cron; safe to run repeatedly and concurrently.
 """
 
 import datetime
@@ -21,7 +22,7 @@ from django.db import transaction
 from django.utils.timezone import now
 
 from streamer.format import RoomSend, ServerMessage
-from streamer.models import AnimeRoom, AnimeUser
+from streamer.models import SERVICES, Service
 from streamer.reactions import fold_room_reactions
 
 logger = logging.getLogger(__name__)
@@ -29,18 +30,18 @@ logger = logging.getLogger(__name__)
 DEFAULT_MAX_AGE_HOURS = 48
 
 
-def close_room(room_id) -> bool:
-    """Fold reactions and logically delete the room and its users.
+def close_room(room_id, *, service: Service) -> bool:
+    """Fold reactions and logically delete the room of ``service`` and its users.
 
     Returns ``False`` if the room was already closed by someone else (a host
     delete or another run of this command racing this one).
     """
     with transaction.atomic():
-        fold_room_reactions(room_id)
-        closed = AnimeRoom.objects.alive().filter(room_id=room_id).delete()
+        fold_room_reactions(room_id, service=service)
+        closed = service.room.objects.alive().filter(room_id=room_id).delete()
         if not closed:
             return False
-        AnimeUser.objects.alive().filter(room_id=room_id).delete()
+        service.user.objects.alive().filter(room_id=room_id).delete()
     return True
 
 
@@ -64,8 +65,8 @@ def notify_room_deleted(room_id) -> None:
 
 class Command(BaseCommand):
     help = (
-        "Force-close (logically delete) AnimeRoom rows still alive after the "
-        "maximum room lifetime, together with their users."
+        "Force-close (logically delete) the rooms of every service still alive "
+        "after the maximum room lifetime, together with their users."
     )
 
     def add_arguments(self, parser):
@@ -82,16 +83,17 @@ class Command(BaseCommand):
         if hours < 1:
             raise CommandError("--hours must be 1 or greater")
         cutoff = now() - datetime.timedelta(hours=hours)
-        room_ids = list(
-            AnimeRoom.objects.alive()
-            .filter(created_at__lt=cutoff)
-            .values_list("room_id", flat=True)
-        )
         closed = 0
-        for room_id in room_ids:
-            if close_room(room_id):
-                notify_room_deleted(room_id)
-                closed += 1
+        for service in SERVICES:
+            room_ids = list(
+                service.room.objects.alive()
+                .filter(created_at__lt=cutoff)
+                .values_list("room_id", flat=True)
+            )
+            for room_id in room_ids:
+                if close_room(room_id, service=service):
+                    notify_room_deleted(room_id)
+                    closed += 1
         self.stdout.write(
             self.style.SUCCESS(f"closed {closed} room(s) older than {hours} hour(s)")
         )

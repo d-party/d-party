@@ -14,8 +14,23 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.utils import timezone
 
-from .factories import AnimeRoomFactory, AnimeUserFactory
-from .models import AnimeReaction, AnimeRoom, AnimeUser, ReactionStat
+from .factories import (
+    AnimeRoomFactory,
+    AnimeUserFactory,
+    DmmRoomFactory,
+    DmmUserFactory,
+)
+from .models import (
+    ANIME_STORE,
+    AnimeReaction,
+    AnimeRoom,
+    AnimeUser,
+    DmmReaction,
+    DmmReactionStat,
+    DmmRoom,
+    DmmUser,
+    ReactionStat,
+)
 
 
 def _make_room(age: datetime.timedelta, *, users: int = 1) -> AnimeRoom:
@@ -30,8 +45,19 @@ def _make_room(age: datetime.timedelta, *, users: int = 1) -> AnimeRoom:
     return room
 
 
-def _is_alive(room: AnimeRoom) -> bool:
-    return AnimeRoom.objects.alive().filter(pk=room.pk).exists()
+def _make_dmm_room(age: datetime.timedelta, *, users: int = 1) -> DmmRoom:
+    """``_make_room`` の DMM TV 版。"""
+    room = DmmRoomFactory()
+    DmmRoom.objects.filter(pk=room.pk).update(
+        created_at=timezone.now() - age, updated_at=timezone.now()
+    )
+    for _ in range(users):
+        DmmUserFactory(room_id=room)
+    return room
+
+
+def _is_alive(room: AnimeRoom | DmmRoom) -> bool:
+    return type(room).objects.alive().filter(pk=room.pk).exists()
 
 
 @pytest.mark.django_db
@@ -108,7 +134,7 @@ def test_close_room_reports_a_room_someone_else_already_closed():
     user = AnimeUser.objects.get(room_id=room)
     room.delete()
 
-    assert close_room(room.pk) is False
+    assert close_room(room.pk, service=ANIME_STORE) is False
     # ルームを閉じた側がユーザーも閉じる。負けた側は触らない。
     assert AnimeUser.objects.alive().filter(pk=user.pk).exists()
 
@@ -119,7 +145,9 @@ def test_room_closed_by_a_concurrent_run_is_not_counted_or_notified(monkeypatch)
 
     _make_room(datetime.timedelta(hours=49))
     notified = []
-    monkeypatch.setattr(close_expired_rooms, "close_room", lambda room_id: False)
+    monkeypatch.setattr(
+        close_expired_rooms, "close_room", lambda room_id, *, service: False
+    )
     monkeypatch.setattr(close_expired_rooms, "notify_room_deleted", notified.append)
     out = io.StringIO()
 
@@ -146,3 +174,48 @@ def test_channel_layer_failure_does_not_fail_the_run(monkeypatch, caplog):
     assert not _is_alive(expired)
     assert "closed 1 room(s)" in out.getvalue()
     assert f"failed to notify room {expired.pk}" in caplog.text
+
+
+@pytest.mark.django_db
+def test_closes_expired_dmm_rooms_too():
+    expired = _make_dmm_room(datetime.timedelta(hours=49), users=2)
+    young = _make_dmm_room(datetime.timedelta(hours=47), users=2)
+    anime = _make_room(datetime.timedelta(hours=49))
+    out = io.StringIO()
+
+    call_command("close_expired_rooms", stdout=out)
+
+    assert _is_alive(expired) is False
+    assert DmmUser.objects.alive().filter(room_id=expired).count() == 0
+    assert _is_alive(young) is True
+    assert DmmUser.objects.alive().filter(room_id=young).count() == 2
+    assert _is_alive(anime) is False
+    assert "closed 2 room(s)" in out.getvalue()
+
+
+@pytest.mark.django_db
+def test_folds_reactions_of_closed_dmm_rooms_into_dmm_stats():
+    expired = _make_dmm_room(datetime.timedelta(hours=49))
+    DmmReaction.objects.create(room_id=expired, reaction_type="S")
+    DmmReaction.objects.create(room_id=expired, reaction_type="C")
+
+    call_command("close_expired_rooms")
+
+    assert DmmReaction.objects.filter(room_id=expired).count() == 0
+    assert DmmReactionStat.objects.get(reaction_type="S").count == 1
+    assert DmmReactionStat.objects.get(reaction_type="C").count == 1
+    # dアニメストアの集計には混ぜない。
+    assert ReactionStat.objects.exists() is False
+
+
+@pytest.mark.django_db
+def test_notifies_connections_still_in_a_dmm_room():
+    expired = _make_dmm_room(datetime.timedelta(hours=49))
+    layer = get_channel_layer()
+    channel = async_to_sync(layer.new_channel)()
+    async_to_sync(layer.group_add)(str(expired.room_id), channel)
+
+    call_command("close_expired_rooms")
+
+    message = async_to_sync(layer.receive)(channel)
+    assert message["response"]["message_type"] == "room_deleted"
