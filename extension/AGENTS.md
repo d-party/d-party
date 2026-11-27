@@ -1,6 +1,6 @@
 # AGENTS.md — extension
 
-dアニメストアのページに注入して同時視聴を実現する Manifest V3 拡張機能。
+dアニメストア・DMM TV のページに注入して同時視聴を実現する Manifest V3 拡張機能。
 
 - TypeScript（strict）· React 19 · rspack（swc）· Tailwind CSS v4 · shadcn/ui
 - primitive と `cn` は `@d-party/ui`。`Button` だけ `src/components/ui/button.tsx` に自前で持つ。
@@ -63,7 +63,7 @@ pnpm storybook      # :6006
   （再生ページのプレイヤー同期）
 - `https://d-party.net/{anime-store,dmm-tv}/lobby/*`（dev は `http://localhost/...`）
 
-content script の DOM 操作は、有料の dアニメストア実ページでしか最終確認できない。
+content script の DOM 操作は、dアニメストア・DMM TV の実ページ（視聴には契約が要る）でしか最終確認できない。
 実ページから localhost の backend へつなぐには `chrome://flags/#block-insecure-private-network-requests`
 を Disabled にする。
 

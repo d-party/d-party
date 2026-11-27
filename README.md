@@ -2,7 +2,7 @@
 
 # d-party
 
-dアニメストアの動画を、離れた友だちと同時視聴するためのブラウザ拡張機能とサーバ。
+dアニメストア・DMM TV の動画を、離れた友だちと同時視聴するためのブラウザ拡張機能とサーバ。
 
 [![Backend/CI](https://github.com/d-party/d-party/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/backend-ci.yml)
 [![Backend/Build](https://github.com/d-party/d-party/actions/workflows/backend-build.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/backend-build.yml)
@@ -22,10 +22,11 @@ dアニメストアの動画を、離れた友だちと同時視聴するため�
 
 ## d-party とは
 
-dアニメストアには複数人で一緒に観る機能がありません。d-party のブラウザ拡張機能を入れると、
-再生・一時停止・シークが同じルームの参加者全員に同期され、リアクションも送り合えます。
+動画配信サービスの dアニメストア・DMM TV で、離れた友だちと同じ作品を一緒に観るための
+サービスです。d-party のブラウザ拡張機能を入れると、再生・一時停止・シークが同じルームの
+参加者全員に同期され、リアクションも送り合えます。
 
-- 無料で、広告はありません。必要なのは各自のdアニメストア契約だけです。
+- 無料で、広告はありません。必要なのは、観るサービス（dアニメストア・DMM TV）の各自の契約だけです。
 - アカウント登録は不要です。ルームの URL を共有すれば始められます。
 - 動画は各自のブラウザが再生します。サーバが中継するのは再生位置などの同期メッセージだけで、
   映像は扱いません。
@@ -111,7 +112,7 @@ pnpm --filter d-party-chrome-extension run build
 `production` なら `d-party.net`（https / wss）です。上のコマンドは未指定なので、ローカルの
 バックエンドに繋がります。定義は `extension/src/infrastructure/env.ts` にあります。
 
-dアニメストアのページから `localhost` のバックエンドへ繋ぐには、Chrome の
+dアニメストア・DMM TV のページから `localhost` のバックエンドへ繋ぐには、Chrome の
 `chrome://flags/#block-insecure-private-network-requests` を Disabled にしてください。
 既定では Private Network Access の制限で接続がブロックされます。
 

@@ -1,7 +1,7 @@
 {
   "name": "d-party",
   "version": "2.14.1",
-  "description": "dアニメストアで『同時視聴』を実現する d-party",
+  "description": "dアニメストア・DMM TV で『同時視聴』を実現する d-party",
   "private": true,
   "type": "module",
   "scripts": {
