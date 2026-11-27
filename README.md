@@ -15,12 +15,13 @@
 | d\_party/dashboard.py                                   |       23 |        0 |        2 |        0 |    100% |           |
 | d\_party/settings.py                                    |       60 |        0 |       10 |        0 |    100% |           |
 | d\_party/urls.py                                        |        7 |        0 |        2 |        0 |    100% |           |
+| d\_party/workers.py                                     |        4 |        0 |        0 |        0 |    100% |           |
 | streamer/\_\_init\_\_.py                                |        0 |        0 |        0 |        0 |    100% |           |
 | streamer/admin.py                                       |       58 |        0 |        0 |        0 |    100% |           |
 | streamer/apps.py                                        |        3 |        0 |        0 |        0 |    100% |           |
-| streamer/consumers.py                                   |      212 |        5 |       54 |        4 |     97% |74-\>exit, 139-140, 150-151, 205 |
+| streamer/consumers.py                                   |      262 |        1 |       82 |        2 |     99% |104-\>exit, 271 |
 | streamer/fields.py                                      |       23 |        0 |        4 |        0 |    100% |           |
-| streamer/format.py                                      |       85 |        0 |        2 |        0 |    100% |           |
+| streamer/format.py                                      |       93 |        0 |        2 |        0 |    100% |           |
 | streamer/management/\_\_init\_\_.py                     |        0 |        0 |        0 |        0 |    100% |           |
 | streamer/management/commands/\_\_init\_\_.py            |        0 |        0 |        0 |        0 |    100% |           |
 | streamer/management/commands/close\_active\_sessions.py |       20 |        0 |        2 |        0 |    100% |           |
@@ -31,7 +32,7 @@
 | streamer/repository.py                                  |       75 |        0 |       12 |        0 |    100% |           |
 | streamer/routing.py                                     |        3 |        0 |        0 |        0 |    100% |           |
 | streamer/util.py                                        |        9 |        0 |        2 |        0 |    100% |           |
-| **TOTAL**                                               | **1008** |    **5** |  **142** |    **4** | **99%** |           |
+| **TOTAL**                                               | **1070** |    **1** |  **170** |    **2** | **99%** |           |
 
 
 ## Setup coverage badge
