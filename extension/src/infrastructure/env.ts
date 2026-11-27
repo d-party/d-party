@@ -11,7 +11,7 @@ const HOST = IS_PRODUCTION ? "d-party.net" : "localhost";
 export const API_BASE_URL = `${IS_PRODUCTION ? "https" : "http"}://${HOST}`;
 
 export const SITE_URL = `${API_BASE_URL}/`;
-/** 利用マニュアル（旧 `/usage` はここへ転送される）。 */
+/** 公開サイトの利用マニュアル。 */
 export const DOCS_URL = `${SITE_URL}docs`;
 
 export const WEBSOCKET_ENDPOINT = `${IS_PRODUCTION ? "wss" : "ws"}://${HOST}/anime-store/party/`;

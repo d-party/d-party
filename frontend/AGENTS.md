@@ -56,9 +56,8 @@ pnpm storybook
 
 ## 利用マニュアル `/docs`
 
-- 「使い方」はこのマニュアルに一本化している。旧 `/usage` は `next.config.ts` の `redirects` で
-  `/docs` へ 308 で転送する。インストール済みの拡張機能（初回インストール時のタブ・ポップアップの
-  「使い方」）が開くので、転送は消さないこと。サイト内のリンクは `/docs` を直接指す。
+- 「使い方」はこのマニュアルに一本化している。旧 `/usage` は廃止した（転送はせず 404）。
+  サイト内のリンクは `/docs` を直接指す。
 - 章の並び・タイトル・説明は `components/docs/chapters.ts` の 1 か所。目次・前後リンク・メタデータ・
   sitemap はここから作る。章を足すときは `app/docs/<slug>/page.tsx` と一緒にここへ足す。
 - 画像は `public/img/docs/*.webp`（WebP・2 倍解像度）で、寸法は `components/docs/images.ts` に持つ。
