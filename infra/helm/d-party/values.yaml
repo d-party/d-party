@@ -136,6 +136,8 @@ nginx:
   # RPi クラスタで他サービスと相乗りする前提のため既定 1。可用性が要るなら上げる。
   replicaCount: 1
   service:
+    # Cloudflare（cloudflared）を通らずに外から届く type にしない。管理画面のログイン試行の
+    # ロックは Cloudflare が付ける CF-Connecting-IP で数えるので、直接届くと偽れる。
     type: ClusterIP
     port: 80
   strategy:
@@ -199,6 +201,7 @@ redis:
       memory: 192Mi
 
 # ── Ingress（既定 OFF。ドメイン/複数ドメインは運用リポジトリ側で扱う）────────
+# 有効にするなら Cloudflare の後ろに置く（nginx.service.type の注意と同じ理由）。
 ingress:
   enabled: false
   className: ""

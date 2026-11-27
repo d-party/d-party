@@ -168,11 +168,11 @@ ruff は `uv run ruff` で実行してください。`backend/uv.lock` で固定
 
 UI コンポーネントの Storybook を GitHub Pages で公開しています。`main` にマージすると更新されます。
 
-- <https://d-party.github.io/d-party/extension/> — 拡張機能（明るいテーマ）
+- <https://d-party.github.io/d-party/extension/> — 拡張機能（暗いテーマ）
 - <https://d-party.github.io/d-party/frontend/> — 公開サイト（暗いテーマ）
 - ローカル: `pnpm --filter d-party-frontend run storybook`（<http://localhost:6006>）
 
-`packages/ui` のコンポーネントは両方に載っており、それぞれのテーマでの見た目を確認できます。
+`packages/ui` のコンポーネントは両方に載っており、それぞれのテーマトークンでの見た目を確認できます。
 
 ### CI
 

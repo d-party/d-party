@@ -9,7 +9,9 @@ import {
 } from "lucide-react";
 import { useSyncExternalStore } from "react";
 
+import { Announcements } from "@/components/Announcements";
 import { Logo } from "@/components/Logo";
+import type { Announcement } from "@/domain/announcement";
 import type { RoomSettings as RoomSettingsValue } from "@/domain/roomSettings";
 import {
   Tabs,
@@ -34,6 +36,8 @@ export interface SidebarProps {
   onTabChange: (tab: SidebarTab) => void;
   /** 共有パネルに「タイマーのみの URL」を出すか（既定 true）。タイマー画面の無い DMM TV では false。 */
   showTimerUrl?: boolean;
+  /** 配信中のアナウンスの取得。省略するとアナウンスを出さない。 */
+  loadAnnouncements?: () => Promise<Announcement[]>;
 }
 
 export function Sidebar({
@@ -44,6 +48,7 @@ export function Sidebar({
   onUpdateRoomSettings,
   onTabChange,
   showTimerUrl = true,
+  loadAnnouncements,
 }: SidebarProps): React.JSX.Element | null {
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
 
@@ -96,6 +101,7 @@ export function Sidebar({
                 onUpdateRoomSettings={onUpdateRoomSettings}
                 onTabChange={onTabChange}
                 showTimerUrl={showTimerUrl}
+                loadAnnouncements={loadAnnouncements}
               />
             </motion.div>
           )}
@@ -114,6 +120,7 @@ function Panel({
   onUpdateRoomSettings,
   onTabChange,
   showTimerUrl,
+  loadAnnouncements,
 }: SidebarProps & { state: SidebarState }): React.JSX.Element {
   const isOwner = state.users.some(
     (user) => user.user_id === state.selfUserId && user.is_host === true,
@@ -140,6 +147,9 @@ function Panel({
           </button>
         </div>
       </header>
+      {loadAnnouncements && (
+        <Announcements load={loadAnnouncements} itemClassName="px-2" />
+      )}
 
       {state.mode === "create" && !state.joined ? (
         <CreatePanel

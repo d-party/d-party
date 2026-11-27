@@ -122,3 +122,61 @@ class TestDmmPartyConsumer(TransactionTestCase):
     @database_sync_to_async
     def dmm_stat_total(self):
         return DmmReactionStat.objects.aggregate(total=Sum("count"))["total"] or 0
+
+
+async def _receive_action(communicator: WebsocketCommunicator, action: str) -> dict:
+    message = await communicator.receive_json_from()
+    while message["action"] != action:
+        message = await communicator.receive_json_from()
+    return message
+
+
+@database_sync_to_async
+def _dmm_part_id(room_id: str) -> str:
+    return DmmRoom.objects.get(room_id=room_id).part_id
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_dmm_host_video_operation_keeps_a_long_part_id():
+    """再生状態の ``part_id`` は配信するだけの値（64 文字）ではなく、DMM の列の長さで扱う。
+
+    DMM の ``season/content`` は 64 文字を超えうる。受信時に 64 文字で切ると、切れた値が
+    ゲストへ配られ、ホストのものとして保存もされてしまう。
+    """
+    host = WebsocketCommunicator(DmmPartyConsumer.as_asgi(), "/dmm-tv/party/")
+    guest = WebsocketCommunicator(DmmPartyConsumer.as_asgi(), "/dmm-tv/party/")
+    assert (await host.connect())[0]
+    assert (await guest.connect())[0]
+    await host.send_json_to(
+        {"action": "create", "user_name": "host", "part_id": "s/c", "request_id": 1}
+    )
+    room_id = (await _receive_action(host, "create"))["room_id"]
+    await guest.send_json_to(
+        {"action": "join", "user_name": "guest", "room_id": room_id, "request_id": 1}
+    )
+    await _receive_action(guest, "join")
+    while await guest.receive_nothing() is False:
+        await guest.receive_json_from()
+
+    part_id = f"{'s' * 40}/{'c' * 59}"
+    assert 64 < len(part_id) <= 128
+    await host.send_json_to(
+        {
+            "action": "video_operation",
+            "operation": "seeked",
+            "option": {
+                "time": 1,
+                "src": None,
+                "paused": "False",
+                "rate": "1",
+                "part_id": part_id,
+            },
+            "request_id": 2,
+        }
+    )
+    relayed = await _receive_action(guest, "video_operation")
+
+    assert relayed["option"]["part_id"] == part_id
+    assert await _dmm_part_id(room_id) == part_id
+    await host.disconnect()
+    await guest.disconnect()

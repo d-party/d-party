@@ -12,7 +12,14 @@ as the ``ResponseBaseFormat`` base class.
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, BeforeValidator, SerializeAsAny, field_validator
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    FiniteFloat,
+    SerializeAsAny,
+    ValidationInfo,
+    field_validator,
+)
 
 from .models import (
     DEFAULT_USER_ICON,
@@ -34,23 +41,47 @@ class User(BaseModel):
     is_host: bool = False
 
 
+# 再生状態（``Option``）の文字列の上限。配信するだけで保存はしない（``part_id`` はホストの
+# ものだけ、そのサービスの列の長さ以下なら consumer が保存する）。拡張機能が送るのは
+# ``"True"`` / ``"1.25"`` / 作品の ID 程度。``src`` は video 要素の src 属性で、どのクライアントも
+# 読まないが、URL として収まる長さを残す。
+OPTION_VALUE_MAX_LENGTH = 64
+OPTION_SRC_MAX_LENGTH = 2048
+# 列の長さはサービスで違う。受信時は最も長いものへ切り、consumer がサービスの長さで判断する
+# （DMM TV の ``season/content`` は ``OPTION_VALUE_MAX_LENGTH`` を超えうる）。
+PART_ID_RECEIVE_MAX_LENGTH = max(PART_ID_MAX_LENGTH, DMM_PART_ID_MAX_LENGTH)
+
+
 class Option(BaseModel):
     """再生状態。"""
 
-    time: float
+    # NaN / Infinity は json.dumps で JSON に無いトークンになり、受け手の JSON.parse が
+    # フレームごと捨てる。
+    time: FiniteFloat
     src: str | None
     paused: str
     rate: str
     part_id: str
 
-    @field_validator("paused", "rate", mode="before")
+    @field_validator("paused", "rate", "part_id", mode="before")
     @classmethod
-    def _coerce_to_str(cls, value):
+    def _coerce_to_str(cls, value, info: ValidationInfo):
         # The extension compares the Python repr (`option.paused === "False"`),
-        # so bools and numbers are stringified with str().
-        if value is None or isinstance(value, str):
-            return value
-        return str(value)
+        # so bools and numbers are stringified with str(). Anything else (None,
+        # lists, objects) is left for validation to reject.
+        if isinstance(value, bool | int | float):
+            value = str(value)
+        max_length = (
+            PART_ID_RECEIVE_MAX_LENGTH
+            if info.field_name == "part_id"
+            else OPTION_VALUE_MAX_LENGTH
+        )
+        return value[:max_length] if isinstance(value, str) else value
+
+    @field_validator("src", mode="before")
+    @classmethod
+    def _clip_src(cls, value):
+        return value[:OPTION_SRC_MAX_LENGTH] if isinstance(value, str) else value
 
 
 # --- クライアント → サーバ -------------------------------------------------------
@@ -73,8 +104,8 @@ def _clipped(max_length: int, default: str = ""):
     return BeforeValidator(clip)
 
 
-# 列の長さはサービスで違う。ここでは最も長いものへ切り、consumer がサービスの長さへ切る。
-PartId = Annotated[str, _clipped(max(PART_ID_MAX_LENGTH, DMM_PART_ID_MAX_LENGTH))]
+# consumer がサービスの列の長さへ切る。
+PartId = Annotated[str, _clipped(PART_ID_RECEIVE_MAX_LENGTH)]
 Title = Annotated[str, _clipped(TITLE_MAX_LENGTH)]
 UserName = Annotated[str, _clipped(USER_NAME_MAX_LENGTH, DEFAULT_USER_NAME)]
 UserIcon = Annotated[str, _clipped(USER_ICON_MAX_LENGTH, DEFAULT_USER_ICON)]
@@ -105,8 +136,18 @@ class VideoOperationRequest(BaseModel):
     title: Title | None = None
 
 
+class UserRef(User):
+    """クライアントが宛先として送る参加者。照合に使うのは ``user_id`` だけ。
+
+    channel layer の封筒に載ってルームの全接続へ渡るので、文字列は切り詰める。
+    """
+
+    user_name: UserName
+    user_icon: UserIcon = DEFAULT_USER_ICON
+
+
 class SyncResponseRequest(BaseModel):
-    to_user: User
+    to_user: UserRef
     option: Option
 
 

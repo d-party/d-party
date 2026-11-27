@@ -13,6 +13,8 @@ export const GITHUB_ORG_URL = "https://github.com/d-party";
 
 export const GITHUB_REPO_URL = `${GITHUB_ORG_URL}/d-party`;
 
+export const GITHUB_RELEASES_URL = `${GITHUB_REPO_URL}/releases`;
+
 export const GITHUB_SPONSORS_URL = "https://github.com/sponsors/d-party";
 
 export const FEEDBACK_FORM_URL = "https://forms.gle/kKPbAPGY96rbaKgK8";

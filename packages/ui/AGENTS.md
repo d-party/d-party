@@ -21,6 +21,8 @@ TypeScript のソースのまま公開し、消費側がトランスパイルす
 
 ## Storybook
 
-両アプリの `.storybook/main.ts` がここの story も拾う。テーマトークンが違うので、popup の
-明るい配色とサイトの暗い配色の両方で確認できる。story はフレームワークに縛れないので
+両アプリの `.storybook/main.ts` がここの story も拾う。どちらも今はダーク固定で、それぞれの
+テーマトークン（`extension/src/styles/theme.css` · `frontend/src/app/globals.css`）で描かれる。
+primitive に `dark:` を書くと、拡張機能では `data-theme`、サイトでは prefers-color-scheme
+（Tailwind の既定）に従い、効き方が揃わない。色はトークンで書くこと。story はフレームワークに縛れないので
 `@storybook/react` から型を取り、`storybook/no-renderer-packages` だけ無効化している。

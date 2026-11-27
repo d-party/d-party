@@ -1,11 +1,44 @@
 /*
- * テーマトークン。popup（`:root`）とサイドバーの Shadow DOM（`:host`。shadow tree の中の
- * `:root` はページの <html> を指すので当たらない）の両方から import する。
- * 配色は prefers-color-scheme だけで切り替える。
+ * テーマトークン。popup（`:root`）とサイドバー・トーストの Shadow DOM（`:host`。shadow tree の
+ * 中の `:root` はページの <html> を指すので当たらない）の両方から import する。
+ *
+ * 今はダーク固定。テーマは OS の prefers-color-scheme ではなく `data-theme` 属性で表し、
+ * 属性は `theme.ts` の `applyTheme()` が各ルート（popup の <html>、Shadow DOM の中の
+ * マウント先）に付ける。どのテーマにするかは `resolveTheme()` だけが決める。
+ *
+ * - ダークが既定。属性が無くても（`data-theme="dark"` でも）ダークのトークンになる。
+ * - ライトは `[data-theme="light"]` の下にだけ置く。`resolveTheme()` が "light" を返すまで
+ *   どこにも当たらない。トークンを足すときは両方のブロックに足すこと。
+ * - テーマの入れ子（ライトの中にダークの島を作る）は扱わない。
  */
 :root,
 :host {
+  color-scheme: dark;
   --radius: 0.625rem;
+  --background: oklch(0.165 0.01 270);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.215 0.01 270);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.215 0.01 270);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.637 0.237 25.331);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.27 0.01 270);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.27 0.01 270);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.27 0.01 270);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.637 0.237 25.331);
+}
+
+/* ライト（今は未使用）。ダークのブロックより後ろに置き、同じ詳細度の `:root` に勝たせる。 */
+[data-theme="light"] {
+  color-scheme: light;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -27,28 +60,12 @@
   --ring: oklch(0.637 0.237 25.331);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root,
-  :host {
-    --background: oklch(0.165 0.01 270);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.215 0.01 270);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.215 0.01 270);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.637 0.237 25.331);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.27 0.01 270);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.27 0.01 270);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.27 0.01 270);
-    --accent-foreground: oklch(0.985 0 0);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.637 0.237 25.331);
-  }
-}
+/*
+ * `dark:` を prefers-color-scheme ではなくテーマ属性に従わせる。トークンと同じく「ライトの
+ * 下に無ければダーク」とし、属性を付け忘れたルートでもトークンと `dark:` が食い違わないようにする。
+ * セレクタは Shadow DOM の境界を越えないので、属性は shadow root の中のマウント先に付ける。
+ */
+@custom-variant dark (&:not(:where([data-theme="light"], [data-theme="light"] *)));
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);

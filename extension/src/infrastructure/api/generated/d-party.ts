@@ -5,6 +5,8 @@
  * OpenAPI spec version: 1.0.0
  */
 import type {
+  AnnouncementListResult,
+  AnnouncementsActiveParams,
   ApiMessage,
   CountResult,
   HourlyAverageResult,
@@ -239,6 +241,60 @@ export const getLobbyResolveUrl = (roomId: string,) => {
 export const lobbyResolve = async (roomId: string, options?: Parameters<typeof customFetch>[1]): Promise<lobbyResolveResponse> => {
 
   return customFetch<lobbyResolveResponse>(getLobbyResolveUrl(roomId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type announcementsActiveResponse200 = {
+  data: AnnouncementListResult
+  status: 200
+}
+
+export type announcementsActiveResponse400 = {
+  data: ApiMessage
+  status: 400
+}
+
+export type announcementsActiveResponseSuccess = (announcementsActiveResponse200) & {
+  headers: Headers;
+};
+export type announcementsActiveResponseError = (announcementsActiveResponse400) & {
+  headers: Headers;
+};
+
+export type announcementsActiveResponse = (announcementsActiveResponseSuccess | announcementsActiveResponseError)
+
+export const getAnnouncementsActiveUrl = (params?: AnnouncementsActiveParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/announcements?${stringifiedParams}` : `/api/v1/announcements`
+}
+
+/**
+ * Announcements being delivered now (``starts_at`` <= now < ``ends_at``).
+ *
+ * Read-only and public: the extension's popup and sidebar fetch it. Ordered by
+ * importance (warning first), then by the newest start. ``extension_version``
+ * narrows the collection to the announcements targeting that extension version.
+ */
+export const announcementsActive = async (params?: AnnouncementsActiveParams, options?: Parameters<typeof customFetch>[1]): Promise<announcementsActiveResponse> => {
+
+  return customFetch<announcementsActiveResponse>(getAnnouncementsActiveUrl(params),
   {
     ...options,
     method: 'GET'

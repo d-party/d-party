@@ -55,6 +55,10 @@ export class RoomSession {
   private static readonly HEARTBEAT_MS = 5000;
   // 手動の sync のときだけトーストを出す（join 直後の自動 sync では出さない）。
   private pendingManualSyncToast = false;
+  // 自分が出した sync_request への応答だけを適用する。要求していない sync_response で
+  // 他人に再生を動かされないように（サーバもホスト以外からの sync_response は捨てる）。
+  private syncRequestedAt: number | null = null;
+  private static readonly SYNC_RESPONSE_TIMEOUT_MS = 10000;
   // 接続時間のうち、まだ統計へ足していない区間の開始時刻。
   private connectedAt: number | null = null;
   // タブを閉じると切断ハンドラが走らないことがあるので、定期的に書き出す。
@@ -169,6 +173,12 @@ export class RoomSession {
     this._inRoom = false;
     this.roomSettings = DEFAULT_ROOM_SETTINGS;
     this.pendingSettings = null;
+    this.closeSyncWindow();
+  }
+
+  private closeSyncWindow(): void {
+    this.syncRequestedAt = null;
+    this.pendingManualSyncToast = false;
   }
 
   private startConnectionTracking(): void {
@@ -234,7 +244,19 @@ export class RoomSession {
   }
 
   requestSync(opts: { manual?: boolean } = {}): void {
+    // ホストの sync_request は自分には返らない（サーバはホストへだけ送り、送り主は除く）。
+    // 受け付けの窓を開けると、偽の sync_response でホストの再生を動かされうる。
+    if (this.isHost) return;
+    // 前の手動 sync に応答が来ないまま期限が過ぎていたら、そのトーストの予約は捨てる
+    // （自動の sync で「シンクしました」と出さない）。
+    if (
+      this.syncRequestedAt === null ||
+      now() - this.syncRequestedAt > RoomSession.SYNC_RESPONSE_TIMEOUT_MS
+    ) {
+      this.pendingManualSyncToast = false;
+    }
     if (opts.manual ?? true) this.pendingManualSyncToast = true;
+    this.syncRequestedAt = now();
     this.send({ action: "sync_request", request_id: now() });
     this.deps.guard.allow();
   }
@@ -412,12 +434,17 @@ export class RoomSession {
       case "sync_request":
         this.sendSyncResponse(message.user);
         break;
-      case "sync_response":
+      case "sync_response": {
+        if (this.syncRequestedAt === null) break;
+        const expired =
+          now() - this.syncRequestedAt > RoomSession.SYNC_RESPONSE_TIMEOUT_MS;
+        const manual = this.pendingManualSyncToast;
+        this.closeSyncWindow();
+        if (expired) break;
         this.deps.guard.suppress();
         this.lastRemoteApplyAt = now();
         player.onAction("sync", message.option);
-        if (this.pendingManualSyncToast) {
-          this.pendingManualSyncToast = false;
+        if (manual) {
           this.deps.notifier.info("再生状況をホストにシンク");
           this.deps.sidebar.addHistory({
             direction: "system",
@@ -426,6 +453,7 @@ export class RoomSession {
           });
         }
         break;
+      }
       case "operation_notification":
         this.notifyOperation(
           message.operation,

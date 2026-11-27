@@ -5,7 +5,16 @@ import uuid
 import pytest
 from pydantic import ValidationError
 
-from .format import GroupSend, Option, User, UserAdd, UserSend, VideoOperation
+from .format import (
+    OPTION_SRC_MAX_LENGTH,
+    OPTION_VALUE_MAX_LENGTH,
+    GroupSend,
+    Option,
+    User,
+    UserAdd,
+    UserSend,
+    VideoOperation,
+)
 
 USER = {"user_id": uuid.uuid4(), "user_name": "a"}
 OPTION = {"time": 1.5, "src": None, "paused": "False", "rate": "1", "part_id": "1"}
@@ -74,3 +83,38 @@ def test_video_operation_title_is_optional():
     assert dumped["action"] == "video_operation"
     assert dumped["title"] is None
     assert dumped["option"]["src"] is None
+
+
+def test_option_clips_relayed_strings():
+    option = Option(
+        **{
+            **OPTION,
+            "src": "s" * 5000,
+            "paused": "p" * 100,
+            "rate": 1.5,
+            "part_id": 12345,
+        }
+    )
+
+    assert option.src == "s" * OPTION_SRC_MAX_LENGTH
+    assert option.paused == "p" * OPTION_VALUE_MAX_LENGTH
+    assert option.rate == "1.5"
+    assert option.part_id == "12345"
+
+
+def test_option_keeps_a_missing_src():
+    assert Option(**OPTION).src is None
+
+
+@pytest.mark.parametrize("field", ["paused", "rate", "part_id"])
+@pytest.mark.parametrize("value", [[1], {"a": 1}, None])
+def test_option_rejects_non_scalar_values(field, value):
+    """真偽値と数値だけを文字列にする。入れ物は文字列にせず検証で落とす。"""
+    with pytest.raises(ValidationError):
+        Option(**{**OPTION, field: value})
+
+
+@pytest.mark.parametrize("time", [float("nan"), float("inf"), float("-inf")])
+def test_option_rejects_non_finite_time(time):
+    with pytest.raises(ValidationError):
+        Option(**{**OPTION, "time": time})

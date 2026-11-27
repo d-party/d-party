@@ -16,18 +16,19 @@ src/
     RoomSession.ts   再生同期のオーケストレーション
     ports.ts         PartySocket / PlayerController / SidebarView / Notifier などの境界
     ActionGuard.ts   受信した操作を送り返さないためのフラグ
-  infrastructure/  ws/ · storage/（chrome.storage.sync）· notifier/ · api/ · env.ts
-  styles/          theme.css（popup と sidebar が共有するテーマトークン）· sidebar.css
+  infrastructure/  ws/ · storage/（chrome.storage.sync / local）· notifier/ · api/ · env.ts
+  styles/          theme.css（popup と Shadow DOM が共有するテーマトークン）· theme.ts（テーマの決定）· sidebar.css
   presentation/    注入先ごとのエントリ
     background/      service worker
     content/store/   作品ページ
     content/party/   プレイヤーページ（サイドバー・プレイヤー・リアクション）
+    content/dmm/     DMM TV の作品詳細（detail/）と再生ページ（player/。サイドバー・通知・リアクションは party/ を再利用）
     content/version/ ロビーでのバージョン確認
     popup/           設定 UI
 ```
 
 rspack のエントリは `background` · `content-store` · `content-party` · `content-version` ·
-`popup` · `sidebar-style`。ページへ直接当てる CSS は `manifest.json` の `css`（`public/css/`）で
+`content-dmm-detail` · `content-dmm-player` · `popup` · `sidebar-style`。ページへ直接当てる CSS は `manifest.json` の `css`（`public/css/`）で
 注入し、Shadow DOM 用の CSS（`sidebar-style`）だけをバンドルして実行時に読み込む。
 
 ## 約束
@@ -43,6 +44,14 @@ rspack のエントリは `background` · `content-store` · `content-party` · 
   リアクション禁止では送信せず自分にだけ表示する（`RoomSession`）。
 - 共有パネルの「タイマーのみの URL」はロビー URL に `?timer=true` を付けたもの。タイマー画面は
   dアニメストアのロビーにしか無いので、DMM TV では `mountSidebar` に `showTimerUrl: false` を渡して出さない。
+- アナウンス（`components/Announcements.tsx`）はポップアップではタブの上、サイドバーでは
+  ヘッダーの下に出す。ポップアップは backend を直接、content script は background 経由
+  （`{ type: "announcements" }`）で取る。どちらも orval のクライアントの引数で
+  `extension_version`（manifest の `version`）を送り、配信対象のものだけを受け取る（取れない
+  環境では付けない）。取得の失敗は空として扱い何も出さない。× で閉じた ID は
+  `chrome.storage.local` の `dismissedAnnouncementIds` に残し、両方で二度と出さない。
+  見た目は控えめなテキスト行で、重要（`warning`）は色だけに頼らず警告アイコンと「重要」の文字で
+  お知らせ（`info`）と区別する。
 
 ## ビルドと読み込み
 
@@ -73,6 +82,35 @@ content script の DOM 操作は、dアニメストア・DMM TV の実ページ�
 アニメーションは Google Noto Emoji（Apache-2.0）の Lottie。既定 5 種とエクストラ最大 200 種を
 `src/presentation/content/party/react/reactions/lottie/` に同梱する。エクストラを静的 import
 しているので `content-party` は十数 MB になる。静的アイコンは react-icons と lucide。
+
+## テーマ
+
+拡張機能の UI は**ダーク固定**（公開サイトと同じ）。OS の prefers-color-scheme には従わない。
+
+- テーマは `data-theme` 属性で表す。どれにするかは `src/styles/theme.ts` の `resolveTheme()`
+  だけが決め（今は常に `"dark"`）、`applyTheme(root)` が属性を付ける。
+- 属性を付ける場所: popup は `<html>`、サイドバーとトーストは shadow root の中のマウント先、
+  Storybook は `.storybook/preview.ts` で `<html>`。shadow tree のセレクタはホストより外を見られない
+  ので、Shadow DOM ではホストではなく中の要素に付ける。新しく React のルートを作ったら
+  `applyTheme()` を呼ぶ。
+- トークン（`src/styles/theme.css`）はダークが既定（`:root, :host`）で、`color-scheme: dark` も
+  ここで効かせる。ライトのトークンは `[data-theme="light"]` の下に残してあり、今はどこにも当たらない。
+  トークンを足すときは両方のブロックに足す。
+- `dark:` バリアントは `@custom-variant dark` でテーマ属性に従わせてある（`[data-theme="light"]`
+  の下に無ければダーク）。トークンで書けない色（`text-amber-700 dark:text-amber-400` など）は
+  ライト用を素のクラス、ダーク用を `dark:` に書く。ライトを使わない今も両方書いておく。
+- 次はテーマの対象外で、色を固定している。
+  - ダーク前提の固定色: トースト・リアクションのバッジ・ポップアップとサイドバーのヘッダー・
+    サイドバーを開くタブ。
+  - ページへ直接当てる `public/css/`: 作品ページのボタンはページの明るい配色に、プレイヤーの
+    ボタンは黒いコントロールバーに合わせる。
+
+ライトを足すとき:
+
+1. `resolveTheme()` を設定（`domain/settings.ts`）や `matchMedia("(prefers-color-scheme: light)")`
+   に従わせる。設定の変更やシステム設定の変化に追従するなら、そのときに `applyTheme()` を呼び直す。
+2. `[data-theme="light"]` のトークンを見直し、固定色を持つ UI と `dark:` の無い固定色を確かめる。
+3. Storybook の preview でテーマを切り替えられるようにする（toolbar の globals など）。
 
 ## CI
 
