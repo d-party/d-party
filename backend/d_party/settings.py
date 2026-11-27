@@ -50,7 +50,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django_extensions",
     "channels",
     "rest_framework",
     "drf_spectacular",
@@ -60,6 +59,9 @@ INSTALLED_APPS = [
     "streamer",
     "api",
 ]
+if DEBUG:
+    # shell_plus などの開発用コマンド。本番では読み込まない。
+    INSTALLED_APPS += ["django_extensions"]
 
 # OpenAPI スキーマは `manage.py spectacular` でファイル（backend/openapi.json）に書き出す。
 # スキーマを配信する URL は持たない。

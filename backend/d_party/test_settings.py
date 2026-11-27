@@ -37,6 +37,8 @@ def test_production_hardening(load_settings):
     assert loaded["SESSION_COOKIE_SECURE"] is True
     assert loaded["CSRF_COOKIE_SECURE"] is True
     assert loaded["SECURE_PROXY_SSL_HEADER"] == ("HTTP_X_FORWARDED_PROTO", "https")
+    # 開発用のコマンドは本番に載せない。
+    assert "django_extensions" not in loaded["INSTALLED_APPS"]
     # axes（ログイン試行のロック）は既定で有効。
     assert "AXES_ENABLED" not in loaded
     assert loaded["OTP_WEBAUTHN_RP_ID"] == "d-party.example"
@@ -56,6 +58,7 @@ def test_debug_relaxations(load_settings):
     assert "SESSION_COOKIE_SECURE" not in loaded
     assert "SECURE_PROXY_SSL_HEADER" not in loaded
     assert loaded["AXES_ENABLED"] is False
+    assert "django_extensions" in loaded["INSTALLED_APPS"]
     assert "http://localhost:8000" in loaded["OTP_WEBAUTHN_ALLOWED_ORIGINS"]
 
 
