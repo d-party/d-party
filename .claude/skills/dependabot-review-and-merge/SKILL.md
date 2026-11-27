@@ -59,8 +59,10 @@ description: Review, verify and merge the open Dependabot PRs on the d-party mon
   重ねない処理は後段がするので、既存のコメントを読みに行かなくてよい。
 - 後段の merge ジョブ（LLM を使わない `.github/scripts/dependabot-merge.sh`）は、`merge` の
   PR をさらに次の条件で確かめてからマージする。満たさないものは判定にあってもマージされない。
-  - Dependabot が立てた open な PR で、commit がすべて Dependabot のもの
-  - commit 本文の `update-type` が minor か patch（major と、種別の書かれていないものは人に回る）
+  - Dependabot が同じリポジトリのブランチから立てた open な PR で、commit がすべて
+    Dependabot のもの（GitHub が署名した検証済みの commit。author を名乗るだけでは通らない）
+  - commit 本文の依存ごとの `update-type` がすべて minor か patch（major と、種別の書かれて
+    いない依存が 1 つでもあるものは人に回る）
   - `.github/workflows/` を変えない
   - head commit のチェックがすべて成功していて、`mergeStateStatus` が `CLEAN`
     （lockfile の衝突は Dependabot の自動 rebase を全 PR で合計 30 分まで待つ）

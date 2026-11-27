@@ -8,6 +8,9 @@
 #
 # 判定ファイルの形（.claude/skills/dependabot-review-and-merge/SKILL.md の「非対話モード」）:
 #   {"merge": [{"number": 123}], "comments": [{"number": 124, "body": "..."}]}
+#
+# pipefail の下で `cmd | grep -q` は使わない。grep -q が先に終わると cmd が SIGPIPE で
+# 落ち、パイプ全体が失敗扱いになって、一致したのに if が偽になる。出力は変数に受けてから見る。
 set -euo pipefail
 
 verdict="${1:?usage: dependabot-merge.sh <verdict.json>}"
@@ -15,6 +18,7 @@ repo="${GITHUB_REPOSITORY:?}"
 summary="${GITHUB_STEP_SUMMARY:-/dev/stdout}"
 # lockfile の衝突は Dependabot が自動で rebase する。その CI を待つのは全 PR で合計 30 分まで。
 deadline=$(($(date +%s) + ${MERGE_WAIT_SECONDS:-1800}))
+poll="${MERGE_POLL_SECONDS:-30}"
 
 log() { printf '%s\n' "$@" >>"$summary"; }
 
@@ -33,42 +37,66 @@ checks_jq='
     elif all($s[]; IN("SUCCESS", "SKIPPED", "NEUTRAL")) then "green"
     else "pending" end'
 
-# Dependabot が立てた open な PR か。
+# Dependabot が同じリポジトリのブランチから立てた open な PR か。
 is_dependabot_pr() {
   local pr
   pr=$(gh api "repos/$repo/pulls/$1") || return 1
-  [ "$(jq -r '.state' <<<"$pr")" = open ] && [ "$(jq -r '.user.login' <<<"$pr")" = 'dependabot[bot]' ]
+  jq -e '.state == "open" and .user.login == "dependabot[bot]"
+         and .head.repo.full_name == .base.repo.full_name' <<<"$pr" >/dev/null
 }
 
 # マージしてよいか。だめなら理由を 1 行出して 1 を返す。
 eligible() {
-  local n=$1 head=$2 commits
+  local n=$1 head=$2 commits files
   is_dependabot_pr "$n" || { echo "Dependabot の open な PR ではない"; return 1; }
 
-  commits=$(gh api "repos/$repo/pulls/$n/commits" --paginate --jq '.[] | {sha, login: (.author.login // ""), message: .commit.message}' | jq -s .)
+  commits=$(gh api "repos/$repo/pulls/$n/commits" --paginate \
+    --jq '.[] | {sha, login: (.author.login // ""), committer: (.committer.login // ""),
+                 verified: (.commit.verification.verified // false), message: .commit.message}' |
+    jq -s .) || { echo "commit を読めない"; return 1; }
   [ "$(jq -r 'last.sha' <<<"$commits")" = "$head" ] || { echo "確認中に head が変わった"; return 1; }
+  # author は commit のメールアドレスから決まるので、push できる人なら名乗れる。Dependabot の
+  # commit は GitHub（web-flow）が署名するので、検証済みの署名もあわせて求める。
   # 人や別の bot が足した commit（移行コードなど）は人が見る。
-  jq -e 'all(.[]; .login == "dependabot[bot]")' <<<"$commits" >/dev/null ||
-    { echo "Dependabot 以外の commit がある"; return 1; }
-  # Dependabot は commit 本文に update-type を書く。major と、種別の分からないものは人に回す。
-  jq -e '[.[].message | scan("update-type: *version-update:semver-[a-z]+")] as $t
-         | ($t | length) > 0 and all($t[]; test("semver-(minor|patch)$"))' <<<"$commits" >/dev/null ||
-    { echo "major か、更新の種別が分からない"; return 1; }
+  jq -e 'all(.[]; .login == "dependabot[bot]" and .committer == "web-flow" and .verified)' \
+    <<<"$commits" >/dev/null || { echo "Dependabot が署名した commit だけではない"; return 1; }
+  # Dependabot は commit 本文に依存ごとの update-type を書く。major と、種別の書かれていない
+  # 依存が 1 つでもあれば人に回す。
+  jq -e '[.[].message | scan("dependency-name:")] as $names
+         | [.[].message | scan("update-type: *version-update:semver-[a-z]+")] as $t
+         | ($t | length) > 0 and ($t | length) == ($names | length)
+           and all($t[]; test("semver-(minor|patch)$"))' <<<"$commits" >/dev/null ||
+    { echo "major か、更新の種別が分からない依存がある"; return 1; }
   # GITHUB_TOKEN には workflows 権限が無い。
-  if gh api "repos/$repo/pulls/$n/files" --paginate --jq '.[].filename' | grep -q '^\.github/workflows/'; then
+  files=$(gh api "repos/$repo/pulls/$n/files" --paginate --jq '.[].filename') ||
+    { echo "変更ファイルを読めない"; return 1; }
+  if [[ $'\n'"$files" == *$'\n.github/workflows/'* ]]; then
     echo ".github/workflows/ を変える（手動マージ待ち）"
     return 1
   fi
 }
 
 log "## Dependabot のマージ" ""
-mapfile -t numbers < <(jq -r '.merge[]? | .number | select(type == "number" and . > 0 and . == floor)' "$verdict")
+# 重複と、番号でない値は落とす（1 つ壊れた値があっても残りは読む）。
+mapfile -t numbers < <(jq -r '
+  [.merge[]? | objects | .number | select(type == "number" and . > 0 and . == floor)]
+  | reduce .[] as $n ([]; if index([$n]) then . else . + [$n] end) | .[]' "$verdict")
 [ "${#numbers[@]}" -gt 0 ] || log "- 判定でマージ対象になった PR は無い。"
 
+failed=0
 for n in "${numbers[@]}"; do
+  # 待つ前に確かめる。閉じた PR や人の PR を CLEAN になるまで待って、時間を使い切らない。
+  if ! is_dependabot_pr "$n"; then
+    log "- #$n: 見送り（Dependabot の open な PR ではない）"
+    continue
+  fi
   while :; do
-    if ! state=$(gh pr view "$n" -R "$repo" --json mergeStateStatus,headRefOid,statusCheckRollup); then
+    if ! state=$(gh pr view "$n" -R "$repo" --json state,mergeStateStatus,headRefOid,statusCheckRollup); then
       log "- #$n: 見送り（PR を読めない）"
+      break
+    fi
+    if [ "$(jq -r '.state' <<<"$state")" != OPEN ]; then
+      log "- #$n: 見送り（open でなくなった）"
       break
     fi
     head=$(jq -r '.headRefOid' <<<"$state")
@@ -80,22 +108,26 @@ for n in "${numbers[@]}"; do
       break
     fi
     if [ "$merge_state" = CLEAN ] && [ "$checks" = green ]; then
-      if reason=$(eligible "$n" "$head"); then
-        if gh pr merge "$n" -R "$repo" --squash --delete-branch --match-head-commit "$head"; then
-          log "- #$n: マージした（${head:0:7}）"
-        else
-          log "- #$n: マージに失敗した（${head:0:7}）"
-        fi
-      else
+      if ! reason=$(eligible "$n" "$head"); then
         log "- #$n: 見送り（$reason）"
+        break
       fi
-      break
-    fi
-    if [ "$(date +%s)" -ge "$deadline" ]; then
+      if gh pr merge "$n" -R "$repo" --squash --delete-branch --match-head-commit "$head"; then
+        log "- #$n: マージした（${head:0:7}）"
+        break
+      fi
+      # 直前のマージの直後は、古い CLEAN が返ったり base が変わったと断られたりする。
+      # Dependabot の rebase を待ってやり直す。
+      if [ "$(date +%s)" -ge "$deadline" ]; then
+        log "- #$n: マージに失敗した（${head:0:7}）"
+        failed=$((failed + 1))
+        break
+      fi
+    elif [ "$(date +%s)" -ge "$deadline" ]; then
       log "- #$n: 翌週に回す（待ち時間の上限。mergeStateStatus=$merge_state, checks=$checks）"
       break
     fi
-    sleep 30
+    sleep "$poll"
   done
 done
 
@@ -104,13 +136,15 @@ posted=0
 while IFS= read -r item; do
   n=$(jq -r '.number' <<<"$item")
   is_dependabot_pr "$n" || { log "- #$n: 投稿しない（Dependabot の open な PR ではない）"; continue; }
-  # 判定ファイルの本文は LLM が書いたもの。メンションとして効かないように @ の後ろへ
-  # ゼロ幅スペースを入れる（@dependabot へのコマンドにもならない）。
   body=$(jq -r '.body' <<<"$item")
   marker="<!-- d-party-maintenance:$(printf '%s' "$body" | sha256sum | cut -c1-16) -->"
   # 同じ内容のコメントは重ねない。
-  if gh api "repos/$repo/issues/$n/comments" --paginate \
-    --jq '.[] | select(.user.login == "github-actions[bot]") | .body' | grep -qF "$marker"; then
+  if ! existing=$(gh api "repos/$repo/issues/$n/comments" --paginate \
+    --jq '.[] | select(.user.login == "github-actions[bot]") | .body'); then
+    log "- #$n: 投稿しない（既存のコメントを読めない）"
+    continue
+  fi
+  if [[ "$existing" == *"$marker"* ]]; then
     log "- #$n: 同じコメントが既にある"
     continue
   fi
@@ -120,7 +154,15 @@ while IFS= read -r item; do
   else
     log "- #$n: コメントに失敗した"
   fi
-done < <(jq -c '.comments[]?
+# 判定ファイルの本文は LLM が書いたもの。メンションとして効かないように @ の後ろへ
+# ゼロ幅スペースを入れる（@dependabot へのコマンドにもならない）。文字参照（&#64; など）で
+# @ を書かれないように & も文字参照にする。GitHub の上限（65536 文字）に収まるよう最後に切る。
+done < <(jq -c '.comments[]? | objects
   | select((.number | type) == "number" and .number > 0 and .number == (.number | floor) and (.body | type) == "string")
-  | {number, body: (.body[:60000] | gsub("@"; "@​"))}' "$verdict")
+  | {number, body: (.body | gsub("&"; "&amp;") | gsub("@"; "@​") | .[:60000])}' "$verdict")
 [ "$posted" -gt 0 ] || log "- 新しく投稿したコメントは無い。"
+
+if [ "$failed" -gt 0 ]; then
+  log "" "マージに失敗した PR が $failed 件ある。"
+  exit 1
+fi

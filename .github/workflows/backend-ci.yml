@@ -133,14 +133,31 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    cache-mode: none
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+      # artifact は依存のコードを動かした pytest ジョブが作ったもの。checkout の上に直接
+      # 展開すると設定ファイル（pyproject.toml · .coveragerc）を差し替えられるので、
+      # 別の場所に受けて .coverage だけを持ってくる。
       - uses: actions/download-artifact@v8
         with:
           name: coverage-data
-          path: backend
+          path: ${{ runner.temp }}/coverage-data
+      - name: Take only the coverage database
+        working-directory: .
+        env:
+          DATA_DIR: ${{ runner.temp }}/coverage-data
+        run: |
+          set -euo pipefail
+          data="$DATA_DIR/.coverage"
+          count=$(find "$DATA_DIR" -mindepth 1 | wc -l)
+          if [ "$count" -ne 1 ] || [ ! -f "$data" ] || [ -L "$data" ]; then
+            echo "::error::coverage-data must hold exactly one regular file named .coverage"
+            exit 1
+          fi
+          cp "$data" backend/.coverage
       # fork の PR では投稿できないので continue-on-error（本文は artifact に残る）。
       - name: Coverage comment
         id: coverage_comment
