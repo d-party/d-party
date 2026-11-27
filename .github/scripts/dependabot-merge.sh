@@ -99,9 +99,13 @@ for n in "${numbers[@]}"; do
     fi
     case "$(jq -r '.state' <<<"$state")" in
       OPEN) ;;
-      # gh pr merge がマージした後に（ブランチの削除などで）失敗を返した場合。
       MERGED)
-        log "- #$n: マージ済み（gh pr merge はエラーを返した）"
+        if [ "$tries" -gt 0 ]; then
+          # gh pr merge がマージした後に（ブランチの削除などで）失敗を返した場合。
+          log "- #$n: マージ済み（gh pr merge はエラーを返した）"
+        else
+          log "- #$n: 待つあいだに別の手でマージされた"
+        fi
         break
         ;;
       *)
