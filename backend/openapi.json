@@ -173,7 +173,19 @@
         "/api/v1/announcements": {
             "get": {
                 "operationId": "announcementsActive",
-                "description": "Announcements being delivered now (``starts_at`` <= now < ``ends_at``).\n\nRead-only and public: the extension's popup and sidebar fetch it. Ordered by\nimportance (warning first), then by the newest start.",
+                "description": "Announcements being delivered now (``starts_at`` <= now < ``ends_at``).\n\nRead-only and public: the extension's popup and sidebar fetch it. Ordered by\nimportance (warning first), then by the newest start. ``extension_version``\nnarrows the collection to the announcements targeting that extension version.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "extension_version",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^(0|[1-9][0-9]{0,4})\\.(0|[1-9][0-9]{0,4})\\.(0|[1-9][0-9]{0,4})$",
+                            "maxLength": 17
+                        },
+                        "description": "拡張機能のバージョン（x.y.z。各部は 0〜65535 の整数。例: 2.15.0）。指定すると、このバージョンが配信対象（下限 ≤ バージョン ≤ 上限。下限・上限が空の側は制限なし）のものだけを返す。省略すると、バージョンでは絞り込まない（対象バージョンに関係なく、配信中のものをすべて返す）。形式が不正なら 400。"
+                    }
+                ],
                 "tags": [
                     "v1"
                 ],
@@ -186,6 +198,16 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/AnnouncementListResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
                                 }
                             }
                         },

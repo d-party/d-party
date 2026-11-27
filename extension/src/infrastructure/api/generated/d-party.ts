@@ -6,6 +6,7 @@
  */
 import type {
   AnnouncementListResult,
+  AnnouncementsActiveParams,
   ApiMessage,
   CountResult,
   HourlyAverageResult,
@@ -255,30 +256,45 @@ export type announcementsActiveResponse200 = {
   status: 200
 }
 
+export type announcementsActiveResponse400 = {
+  data: ApiMessage
+  status: 400
+}
+
 export type announcementsActiveResponseSuccess = (announcementsActiveResponse200) & {
   headers: Headers;
 };
-;
+export type announcementsActiveResponseError = (announcementsActiveResponse400) & {
+  headers: Headers;
+};
 
-export type announcementsActiveResponse = (announcementsActiveResponseSuccess)
+export type announcementsActiveResponse = (announcementsActiveResponseSuccess | announcementsActiveResponseError)
 
-export const getAnnouncementsActiveUrl = () => {
+export const getAnnouncementsActiveUrl = (params?: AnnouncementsActiveParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/announcements`
+  return stringifiedParams.length > 0 ? `/api/v1/announcements?${stringifiedParams}` : `/api/v1/announcements`
 }
 
 /**
  * Announcements being delivered now (``starts_at`` <= now < ``ends_at``).
  *
  * Read-only and public: the extension's popup and sidebar fetch it. Ordered by
- * importance (warning first), then by the newest start.
+ * importance (warning first), then by the newest start. ``extension_version``
+ * narrows the collection to the announcements targeting that extension version.
  */
-export const announcementsActive = async ( options?: Parameters<typeof customFetch>[1]): Promise<announcementsActiveResponse> => {
+export const announcementsActive = async (params?: AnnouncementsActiveParams, options?: Parameters<typeof customFetch>[1]): Promise<announcementsActiveResponse> => {
 
-  return customFetch<announcementsActiveResponse>(getAnnouncementsActiveUrl(),
+  return customFetch<announcementsActiveResponse>(getAnnouncementsActiveUrl(params),
   {
     ...options,
     method: 'GET'

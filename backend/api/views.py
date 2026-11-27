@@ -13,6 +13,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from announcements import versions
 from announcements.models import Announcement, AnnouncementLevel
 from streamer.models import AnimeRoom, AnimeUser, ReactionType
 from streamer.reactions import reaction_counts_by_type
@@ -36,6 +37,23 @@ _STRICT_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 # 配信中のアナウンスをブラウザ（拡張機能の fetch）に覚えさせる秒数。管理画面での
 # 追加・終了が拡張機能に届くまでの遅れの上限になる。
 ANNOUNCEMENTS_MAX_AGE = 60
+
+# OpenAPI スキーマに載せる ``?extension_version=x.y.z`` の定義。
+_EXTENSION_VERSION_PARAMETER = OpenApiParameter(
+    name="extension_version",
+    type={
+        "type": "string",
+        "pattern": versions.PATTERN,
+        "maxLength": versions.MAX_LENGTH,
+    },
+    description=(
+        "拡張機能のバージョン（x.y.z。各部は 0〜65535 の整数。例: 2.15.0）。"
+        "指定すると、このバージョンが配信対象（下限 ≤ バージョン ≤ 上限。"
+        "下限・上限が空の側は制限なし）のものだけを返す。"
+        "省略すると、バージョンでは絞り込まない（対象バージョンに関係なく、配信中のものをすべて返す）。"
+        "形式が不正なら 400。"
+    ),
+)
 
 # ``?days=N`` の既定と上限は 1 年。
 DEFAULT_STATS_DAYS = 365
@@ -444,20 +462,37 @@ class AnnouncementsActiveAPI(APIView):
     """Announcements being delivered now (``starts_at`` <= now < ``ends_at``).
 
     Read-only and public: the extension's popup and sidebar fetch it. Ordered by
-    importance (warning first), then by the newest start.
+    importance (warning first), then by the newest start. ``extension_version``
+    narrows the collection to the announcements targeting that extension version.
     """
 
     # docstring は OpenAPI の description になるので、実装の事情はコメントに書く。
     # 書き込みの口は持たない（作成・編集は管理画面だけ）ので、GET 以外は 405 になる。
     # 拡張機能はポップアップやサイドバーを開くたびに叩くので、短い max-age を付ける。
+    # キャッシュはクエリ文字列ごとに分かれるので、バージョンごとの応答が混ざることはない。
 
     @extend_schema(
         operation_id="announcementsActive",
-        responses={200: AnnouncementListResultSerializer},
+        parameters=[_EXTENSION_VERSION_PARAMETER],
+        responses={
+            200: AnnouncementListResultSerializer,
+            400: ApiMessageSerializer,
+        },
     )
     def get(self, request, format=None) -> Response:
+        rows = Announcement.objects.live()
+        if "extension_version" in request.GET:
+            version = request.GET["extension_version"]
+            if versions.parse(version) is None:
+                return Response(
+                    {
+                        "message": "extension_version パラメータは x.y.z の形式（例: 2.15.0）で指定してください"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            rows = rows.for_extension_version(version)
         # 開始が同じものは後から登録したもの（id が大きい方）を先にして、並びを決める。
-        rows = Announcement.objects.live().order_by(
+        rows = rows.order_by(
             Case(When(level=AnnouncementLevel.WARNING, then=0), default=1),
             "-starts_at",
             "-id",
