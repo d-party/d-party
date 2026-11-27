@@ -8,12 +8,17 @@ import { Clock, Download, PictureInPicture2 } from "lucide-react";
 
 import { openTimerPopup } from "@/components/timer/openTimerPopup";
 import { TimerView } from "@/components/timer/TimerView";
-import { lobbyResolve } from "@/infrastructure/api/generated/d-party";
-import { CHROME_WEBSTORE_URL, timerPath } from "@/lib/links";
+import { resolveLobby } from "@/infrastructure/lobby";
+import { CHROME_WEBSTORE_URL, type LobbyService, timerPath } from "@/lib/links";
 
 const POLL_INTERVAL_MS = 1000;
 const MAX_POLLS = 30;
 const NOTICE_FADE_MS = 2000;
+
+const ACTION =
+  "inline-flex items-center justify-center gap-2 rounded-md px-5 py-2.5 text-sm font-semibold transition-colors";
+const PRIMARY_ACTION = `${ACTION} bg-primary text-primary-foreground hover:bg-primary/90`;
+const SECONDARY_ACTION = `${ACTION} border border-border hover:bg-muted`;
 
 /** What `.chrome_extension_field` said: "true" / "false" / nothing for 30s. */
 type Extension = "pending" | "supported" | "outdated" | "missing";
@@ -41,17 +46,41 @@ export function LobbySpinner(): React.JSX.Element {
   );
 }
 
+/** 拡張機能が無いときの案内に出すサービス名。 */
+const SERVICE_NAME: Record<LobbyService, string> = {
+  "anime-store": "dアニメストア",
+  "dmm-tv": "DMM TV",
+};
+
+export interface LobbyViewProps {
+  roomId: string;
+  /**
+   * どのサービスのロビーか。`room_id` の解決先（`GET /api/v1/<service>/lobby/{room_id}`）を
+   * 決める。ページ（server component）からは関数を渡せないので、解決関数ではなくキーで受ける。
+   */
+  service: LobbyService;
+  /**
+   * タイマー画面（`?timer=true`）を持つか。持たないサービスでは `?timer=true` を無視し、
+   * 拡張機能が無いときの選択肢もインストール / アップデートだけにする。
+   */
+  timer: boolean;
+}
+
 /**
  * The extension's `content-version` writes "true" / "false" into
  * `.chrome_extension_field`; we poll it every second.
- *   - "true"  → redirect to the dアニメストア player
- *   - "false" → offer the timer or an update
- *   - nothing for 30s → offer the timer or an install
- * `?timer=true` shows the timer instead.
+ *   - "true"  → redirect to the service's player
+ *   - "false" → offer the timer (if the service has one) or an update
+ *   - nothing for 30s → offer the timer (if any) or an install
+ * `?timer=true` shows the timer instead (only when `timer` is set).
  */
-export function LobbyView({ roomId }: { roomId: string }): React.JSX.Element {
+export function LobbyView({
+  roomId,
+  service,
+  timer,
+}: LobbyViewProps): React.JSX.Element {
   const searchParams = useSearchParams();
-  const isTimer = searchParams.get("timer") === "true";
+  const isTimer = timer && searchParams.get("timer") === "true";
   const isPopup = searchParams.get("popup") === "1";
 
   const [room, setRoom] = useState<Room>({ status: "loading" });
@@ -63,7 +92,7 @@ export function LobbyView({ roomId }: { roomId: string }): React.JSX.Element {
 
   useEffect(() => {
     let cancelled = false;
-    lobbyResolve(roomId)
+    resolveLobby(service, roomId)
       .then(
         (res): Room =>
           res.status === 200
@@ -81,7 +110,7 @@ export function LobbyView({ roomId }: { roomId: string }): React.JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [roomId]);
+  }, [service, roomId]);
 
   useEffect(() => {
     if (isTimer) return;
@@ -193,27 +222,31 @@ export function LobbyView({ roomId }: { roomId: string }): React.JSX.Element {
                   : "拡張機能が見つかりませんでした"}
               </p>
               <p className="text-muted-foreground">
-                拡張機能なしでも、タイマーで再生状況を見られます。
+                {timer
+                  ? "拡張機能なしでも、タイマーで再生状況を見られます。"
+                  : `${SERVICE_NAME[service]} で同時視聴するには d-party 拡張機能が必要です。`}
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <a
-                href={timerPath(roomId)}
-                className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                <Clock className="size-4" aria-hidden /> タイマーを見る
-              </a>
-              <button
-                type="button"
-                onClick={() => openTimerPopup(roomId)}
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
-              >
-                <PictureInPicture2 className="size-4" aria-hidden />
-                ポップアップで開く
-              </button>
+              {timer && (
+                <>
+                  <a href={timerPath(roomId)} className={PRIMARY_ACTION}>
+                    <Clock className="size-4" aria-hidden /> タイマーを見る
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => openTimerPopup(roomId)}
+                    className={SECONDARY_ACTION}
+                  >
+                    <PictureInPicture2 className="size-4" aria-hidden />
+                    ポップアップで開く
+                  </button>
+                </>
+              )}
               <a
                 href={CHROME_WEBSTORE_URL}
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
+                // タイマーが無ければ、これが唯一の選択肢になる。
+                className={timer ? SECONDARY_ACTION : PRIMARY_ACTION}
               >
                 <Download className="size-4" aria-hidden />
                 {extension === "outdated"

@@ -17,11 +17,17 @@ export const GITHUB_SPONSORS_URL = "https://github.com/sponsors/d-party";
 
 export const FEEDBACK_FORM_URL = "https://forms.gle/kKPbAPGY96rbaKgK8";
 
-export function lobbyPath(roomId: string): string {
-  return `/anime-store/lobby/${roomId}`;
+/** ロビーを持つ動画配信サービス。ロビーのパスの先頭（`/<service>/lobby/<roomId>`）でもある。 */
+export type LobbyService = "anime-store" | "dmm-tv";
+
+export function lobbyPath(
+  roomId: string,
+  service: LobbyService = "anime-store",
+): string {
+  return `/${service}/lobby/${roomId}`;
 }
 
-/** `popup` は `openTimerPopup` が開く小窓用。 */
+/** タイマー画面は dアニメストアのロビーだけ。`popup` は `openTimerPopup` が開く小窓用。 */
 export function timerPath(roomId: string, { popup = false } = {}): string {
   return `${lobbyPath(roomId)}?timer=true${popup ? "&popup=1" : ""}`;
 }

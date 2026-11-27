@@ -43,8 +43,11 @@ pnpm storybook
    「インストール / アップデート」の選択肢を出す。
 
 DMM TV も同じ DOM 契約で `/dmm-tv/lobby/[roomId]` を持ち、`GET /api/v1/dmm-tv/lobby/{room_id}` で
-再生ページ（`/vod/playback/on-demand/?season=..&content=..&party=join`）へ解決する。DMM のタイマー
-画面はまだ無い。
+再生ページ（`/vod/playback/on-demand/?season=..&content=..&party=join`）へ解決する。どちらのページも
+`LobbyView` に `service`（解決先）と `timer`（タイマー画面を持つか）を渡すだけで、metadata
+（`noindex`）とルーム別の OGP も同じ形で持つ。DMM のタイマー画面はまだ無いので `timer={false}` にし、
+`?timer=true` は無視して、拡張機能が無いときの選択肢もインストール / アップデートだけにする
+（拡張機能のサイドバーも DMM のルームでは「タイマーのみの URL」を出さない）。
 
 拡張機能との結合は `d-party.net` か、dev ビルドの拡張機能（`http://localhost/anime-store/lobby/*`）で確かめる。
 

@@ -42,7 +42,7 @@ export interface PageMetadataInput {
   titleIsBranded?: boolean;
 }
 
-/** For public pages. The room lobby has its own (`app/anime-store/lobby/[roomId]/page.tsx`). */
+/** For public pages. The room lobbies have their own (`app/{anime-store,dmm-tv}/lobby/[roomId]/page.tsx`). */
 export function pageMetadata({
   path,
   title,
