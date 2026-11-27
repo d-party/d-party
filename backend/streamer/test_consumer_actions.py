@@ -242,10 +242,64 @@ async def test_sync_response_from_a_guest_is_dropped(one_way):
                 "request_id": 3,
             }
         )
+    # 同じ接続のメッセージは順に処理されるので、後から送ったリアクションが先に届けば、
+    # 上の sync_response は配られていない（時間で待つより確か）。
+    await attacker.send_json_to(
+        {"action": "reaction", "reaction_type": "smile", "request_id": 4}
+    )
 
-    assert await victim.receive_nothing()
-    assert await host.receive_nothing()
+    for communicator in (victim, host):
+        assert (await communicator.receive_json_from())["action"] == "reaction"
     for communicator in (host, attacker, victim):
+        await communicator.disconnect()
+
+
+async def test_sync_response_checks_the_stored_host_flag():
+    """接続が持っている is_host ではなく、DB の値で判定する（委譲は別の接続が書く）。"""
+    _, _, [(promoted, promoted_user), (asker, asker_user)] = await _room_with_guests(
+        "a", "b"
+    )
+    await database_sync_to_async(
+        AnimeUser.objects.filter(user_id=promoted_user["user_id"]).update
+    )(is_host=True)
+
+    await promoted.send_json_to(
+        {
+            "action": "sync_response",
+            "to_user": asker_user,
+            "option": OPTION,
+            "request_id": 2,
+        }
+    )
+
+    assert (await asker.receive_json_from())["action"] == "sync_response"
+    for communicator in (promoted, asker):
+        await communicator.disconnect()
+
+
+async def test_operation_notification_from_a_guest_is_dropped_in_one_way():
+    host, _, [(guest, _), (other, _)] = await _room_with_guests("a", "b")
+    await host.send_json_to(
+        {"action": "update_setting", "one_way": True, "request_id": 2}
+    )
+    for communicator in (host, guest, other):
+        await _recv_until(communicator, "room_setting")
+
+    await guest.send_json_to(
+        {"action": "operation_notification", "operation": "paused", "request_id": 3}
+    )
+    await guest.send_json_to(
+        {"action": "reaction", "reaction_type": "smile", "request_id": 4}
+    )
+
+    for communicator in (host, other):
+        assert (await communicator.receive_json_from())["action"] == "reaction"
+    # ホストの通知は一方通行でも届く。
+    await host.send_json_to(
+        {"action": "operation_notification", "operation": "paused", "request_id": 5}
+    )
+    assert (await other.receive_json_from())["action"] == "operation_notification"
+    for communicator in (host, guest, other):
         await communicator.disconnect()
 
 

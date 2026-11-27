@@ -270,6 +270,11 @@ class AnimePartyConsumer(AsyncAPIConsumer):
     async def operation_notification(
         self, room, user, request: OperationNotificationRequest
     ):
+        # 一方通行ではゲストの操作を配らないので、その通知も配らない。
+        if self._setting.one_way:
+            await repository.refresh(user)
+            if not user.is_host:
+                return
         await self._broadcast(
             room,
             OperationNotification(

@@ -173,6 +173,12 @@ export class RoomSession {
     this._inRoom = false;
     this.roomSettings = DEFAULT_ROOM_SETTINGS;
     this.pendingSettings = null;
+    this.closeSyncWindow();
+  }
+
+  private closeSyncWindow(): void {
+    this.syncRequestedAt = null;
+    this.pendingManualSyncToast = false;
   }
 
   private startConnectionTracking(): void {
@@ -238,6 +244,9 @@ export class RoomSession {
   }
 
   requestSync(opts: { manual?: boolean } = {}): void {
+    // ホストの sync_request は自分には返らない（サーバはホストへだけ送り、送り主は除く）。
+    // 受け付けの窓を開けると、偽の sync_response でホストの再生を動かされうる。
+    if (this.isHost) return;
     if (opts.manual ?? true) this.pendingManualSyncToast = true;
     this.syncRequestedAt = now();
     this.send({ action: "sync_request", request_id: now() });
@@ -417,19 +426,17 @@ export class RoomSession {
       case "sync_request":
         this.sendSyncResponse(message.user);
         break;
-      case "sync_response":
-        if (
-          this.syncRequestedAt === null ||
-          now() - this.syncRequestedAt > RoomSession.SYNC_RESPONSE_TIMEOUT_MS
-        ) {
-          break;
-        }
-        this.syncRequestedAt = null;
+      case "sync_response": {
+        if (this.syncRequestedAt === null) break;
+        const expired =
+          now() - this.syncRequestedAt > RoomSession.SYNC_RESPONSE_TIMEOUT_MS;
+        const manual = this.pendingManualSyncToast;
+        this.closeSyncWindow();
+        if (expired) break;
         this.deps.guard.suppress();
         this.lastRemoteApplyAt = now();
         player.onAction("sync", message.option);
-        if (this.pendingManualSyncToast) {
-          this.pendingManualSyncToast = false;
+        if (manual) {
           this.deps.notifier.info("再生状況をホストにシンク");
           this.deps.sidebar.addHistory({
             direction: "system",
@@ -438,6 +445,7 @@ export class RoomSession {
           });
         }
         break;
+      }
       case "operation_notification":
         this.notifyOperation(
           message.operation,
