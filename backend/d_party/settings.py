@@ -171,6 +171,27 @@ UNFOLD = {
         "light": lambda request: static("branding/dp-mini.png"),
         "dark": lambda request: static("branding/dp-mini.png"),
     },
+    # 公開サイト（frontend/public/favicon/）と同じ画像を置いている
+    "SITE_FAVICONS": [
+        {
+            "rel": "icon",
+            "sizes": "32x32",
+            "type": "image/png",
+            "href": lambda request: static("branding/favicon-32x32.png"),
+        },
+        {
+            "rel": "icon",
+            "sizes": "16x16",
+            "type": "image/png",
+            "href": lambda request: static("branding/favicon-16x16.png"),
+        },
+        {
+            "rel": "apple-touch-icon",
+            "sizes": "180x180",
+            "type": "image/png",
+            "href": lambda request: static("branding/apple-touch-icon.png"),
+        },
+    ],
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "SHOW_BACK_BUTTON": False,
