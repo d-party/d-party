@@ -89,6 +89,18 @@ class AnnouncementSerializer(serializers.ModelSerializer):
         fields = ("id", "message", "level", "starts_at", "ends_at")
         # 応答専用。read_only にするとスキーマで全項目が必須になる。
         read_only_fields = fields
+        # 管理画面向けの help_text の代わりに、クライアント向けの説明をスキーマに載せる。
+        extra_kwargs = {
+            "message": {
+                "help_text": (
+                    "本文（管理画面で入力した生の文字列）。Markdown のインラインリンク "
+                    "`[テキスト](URL)` を含むことがある（ほかの Markdown は含めない）。"
+                    "リンクとして描画してよいのは、URL が https:// で始まり、空白・制御文字・"
+                    "ユーザー情報を含まず、テキストが空でないものだけ。それ以外は元の文字列の"
+                    "まま出す。HTML として解釈しないこと。"
+                )
+            }
+        }
 
 
 class AnnouncementListResultSerializer(serializers.Serializer):
