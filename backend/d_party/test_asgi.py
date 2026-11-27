@@ -69,12 +69,12 @@ async def test_production_rejects_other_origins(load_application, origin, path):
     assert not await _connects(load_application(debug=False), origin, path)
 
 
-def test_default_dmm_tv_domain_is_allowed(settings):
-    """既定（env 未設定）の ``DMM_TV_DOMAIN`` は本番の DMM TV のホストを指す。"""
+async def test_production_accepts_the_real_dmm_tv_origin_by_default(settings):
+    """既定（env 未設定）の ``DMM_TV_DOMAIN`` で、本番の DMM TV のページからつながる。"""
     settings.DEBUG = False
-    importlib.reload(d_party.asgi)
+    application = importlib.reload(d_party.asgi).application
 
-    assert "tv.dmm.com" in d_party.asgi.allowed_origins
+    assert await _connects(application, "https://tv.dmm.com", DMM_TV_PATH)
 
 
 async def test_debug_accepts_any_origin(load_application):
