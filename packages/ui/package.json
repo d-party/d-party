@@ -22,7 +22,7 @@
     "@radix-ui/react-tooltip": "^1.4.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.77.0",
+    "lucide-react": "^1.79.0",
     "tailwind-merge": "^3.7.1"
   },
   "peerDependencies": {
@@ -40,6 +40,6 @@
     "globals": "^17.14.0",
     "prettier": "^3.10.1",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.73.0"
+    "typescript-eslint": "^8.74.0"
   }
 }
