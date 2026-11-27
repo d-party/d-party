@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 import { RoomOgImage } from "@/components/og/RoomOgImage";
 import { resolveRoomTitle } from "@/infrastructure/lobby";
 import { OG_SIZE, ROOM_OG_ALT } from "@/lib/og/card";
-import { loadOgFonts } from "@/lib/og/fonts";
+import { loadOgFonts, ogSafeText } from "@/lib/og/fonts";
 
 export const alt = ROOM_OG_ALT;
 export const size = OG_SIZE;
@@ -20,7 +20,8 @@ export default async function Image({
     loadOgFonts(),
   ]);
 
-  return new ImageResponse(<RoomOgImage title={title} />, {
+  // The title is set by whoever opened the room, so drop what the fonts lack.
+  return new ImageResponse(<RoomOgImage title={ogSafeText(title, fonts)} />, {
     ...OG_SIZE,
     fonts,
   });
