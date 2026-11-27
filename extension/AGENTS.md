@@ -16,7 +16,7 @@ src/
     RoomSession.ts   再生同期のオーケストレーション
     ports.ts         PartySocket / PlayerController / SidebarView / Notifier などの境界
     ActionGuard.ts   受信した操作を送り返さないためのフラグ
-  infrastructure/  ws/ · storage/（chrome.storage.sync）· notifier/ · api/ · env.ts
+  infrastructure/  ws/ · storage/（chrome.storage.sync / local）· notifier/ · api/ · env.ts
   styles/          theme.css（popup と sidebar が共有するテーマトークン）· sidebar.css
   presentation/    注入先ごとのエントリ
     background/      service worker
@@ -42,6 +42,14 @@ rspack のエントリは `background` · `content-store` · `content-party` · 
   現在値はサーバの `room_setting` で受け取る。一方通行では非オーナーは `video_operation` を送らず、
   リアクション禁止では送信せず自分にだけ表示する（`RoomSession`）。
 - 共有パネルの「タイマーのみの URL」はロビー URL に `?timer=true` を付けたもの。
+- アナウンス（`components/Announcements.tsx`）はポップアップではタブの上、サイドバーでは
+  ヘッダーの下に出す。ポップアップは backend を直接、content script は background 経由
+  （`{ type: "announcements" }`）で取る。どちらも orval のクライアントの引数で
+  `extension_version`（manifest の `version`）を送り、配信対象のものだけを受け取る（取れない
+  環境では付けない）。取得の失敗は空として扱い何も出さない。× で閉じた ID は
+  `chrome.storage.local` の `dismissedAnnouncementIds` に残し、両方で二度と出さない。
+  見た目は控えめなテキスト行で、重要（`warning`）は色だけに頼らず警告アイコンと「重要」の文字で
+  お知らせ（`info`）と区別する。
 
 ## ビルドと読み込み
 

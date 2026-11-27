@@ -1,0 +1,105 @@
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { TriangleExclamationPoint, X } from "lucide-react";
+
+import type { Announcement } from "@/domain/announcement";
+import { cn } from "@d-party/ui";
+
+import { useAnnouncements } from "./useAnnouncements";
+
+const LEVEL_LABEL = { info: "お知らせ", warning: "重要なお知らせ" } as const;
+
+export interface AnnouncementsProps {
+  /** 配信中のアナウンスの取得。失敗しても空の配列で解決すること。 */
+  load: () => Promise<Announcement[]>;
+  /** 各行の外側の余白。最後の 1 件を閉じたときに余白ごと畳む。 */
+  itemClassName?: string;
+}
+
+/**
+ * 配信中のアナウンスを控えめなテキスト行で出す（ポップアップはタブの上、サイドバーは
+ * ヘッダーの下）。何も無いとき・取得に失敗したときは何も描かない。
+ */
+export function Announcements({
+  load,
+  itemClassName,
+}: AnnouncementsProps): React.JSX.Element {
+  const { announcements, dismiss } = useAnnouncements(load);
+  const reduce = useReducedMotion();
+  return (
+    <AnimatePresence initial={false}>
+      {announcements.map((announcement) => (
+        <motion.div
+          key={announcement.id}
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={
+            reduce ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }
+          }
+          className={cn("shrink-0 overflow-hidden", itemClassName)}
+        >
+          <AnnouncementRow
+            announcement={announcement}
+            onDismiss={() => dismiss(announcement.id)}
+          />
+        </motion.div>
+      ))}
+    </AnimatePresence>
+  );
+}
+
+/**
+ * 1 件 = 1 行（下線で区切る）。お知らせは小さな点 ＋ 灰色の文字。重要は見落とされないよう、
+ * 色だけに頼らず、点の代わりに三角の警告アイコンを置き、本文の頭に「重要」と書き、本文を
+ * 灰色ではなく通常の文字色にする。
+ */
+function AnnouncementRow({
+  announcement: { message, level },
+  onDismiss,
+}: {
+  announcement: Announcement;
+  onDismiss: () => void;
+}): React.JSX.Element {
+  const warning = level === "warning";
+  return (
+    <div
+      role="note"
+      aria-label={LEVEL_LABEL[level]}
+      className="flex items-start gap-2 border-b border-border py-2 text-xs leading-relaxed"
+    >
+      {/* 1 行目の高さに合わせて中央に置く（本文が折り返しても先頭行にそろう）。 */}
+      <span
+        className="flex h-[1.625em] w-3.5 shrink-0 items-center justify-center"
+        aria-hidden
+      >
+        {warning ? (
+          <TriangleExclamationPoint className="size-3.5 text-amber-600 dark:text-amber-400" />
+        ) : (
+          <span className="size-1.5 rounded-full bg-primary" />
+        )}
+      </span>
+      <p
+        className={cn(
+          "min-w-0 flex-1 break-words",
+          warning ? "text-foreground" : "text-muted-foreground",
+        )}
+      >
+        {warning && (
+          <span className="mr-1.5 font-bold text-amber-700 dark:text-amber-400">
+            重要
+          </span>
+        )}
+        {message}
+      </p>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="このお知らせを閉じる"
+        title="閉じる（次からは表示しません）"
+        className="-my-0.5 shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        <X className="size-3.5" aria-hidden />
+      </button>
+    </div>
+  );
+}

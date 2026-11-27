@@ -27,7 +27,8 @@ streamer/       同時視聴のコア
   fields.py       EncryptedCharField（Fernet）
   management/commands/close_active_sessions.py   起動時の ghost 回収
   management/commands/close_expired_rooms.py     48 時間を超えたルームの強制クローズ（cron）
-api/            DRF（統計 · shields バッジ · バージョン確認 · ロビー解決）
+announcements/  拡張機能に出す短いお知らせ（announcements テーブル · 管理画面）
+api/            DRF（統計 · shields バッジ · バージョン確認 · ロビー解決 · 配信中のアナウンス）
 templates/admin/ 管理画面トップ（Unfold ダッシュボード）· ログイン画面とパスキー一覧への差し込み
 entrypoint.sh   close_active_sessions → runserver / gunicorn
 conftest.py     テストでは InMemoryChannelLayer を使う
@@ -58,6 +59,19 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
 - **REST API**: `api/urls.py` のパスとレスポンスの形は外部から参照される（shields は `{"schemaVersion": 1, ...}`）。
   レスポンスの形は `api/serializers.py` に宣言し、`@extend_schema` の `operation_id` が
   TypeScript の関数名になる。変えたら `openapi.json` を再生成する（手順はルートの `AGENTS.md`）。
+- **アナウンス**: `GET /api/v1/announcements` は配信中（`starts_at` ≤ 現在 < `ends_at`）だけを
+  重要 → 新しい順で返す。認証不要・読み取り専用で、作成・編集・削除は管理画面だけ（REST の書き込み口は
+  作らない。作るなら認証と `IsAdminUser` を付ける。既定の `DEFAULT_AUTHENTICATION_CLASSES` は空）。
+  `Cache-Control: public, max-age=60` なので、管理画面での変更は最大 60 秒遅れて届く。
+  本文の上限（`MESSAGE_MAX_LENGTH`）は拡張機能の幅に合わせている。開始 < 期限は DB の制約でも守る。
+  - 配信対象の拡張機能のバージョンは、下限・上限（どちらも任意・両端を含む）で絞れる。
+    `?extension_version=x.y.z` を付けると対象のものだけを返し、省略すると絞り込まない。形式が
+    不正なら 400（`{"message": ...}`）。拡張機能は manifest の `version` を付けて呼ぶ。
+  - バージョンは `announcements/versions.py` の `ExtensionVersionField` で、各部を 10 進 5 桁に
+    詰めた整数（`2.15.0` → `2_00015_00000`）として `bigint` の 1 列に持つ。DB の比較が数値の
+    順（`2.10.0` > `2.9.0`）になる。Python 側では `x.y.z` の文字列で扱い、比較の lookup に
+    文字列を渡せる。受け付けるのは数字 3 つで、各部は 0〜65535（Chrome の manifest と同じ）。
+    下限 ≤ 上限は `clean()` と DB の制約の両方で守る。
 - **観覧専用（`spectate`）**: `AnimeUser` を作らずにグループへ読み取り参加する（人数・一覧・
   ホスト委譲・自動削除に影響しない）。フロントのタイマー画面が使う。`host_send` / `user_send` は
   `anime_user is None` を必ずガードする。フロントのオリジンから張るので `asgi.py` で `MY_DOMAIN` を許可している。
