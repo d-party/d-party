@@ -7,7 +7,7 @@ import {
   Smile,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Announcements } from "@/components/Announcements";
 import type { Announcement } from "@/domain/announcement";
@@ -65,6 +65,13 @@ export function PopupApp({
   const { settings, update } = useSettings();
   const [tab, setTab] = useState<string>(TABS[0].value);
   const reduce = useReducedMotion();
+  const panelsRef = useRef<HTMLDivElement>(null);
+
+  const changeTab = (value: string): void => {
+    // 統計で下へスクロールしたまま切り替えると、重ねるパネルがその分ずれるので戻す。
+    panelsRef.current?.scrollTo({ top: 0 });
+    setTab(value);
+  };
 
   return (
     <motion.div
@@ -91,7 +98,7 @@ export function PopupApp({
 
       <Announcements load={loadAnnouncements} itemClassName="px-4 pt-3" />
 
-      <Tabs value={tab} onValueChange={setTab} className="min-h-0 gap-0">
+      <Tabs value={tab} onValueChange={changeTab} className="min-h-0 gap-0">
         <TooltipProvider delayDuration={300}>
           <TabsList className="mx-4 mt-3 w-auto shrink-0">
             {TABS.map(({ value, label, icon }) => (
@@ -109,6 +116,7 @@ export function PopupApp({
         {/* The 統計 panel is in the flow, so it scrolls with this box; the
             overlays fill the box and scroll on their own. */}
         <div
+          ref={panelsRef}
           className={`relative min-h-0 ${tab === "stats" ? "overflow-y-auto" : "overflow-hidden"}`}
         >
           <TabsContent value="settings" forceMount className={OVERLAY_PANEL}>
