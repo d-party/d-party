@@ -191,6 +191,7 @@ jobs:
       # release.yml の dispatch。
       actions: write
       checks: read
+    cache-mode: none
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:

@@ -90,15 +90,25 @@ for n in "${numbers[@]}"; do
     log "- #$n: 見送り（Dependabot の open な PR ではない）"
     continue
   fi
+  tries=0
+  tried_head=""
   while :; do
     if ! state=$(gh pr view "$n" -R "$repo" --json state,mergeStateStatus,headRefOid,statusCheckRollup); then
       log "- #$n: 見送り（PR を読めない）"
       break
     fi
-    if [ "$(jq -r '.state' <<<"$state")" != OPEN ]; then
-      log "- #$n: 見送り（open でなくなった）"
-      break
-    fi
+    case "$(jq -r '.state' <<<"$state")" in
+      OPEN) ;;
+      # gh pr merge がマージした後に（ブランチの削除などで）失敗を返した場合。
+      MERGED)
+        log "- #$n: マージ済み（gh pr merge はエラーを返した）"
+        break
+        ;;
+      *)
+        log "- #$n: 見送り（open でなくなった）"
+        break
+        ;;
+    esac
     head=$(jq -r '.headRefOid' <<<"$state")
     merge_state=$(jq -r '.mergeStateStatus' <<<"$state")
     checks=$(jq -r "$checks_jq" <<<"$state")
@@ -117,8 +127,11 @@ for n in "${numbers[@]}"; do
         break
       fi
       # 直前のマージの直後は、古い CLEAN が返ったり base が変わったと断られたりする。
-      # Dependabot の rebase を待ってやり直す。
-      if [ "$(date +%s)" -ge "$deadline" ]; then
+      # Dependabot の rebase を待ってやり直す。同じ head で 3 回断られたら、変わらない理由
+      # （ルールや権限）とみなしてあきらめ、後の PR の待ち時間を使い切らない。
+      [ "$head" = "$tried_head" ] || { tried_head=$head; tries=0; }
+      tries=$((tries + 1))
+      if [ "$tries" -ge 3 ] || [ "$(date +%s)" -ge "$deadline" ]; then
         log "- #$n: マージに失敗した（${head:0:7}）"
         failed=$((failed + 1))
         break
@@ -156,10 +169,11 @@ while IFS= read -r item; do
   fi
 # 判定ファイルの本文は LLM が書いたもの。メンションとして効かないように @ の後ろへ
 # ゼロ幅スペースを入れる（@dependabot へのコマンドにもならない）。文字参照（&#64; など）で
-# @ を書かれないように & も文字参照にする。GitHub の上限（65536 文字）に収まるよう最後に切る。
+# @ を書かれないように、文字参照に見える & だけを &amp; にする（コードの && は崩さない）。
+# GitHub の上限（65536 文字）に収まるよう最後に切る。
 done < <(jq -c '.comments[]? | objects
   | select((.number | type) == "number" and .number > 0 and .number == (.number | floor) and (.body | type) == "string")
-  | {number, body: (.body | gsub("&"; "&amp;") | gsub("@"; "@​") | .[:60000])}' "$verdict")
+  | {number, body: (.body | gsub("&(?=#|[A-Za-z]+;)"; "&amp;") | gsub("@"; "@​") | .[:60000])}' "$verdict")
 [ "$posted" -gt 0 ] || log "- 新しく投稿したコメントは無い。"
 
 if [ "$failed" -gt 0 ]; then
