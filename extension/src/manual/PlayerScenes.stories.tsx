@@ -16,6 +16,7 @@ import {
   MdVolumeUp,
 } from "react-icons/md";
 
+import type { Announcement } from "@/domain/announcement";
 import { DEFAULT_SETTINGS, type ReactionDisplayMode } from "@/domain/settings";
 import { mountPipButton } from "@/presentation/content/party/react/PipButton";
 import { mountPlayerControls } from "@/presentation/content/party/react/PlayerControls";
@@ -34,6 +35,7 @@ import {
   EPISODE_LENGTH,
   EPISODE_NO,
   EPISODE_SUB,
+  MAINTENANCE_NOTICE,
   NightCafeArt,
   SAKURA,
   SHARE_TITLE,
@@ -57,6 +59,7 @@ function PlayerScene({
   toasts = [],
   reactions = [],
   extControls = true,
+  announcements,
 }: {
   store: SidebarStore | null;
   time: string;
@@ -64,6 +67,8 @@ function PlayerScene({
   toasts?: ToastSpec[];
   reactions?: ReactionSpec[];
   extControls?: boolean;
+  /** サイドバーのヘッダーの下に出す運営からのアナウンス。 */
+  announcements?: Announcement[];
 }): React.JSX.Element {
   const [emptyStore] = useState(() => new SidebarStore());
   const s = store ?? emptyStore;
@@ -72,6 +77,10 @@ function PlayerScene({
   const spaceRef = useRef<HTMLDivElement>(null);
   const fsRef = useRef<HTMLDivElement>(null);
   const [reactionStore] = useState(() => new ReactionStore());
+  // 描画のたびに作り直すと、アナウンスを取り直してしまう。
+  const [loadAnnouncements] = useState(() =>
+    announcements ? () => Promise.resolve(announcements) : undefined,
+  );
 
   useEffect(() => {
     const settings = { ...DEFAULT_SETTINGS, extraReactions: EXTRA };
@@ -165,6 +174,7 @@ function PlayerScene({
             onDeleteRoom={() => undefined}
             onUpdateRoomSettings={(v) => store.setRoomSettings(v)}
             onTabChange={() => undefined}
+            loadAnnouncements={loadAnnouncements}
           />
         )}
       </div>
@@ -419,6 +429,23 @@ export const Watching: Story = {
         time="08:42"
         playing
         toasts={[{ variant: "info", message: "『ゆうき』さんが×1.25 倍速" }]}
+      />
+    );
+  },
+};
+
+/** 視聴中: サイドバーのヘッダーの下に運営からの重要なお知らせ。 */
+export const WatchingAnnouncement: Story = {
+  render: () => {
+    const store = hostRoom();
+    addHostHistory(store);
+    store.setActiveTab("history");
+    return (
+      <PlayerScene
+        store={store}
+        time="08:42"
+        playing
+        announcements={[MAINTENANCE_NOTICE]}
       />
     );
   },

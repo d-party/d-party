@@ -2,6 +2,7 @@
  * 利用マニュアル（frontend /docs）のスクリーンショット撮影用の架空データと絵。
  * 実在の作品・人物・サービスの画像は使わない。
  */
+import type { Announcement } from "@/domain/announcement";
 import type { User } from "@/domain/protocol";
 
 export const ROOM_ID = "7c3e9a52-4b1d-4f86-9a2e-5d0c81f3b6a4";
@@ -29,6 +30,29 @@ export const YUUKI: User = {
   user_icon: "FaGamepad",
 };
 export const USERS: User[] = [SAKURA, TAKESHI, YUUKI];
+
+/**
+ * 運営からのアナウンス（架空）。撮影日 2026-11-27（金）の翌週のメンテナンス予告と、
+ * このマニュアルの公開のお知らせ。本文は backend の上限（60 文字）に収める。
+ */
+export const MAINTENANCE_NOTICE: Announcement = {
+  id: 101,
+  level: "warning",
+  message: "12月3日（木）2:00〜6:00 はメンテナンスのため同時視聴を利用できません",
+};
+export const MANUAL_NOTICE: Announcement = {
+  id: 102,
+  level: "info",
+  message: "利用マニュアルを公開しました。「情報」タブの「使い方」から開けます",
+};
+export const MANUAL_ANNOUNCEMENTS: Announcement[] = [MAINTENANCE_NOTICE, MANUAL_NOTICE];
+
+/** `announcements` をすぐ返す `load`（何も渡さなければアナウンスなし）。 */
+export function announcementsOf(
+  ...announcements: Announcement[]
+): () => Promise<Announcement[]> {
+  return () => Promise.resolve(announcements);
+}
 
 /** `formatTime()`（履歴の時刻）を決まった時刻で呼ぶ。 */
 export function atClock<T>(iso: string, fn: () => T): T {

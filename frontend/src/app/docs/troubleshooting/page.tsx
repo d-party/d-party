@@ -29,6 +29,7 @@ const PROBLEMS = [
   { id: "no-reactions", title: "リアクションが表示されない・送れない" },
   { id: "name", title: "名前が「ユーザー」のまま・変わらない" },
   { id: "after-update", title: "拡張機能を更新したあと動きがおかしい" },
+  { id: "announcements", title: "閉じたお知らせがまた出る・人によってお知らせが違う" },
   { id: "contact", title: "それでも解決しないとき" },
 ] as const;
 
@@ -135,6 +136,10 @@ export default function TroubleshootingPage(): React.JSX.Element {
         <p>
           サイドバーを開いたときに d-party のサーバーへ接続できませんでした。サーバーのメンテナンスや障害、または自分のネットワークの問題が考えられます。しばらく待ってからプレイヤーを開き直してください。
         </p>
+        <p>
+          予定されたメンテナンスは、ポップアップやサイドバーに「重要」のお知らせとして前もって表示されることがあります（
+          <DocLink href={`${docPath("room")}#announcements`}>運営からのお知らせ</DocLink>）。
+        </p>
       </DocSection>
 
       <DocSection id="out-of-sync" title="再生がずれる・合わない">
@@ -192,6 +197,20 @@ export default function TroubleshootingPage(): React.JSX.Element {
         <p>
           拡張機能が更新・再読み込みされると、それより前から開いていた dアニメストアのタブでは設定の読み込みなどがうまくいかないことがあります。dアニメストアのタブを再読み込みしてください。
         </p>
+      </DocSection>
+
+      <DocSection
+        id="announcements"
+        title="閉じたお知らせがまた出る・人によってお知らせが違う"
+      >
+        <ul className="list-disc space-y-2 pl-6">
+          <li>
+            お知らせを閉じた記録は、そのブラウザの中にだけ残ります。別の PC や別の Chrome プロファイルでは、閉じたお知らせももう一度表示されます。そのブラウザで改めて <Ui>×</Ui> を押してください。
+          </li>
+          <li>
+            お知らせは拡張機能のバージョンに合わせて配信されるので、バージョンが違う人どうしでは、表示されるお知らせが違うことがあります。
+          </li>
+        </ul>
       </DocSection>
 
       <DocSection id="contact" title="それでも解決しないとき">

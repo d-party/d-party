@@ -6,6 +6,8 @@ import { STORAGE_KEYS } from "@/domain/settings";
 import { PopupApp } from "@/presentation/popup/PopupApp";
 import { installChromeMock } from "@/presentation/popup/storybookChromeMock";
 
+import { MANUAL_ANNOUNCEMENTS, announcementsOf } from "./fixtures";
+
 const SAKURA_STORAGE = {
   [STORAGE_KEYS.userName]: "さくら",
   [STORAGE_KEYS.userIcon]: "FaCat",
@@ -36,6 +38,8 @@ const meta: Meta<typeof PopupApp> = {
   title: "Manual/Popup",
   component: PopupApp,
   parameters: { layout: "centered" },
+  // 既定では backend からアナウンスを取りにいく。撮影結果が変わらないよう、ふだんは出さない。
+  args: { loadAnnouncements: announcementsOf() },
 };
 export default meta;
 type Story = StoryObj<typeof PopupApp>;
@@ -44,3 +48,9 @@ export const Sakura: Story = { decorators: [withMock(SAKURA_STORAGE)] };
 
 /** インストール直後（既定値）。 */
 export const FirstRun: Story = { decorators: [withMock({})] };
+
+/** 運営からのアナウンスが 2 件（重要とお知らせ）出ているところ。 */
+export const SakuraAnnouncements: Story = {
+  decorators: [withMock(SAKURA_STORAGE)],
+  args: { loadAnnouncements: announcementsOf(...MANUAL_ANNOUNCEMENTS) },
+};
