@@ -39,7 +39,7 @@ export default function SettingsPage(): React.JSX.Element {
         </p>
         <DocFigure
           name="popup-announcements"
-          alt="ポップアップのタブの上に、「重要」のメンテナンスのお知らせと、利用マニュアル公開のお知らせの 2 行が表示されている"
+          alt="ポップアップのタブの上に、「重要」のメンテナンスのお知らせと、年末年始の混雑のお知らせの 2 行が表示されている"
           caption="タブの上に表示される運営からのお知らせ"
           maxWidth={360}
         />
