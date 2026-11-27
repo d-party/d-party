@@ -55,8 +55,8 @@
             </div>
         </aside>
         <h2>
-            <span class="text">59 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">59<span class="text"> run</span></button>
+            <span class="text">60 statements &nbsp;</span>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">60<span class="text"> run</span></button>
             <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
             <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">0<span class="text"> partial</span></button>
@@ -67,7 +67,7 @@
             <a id="nextFileLink" class="nav" href="z_6f9138c731eeec9f_urls_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.17.5">coverage.py v7.17.5</a>,
-            created at 2026-11-27 16:06 +0000
+            created at 2026-11-27 17:58 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -421,26 +421,29 @@
     <p class="pln"><span class="n"><a id="t337" href="#t337">337</a></span><span class="t"><span class="com"># &#31649;&#29702;&#30011;&#38754;&#12398;&#12525;&#12464;&#12452;&#12531;&#35430;&#34892;&#21046;&#38480;&#65288;django-axes&#65289;&#12290;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t338" href="#t338">338</a></span><span class="t"><span class="nam">AXES_FAILURE_LIMIT</span> <span class="op">=</span> <span class="num">10</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t339" href="#t339">339</a></span><span class="t"><span class="nam">AXES_COOLOFF_TIME</span> <span class="op">=</span> <span class="num">6</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t340" href="#t340">340</a></span><span class="t"><span class="com"># &#12518;&#12540;&#12470;&#12540;&#21517;&#12384;&#12369;&#12391;&#12525;&#12483;&#12463;&#12377;&#12427;&#12290;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t341" href="#t341">341</a></span><span class="t"><span class="nam">AXES_LOCKOUT_PARAMETERS</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;username&quot;</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t342" href="#t342">342</a></span><span class="t"><span class="nam">AXES_RESET_ON_SUCCESS</span> <span class="op">=</span> <span class="key">True</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t343" href="#t343">343</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t344" href="#t344">344</a></span><span class="t"><span class="key">if</span> <span class="nam">DEBUG</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t345" href="#t345">345</a></span><span class="t">    <span class="nam">AXES_ENABLED</span> <span class="op">=</span> <span class="key">False</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t340" href="#t340">340</a></span><span class="t"><span class="com"># &#12518;&#12540;&#12470;&#12540;&#21517;&#12392; IP &#12398;&#32068;&#12391;&#12525;&#12483;&#12463;&#12377;&#12427;&#12290;&#12518;&#12540;&#12470;&#12540;&#21517;&#12384;&#12369;&#12384;&#12392;&#12289;&#35504;&#12391;&#12418;&#12473;&#12479;&#12483;&#12501;&#12398;&#21517;&#21069;&#12391; 10 &#22238;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t341" href="#t341">341</a></span><span class="t"><span class="com"># &#38291;&#36949;&#12360;&#12427;&#12384;&#12369;&#12391;&#12289;&#12381;&#12398;&#12473;&#12479;&#12483;&#12501;&#12434; AXES_COOLOFF_TIME &#26178;&#38291;&#32224;&#12417;&#20986;&#12379;&#12427;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t342" href="#t342">342</a></span><span class="t"><span class="nam">AXES_LOCKOUT_PARAMETERS</span> <span class="op">=</span> <span class="op">[</span><span class="op">[</span><span class="str">&quot;username&quot;</span><span class="op">,</span> <span class="str">&quot;ip_address&quot;</span><span class="op">]</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t343" href="#t343">343</a></span><span class="t"><span class="com"># IP &#12399; Cloudflare &#12398; CF-Connecting-IP &#12363;&#12425;&#21462;&#12427;&#65288;d_party/client_ip.py&#65289;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t344" href="#t344">344</a></span><span class="t"><span class="nam">AXES_CLIENT_IP_CALLABLE</span> <span class="op">=</span> <span class="str">&quot;d_party.client_ip.client_ip&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t345" href="#t345">345</a></span><span class="t"><span class="nam">AXES_RESET_ON_SUCCESS</span> <span class="op">=</span> <span class="key">True</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t346" href="#t346">346</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t347" href="#t347">347</a></span><span class="t"><span class="com"># &#12497;&#12473;&#12461;&#12540;&#65288;WebAuthn&#65289;&#12290;&#31649;&#29702;&#30011;&#38754;&#12398;&#12525;&#12464;&#12452;&#12531;&#12395;&#12384;&#12369;&#20351;&#12358;&#12290;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t348" href="#t348">348</a></span><span class="t"><span class="com"># RP ID &#12434;&#22793;&#12360;&#12427;&#12392;&#30331;&#37682;&#28168;&#12415;&#12398;&#12497;&#12473;&#12461;&#12540;&#12399;&#12377;&#12409;&#12390;&#20351;&#12360;&#12394;&#12367;&#12394;&#12427;&#65288;&#31227;&#34892;&#12399;&#12391;&#12365;&#12394;&#12356;&#65289;&#12290;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t349" href="#t349">349</a></span><span class="t"><span class="nam">OTP_WEBAUTHN_RP_ID</span> <span class="op">=</span> <span class="nam">os</span><span class="op">.</span><span class="nam">environ</span><span class="op">[</span><span class="str">&quot;MY_DOMAIN&quot;</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t350" href="#t350">350</a></span><span class="t"><span class="nam">OTP_WEBAUTHN_RP_NAME</span> <span class="op">=</span> <span class="str">&quot;d-party&quot;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t351" href="#t351">351</a></span><span class="t"><span class="nam">OTP_WEBAUTHN_ALLOWED_ORIGINS</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t352" href="#t352">352</a></span><span class="t">    <span class="str">&quot;https://&quot;</span> <span class="op">+</span> <span class="nam">os</span><span class="op">.</span><span class="nam">environ</span><span class="op">[</span><span class="str">&quot;MY_DOMAIN&quot;</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t353" href="#t353">353</a></span><span class="t">    <span class="str">&quot;https://www.&quot;</span> <span class="op">+</span> <span class="nam">os</span><span class="op">.</span><span class="nam">environ</span><span class="op">[</span><span class="str">&quot;MY_DOMAIN&quot;</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t354" href="#t354">354</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t355" href="#t355">355</a></span><span class="t"><span class="key">if</span> <span class="nam">DEBUG</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t356" href="#t356">356</a></span><span class="t">    <span class="com"># nginx &#32076;&#30001;&#12392; runserver &#30452;&#12398;&#20001;&#26041;&#12363;&#12425;&#31649;&#29702;&#30011;&#38754;&#12395;&#20837;&#12427;&#12290;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t357" href="#t357">357</a></span><span class="t">    <span class="nam">OTP_WEBAUTHN_ALLOWED_ORIGINS</span> <span class="op">+=</span> <span class="op">[</span><span class="str">&quot;http://localhost&quot;</span><span class="op">,</span> <span class="str">&quot;http://localhost:8000&quot;</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t358" href="#t358">358</a></span><span class="t"><span class="com"># &#12497;&#12473;&#12461;&#12540;&#12391;&#12525;&#12464;&#12452;&#12531;&#12375;&#12383;&#24460;&#12398;&#34892;&#12365;&#20808;&#65288;?next= &#12364;&#28961;&#12356;&#12392;&#12365;&#65289;&#12290;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t359" href="#t359">359</a></span><span class="t"><span class="nam">LOGIN_REDIRECT_URL</span> <span class="op">=</span> <span class="str">&quot;admin:index&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t347" href="#t347">347</a></span><span class="t"><span class="key">if</span> <span class="nam">DEBUG</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t348" href="#t348">348</a></span><span class="t">    <span class="nam">AXES_ENABLED</span> <span class="op">=</span> <span class="key">False</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t349" href="#t349">349</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t350" href="#t350">350</a></span><span class="t"><span class="com"># &#12497;&#12473;&#12461;&#12540;&#65288;WebAuthn&#65289;&#12290;&#31649;&#29702;&#30011;&#38754;&#12398;&#12525;&#12464;&#12452;&#12531;&#12395;&#12384;&#12369;&#20351;&#12358;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t351" href="#t351">351</a></span><span class="t"><span class="com"># RP ID &#12434;&#22793;&#12360;&#12427;&#12392;&#30331;&#37682;&#28168;&#12415;&#12398;&#12497;&#12473;&#12461;&#12540;&#12399;&#12377;&#12409;&#12390;&#20351;&#12360;&#12394;&#12367;&#12394;&#12427;&#65288;&#31227;&#34892;&#12399;&#12391;&#12365;&#12394;&#12356;&#65289;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t352" href="#t352">352</a></span><span class="t"><span class="nam">OTP_WEBAUTHN_RP_ID</span> <span class="op">=</span> <span class="nam">os</span><span class="op">.</span><span class="nam">environ</span><span class="op">[</span><span class="str">&quot;MY_DOMAIN&quot;</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t353" href="#t353">353</a></span><span class="t"><span class="nam">OTP_WEBAUTHN_RP_NAME</span> <span class="op">=</span> <span class="str">&quot;d-party&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t354" href="#t354">354</a></span><span class="t"><span class="nam">OTP_WEBAUTHN_ALLOWED_ORIGINS</span> <span class="op">=</span> <span class="op">[</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t355" href="#t355">355</a></span><span class="t">    <span class="str">&quot;https://&quot;</span> <span class="op">+</span> <span class="nam">os</span><span class="op">.</span><span class="nam">environ</span><span class="op">[</span><span class="str">&quot;MY_DOMAIN&quot;</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t356" href="#t356">356</a></span><span class="t">    <span class="str">&quot;https://www.&quot;</span> <span class="op">+</span> <span class="nam">os</span><span class="op">.</span><span class="nam">environ</span><span class="op">[</span><span class="str">&quot;MY_DOMAIN&quot;</span><span class="op">]</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t357" href="#t357">357</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t358" href="#t358">358</a></span><span class="t"><span class="key">if</span> <span class="nam">DEBUG</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t359" href="#t359">359</a></span><span class="t">    <span class="com"># nginx &#32076;&#30001;&#12392; runserver &#30452;&#12398;&#20001;&#26041;&#12363;&#12425;&#31649;&#29702;&#30011;&#38754;&#12395;&#20837;&#12427;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t360" href="#t360">360</a></span><span class="t">    <span class="nam">OTP_WEBAUTHN_ALLOWED_ORIGINS</span> <span class="op">+=</span> <span class="op">[</span><span class="str">&quot;http://localhost&quot;</span><span class="op">,</span> <span class="str">&quot;http://localhost:8000&quot;</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t361" href="#t361">361</a></span><span class="t"><span class="com"># &#12497;&#12473;&#12461;&#12540;&#12391;&#12525;&#12464;&#12452;&#12531;&#12375;&#12383;&#24460;&#12398;&#34892;&#12365;&#20808;&#65288;?next= &#12364;&#28961;&#12356;&#12392;&#12365;&#65289;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t362" href="#t362">362</a></span><span class="t"><span class="nam">LOGIN_REDIRECT_URL</span> <span class="op">=</span> <span class="str">&quot;admin:index&quot;</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -450,7 +453,7 @@
             <a class="nav" href="z_6f9138c731eeec9f_urls_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.17.5">coverage.py v7.17.5</a>,
-            created at 2026-11-27 16:06 +0000
+            created at 2026-11-27 17:58 +0000
         </p>
     </div>
 </footer>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Coverage for d_party/client_ip.py: 100%</title>
+    <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
+    <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
+    <script src="coverage_html_cb_54cfdca1.js" defer></script>
+</head>
+<body class="pyfile">
+<header>
+    <div class="content">
+        <h1>
+            <span class="text">Coverage for </span><b>d_party<span class="sep">/</span>client_ip.py</b>:
+            <span class="pc_cov">100%</span>
+        </h1>
+        <aside id="help_panel_wrapper">
+            <input id="help_panel_state" type="checkbox">
+            <label for="help_panel_state">
+                <img id="keyboard_icon" src="keybd_closed_cb_900cfef5.png" alt="Show/hide keyboard shortcuts">
+            </label>
+            <div id="help_panel">
+                <p class="legend">Shortcuts on this page</p>
+                <div class="keyhelp">
+                    <p>
+                        <kbd>r</kbd>
+                        <kbd>m</kbd>
+                        <kbd>x</kbd>
+                        <kbd>p</kbd>
+                        &nbsp; toggle line displays
+                    </p>
+                    <p>
+                        <kbd>j</kbd>
+                        <kbd>k</kbd>
+                        &nbsp; next/prev highlighted chunk
+                    </p>
+                    <p>
+                        <kbd>0</kbd> &nbsp; (zero) top of page
+                    </p>
+                    <p>
+                        <kbd>1</kbd> &nbsp; (one) first highlighted chunk
+                    </p>
+                    <p>
+                        <kbd>[</kbd>
+                        <kbd>]</kbd>
+                        &nbsp; prev/next file
+                    </p>
+                    <p>
+                        <kbd>u</kbd> &nbsp; up to the index
+                    </p>
+                    <p>
+                        <kbd>?</kbd> &nbsp; show/hide this help
+                    </p>
+                </div>
+            </div>
+        </aside>
+        <h2>
+            <span class="text">24 statements &nbsp;</span>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">24<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
+            <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">3<span class="text"> excluded</span></button>
+            <button type="button" class="par run show_par button_toggle_par" value="par" data-shortcut="p" title="Toggle lines partially run">0<span class="text"> partial</span></button>
+        </h2>
+        <p class="text">
+            <a id="prevFileLink" class="nav" href="z_6f9138c731eeec9f_asgi_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
+            <a id="nextFileLink" class="nav" href="z_6f9138c731eeec9f_dashboard_py.html">&#xbb; next</a>
+            &nbsp; &nbsp; &nbsp;
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.17.5">coverage.py v7.17.5</a>,
+            created at 2026-11-27 17:58 +0000
+        </p>
+        <aside class="hidden">
+            <button type="button" class="button_next_chunk" data-shortcut="j"></button>
+            <button type="button" class="button_prev_chunk" data-shortcut="k"></button>
+            <button type="button" class="button_top_of_page" data-shortcut="0"></button>
+            <button type="button" class="button_first_chunk" data-shortcut="1"></button>
+            <button type="button" class="button_prev_file" data-shortcut="["></button>
+            <button type="button" class="button_next_file" data-shortcut="]"></button>
+            <button type="button" class="button_to_index" data-shortcut="u"></button>
+            <button type="button" class="button_show_hide_help" data-shortcut="?"></button>
+        </aside>
+    </div>
+</header>
+<main id="source">
+    <p class="pln"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="str">&quot;&quot;&quot;&#12522;&#12463;&#12456;&#12473;&#12488;&#12434;&#36865;&#12387;&#12390;&#12365;&#12383;&#12463;&#12521;&#12452;&#12450;&#12531;&#12488;&#12398; IP&#12290;django-axes &#12398;&#12525;&#12483;&#12463;&#12395;&#20351;&#12358;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="str">&#26412;&#30058;&#12399; Cloudflare &#8594; cloudflared &#8594; nginx &#8594; Django &#12392;&#12388;&#12394;&#12364;&#12427;&#12398;&#12391;&#12289;``REMOTE_ADDR`` &#12399;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="str">nginx &#12398; Pod &#12395;&#12394;&#12427;&#12290;&#12463;&#12521;&#12452;&#12450;&#12531;&#12488;&#12398; IP &#12399; Cloudflare &#12364;&#20184;&#12369;&#12427; ``CF-Connecting-IP`` &#12391;&#21462;&#12427;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="str">Cloudflare &#12399;&#12463;&#12521;&#12452;&#12450;&#12531;&#12488;&#12364;&#36865;&#12387;&#12383;&#21516;&#21517;&#12398;&#12504;&#12483;&#12480;&#12540;&#12434;&#19978;&#26360;&#12365;&#12377;&#12427;&#12398;&#12391;&#12289;Cloudflare &#12434;&#36890;&#12427;&#38480;&#12426;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t"><span class="str">&#20605;&#12428;&#12394;&#12356;&#12290;nginx &#12399; cloudflared &#12398;&#24460;&#12429;&#12398; ClusterIP &#12391;&#12289;&#12463;&#12521;&#12473;&#12479;&#12398;&#22806;&#12363;&#12425;&#12399;&#30452;&#25509;&#23626;&#12363;&#12394;&#12356;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="str">&#65288;&#12463;&#12521;&#12473;&#12479;&#20869;&#12398;&#21029;&#12398; Pod &#12363;&#12425;&#12399;&#23626;&#12367;&#12398;&#12391;&#12289;&#21516;&#23621;&#12377;&#12427;&#12469;&#12540;&#12499;&#12473;&#12399;&#20449;&#38972;&#12375;&#12390;&#12356;&#12427;&#21069;&#25552;&#65289;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t"><span class="str">&quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="key">import</span> <span class="nam">ipaddress</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t"><span class="key">import</span> <span class="nam">logging</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t"><span class="key">from</span> <span class="nam">typing</span> <span class="key">import</span> <span class="nam">TYPE_CHECKING</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="key">from</span> <span class="nam">django</span><span class="op">.</span><span class="nam">conf</span> <span class="key">import</span> <span class="nam">settings</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="key">if</span> <span class="nam">TYPE_CHECKING</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="exc show_exc"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t">    <span class="key">from</span> <span class="nam">django</span><span class="op">.</span><span class="nam">http</span> <span class="key">import</span> <span class="nam">HttpRequest</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="nam">logger</span> <span class="op">=</span> <span class="nam">logging</span><span class="op">.</span><span class="nam">getLogger</span><span class="op">(</span><span class="nam">__name__</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t"><span class="com"># IPv6 &#12399; 1 &#22865;&#32004;&#32773;&#12364; /56&#12316;/48 &#12434;&#25345;&#12388;&#12398;&#12391;&#12289;&#12450;&#12489;&#12524;&#12473;&#12372;&#12392;&#12395;&#25968;&#12360;&#12427;&#12392;&#12289;&#12381;&#12398;&#20013;&#12391;&#22238;&#12377;&#12384;&#12369;&#12391;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="com"># &#35430;&#34892;&#22238;&#25968;&#12398;&#19978;&#38480;&#12434;&#22238;&#36991;&#12391;&#12365;&#12427;&#12290;/56 &#12391;&#12414;&#12392;&#12417;&#12390;&#25968;&#12360;&#12427;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t"><span class="nam">IPV6_PREFIX_LENGTH</span> <span class="op">=</span> <span class="num">56</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t"><span class="key">def</span> <span class="nam">_lockout_key</span><span class="op">(</span><span class="nam">address</span><span class="op">:</span> <span class="nam">str</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="nam">str</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t">    <span class="str">&quot;&quot;&quot;&#12525;&#12483;&#12463;&#12434;&#25968;&#12360;&#12427;&#21336;&#20301;&#12290;IPv4 &#12399;&#12381;&#12398;&#12414;&#12414;&#12289;IPv6 &#12399; /56 &#12398;&#12493;&#12483;&#12488;&#12527;&#12540;&#12463;&#12290;&quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t28" href="#t28">28</a></span><span class="t">    <span class="nam">ip</span> <span class="op">=</span> <span class="nam">ipaddress</span><span class="op">.</span><span class="nam">ip_address</span><span class="op">(</span><span class="nam">address</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t29" href="#t29">29</a></span><span class="t">    <span class="key">if</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">ip</span><span class="op">,</span> <span class="nam">ipaddress</span><span class="op">.</span><span class="nam">IPv6Address</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t30" href="#t30">30</a></span><span class="t">        <span class="key">if</span> <span class="nam">ip</span><span class="op">.</span><span class="nam">ipv4_mapped</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t31" href="#t31">31</a></span><span class="t">            <span class="key">return</span> <span class="nam">str</span><span class="op">(</span><span class="nam">ip</span><span class="op">.</span><span class="nam">ipv4_mapped</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t32" href="#t32">32</a></span><span class="t">        <span class="nam">network</span> <span class="op">=</span> <span class="nam">ipaddress</span><span class="op">.</span><span class="nam">IPv6Network</span><span class="op">(</span><span class="op">(</span><span class="nam">ip</span><span class="op">,</span> <span class="nam">IPV6_PREFIX_LENGTH</span><span class="op">)</span><span class="op">,</span> <span class="nam">strict</span><span class="op">=</span><span class="key">False</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t33" href="#t33">33</a></span><span class="t">        <span class="key">return</span> <span class="nam">str</span><span class="op">(</span><span class="nam">network</span><span class="op">.</span><span class="nam">network_address</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t34" href="#t34">34</a></span><span class="t">    <span class="key">return</span> <span class="nam">str</span><span class="op">(</span><span class="nam">ip</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t35" href="#t35">35</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t36" href="#t36">36</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t37" href="#t37">37</a></span><span class="t"><span class="key">def</span> <span class="nam">client_ip</span><span class="op">(</span><span class="nam">request</span><span class="op">:</span> <span class="nam">HttpRequest</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="nam">str</span> <span class="op">|</span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t38" href="#t38">38</a></span><span class="t">    <span class="str">&quot;&quot;&quot;``CF-Connecting-IP`` &#12364; IP &#12392;&#12375;&#12390;&#35501;&#12417;&#12428;&#12400;&#12381;&#12398;&#21336;&#20301;&#12289;&#12394;&#12369;&#12428;&#12400; ``REMOTE_ADDR``&#12290;&quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t39" href="#t39">39</a></span><span class="t">    <span class="nam">forwarded</span> <span class="op">=</span> <span class="nam">request</span><span class="op">.</span><span class="nam">META</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">&quot;HTTP_CF_CONNECTING_IP&quot;</span><span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">)</span><span class="op">.</span><span class="nam">strip</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t40" href="#t40">40</a></span><span class="t">    <span class="key">if</span> <span class="nam">forwarded</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t41" href="#t41">41</a></span><span class="t">        <span class="key">try</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t42" href="#t42">42</a></span><span class="t">            <span class="key">return</span> <span class="nam">_lockout_key</span><span class="op">(</span><span class="nam">forwarded</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t43" href="#t43">43</a></span><span class="t">        <span class="key">except</span> <span class="nam">ValueError</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t44" href="#t44">44</a></span><span class="t">            <span class="key">pass</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t45" href="#t45">45</a></span><span class="t">    <span class="key">if</span> <span class="key">not</span> <span class="nam">settings</span><span class="op">.</span><span class="nam">DEBUG</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t">        <span class="com"># &#26412;&#30058;&#12391; REMOTE_ADDR&#65288;nginx &#12398; Pod&#65289;&#12395;&#25147;&#12427;&#12392;&#12289;&#20840;&#21729;&#12364;&#21516;&#12376; IP &#12392;&#12375;&#12390;&#25968;&#12360;&#12425;&#12428;&#12289;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t">        <span class="com"># &#12518;&#12540;&#12470;&#12540;&#21517;&#12384;&#12369;&#12398;&#12525;&#12483;&#12463;&#12392;&#21516;&#12376;&#12395;&#12394;&#12427;&#12290;&#40665;&#12387;&#12390;&#36215;&#12365;&#12394;&#12356;&#12424;&#12358;&#12395;&#27531;&#12377;&#12290;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t">        <span class="nam">logger</span><span class="op">.</span><span class="nam">warning</span><span class="op">(</span><span class="str">&quot;no usable CF-Connecting-IP; falling back to REMOTE_ADDR&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t">    <span class="key">return</span> <span class="nam">request</span><span class="op">.</span><span class="nam">META</span><span class="op">.</span><span class="nam">get</span><span class="op">(</span><span class="str">&quot;REMOTE_ADDR&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+</main>
+<footer>
+    <div class="content">
+        <p>
+            <a class="nav" href="z_6f9138c731eeec9f_asgi_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
+            <a class="nav" href="z_6f9138c731eeec9f_dashboard_py.html">&#xbb; next</a>
+            &nbsp; &nbsp; &nbsp;
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.17.5">coverage.py v7.17.5</a>,
+            created at 2026-11-27 17:58 +0000
+        </p>
+    </div>
+</footer>
+</body>
+</html>
