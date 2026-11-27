@@ -31,7 +31,13 @@ const ALLOWED_PREFIX = "https://";
  * リンクにしてよい URL なら、描画に使う正規化した href を返す。許可しないものは `null`。
  */
 export function allowedHref(url: string): string | null {
-  if (!url.startsWith(ALLOWED_PREFIX) || FORBIDDEN_URL_CHARS.test(url)) {
+  if (
+    !url.startsWith(ALLOWED_PREFIX) ||
+    FORBIDDEN_URL_CHARS.test(url) ||
+    // `https:///docs` は URL のパーサだと `docs` をホストと読むが、ホストが空なので弾く
+    // （backend と揃える）。
+    url.startsWith(`${ALLOWED_PREFIX}/`)
+  ) {
     return null;
   }
   let parsed: URL;
