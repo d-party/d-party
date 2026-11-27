@@ -96,6 +96,10 @@ spec:
               mountPath: /etc/nginx/nginx.conf
               subPath: nginx.conf
               readOnly: true
+            - name: nginx-conf
+              mountPath: /usr/share/nginx/maintenance/maintenance.html
+              subPath: maintenance.html
+              readOnly: true
             - name: static
               mountPath: /static
               readOnly: true

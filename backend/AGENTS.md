@@ -59,6 +59,10 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
 - **REST API**: `api/urls.py` のパスとレスポンスの形は外部から参照される（shields は `{"schemaVersion": 1, ...}`）。
   レスポンスの形は `api/serializers.py` に宣言し、`@extend_schema` の `operation_id` が
   TypeScript の関数名になる。変えたら `openapi.json` を再生成する（手順はルートの `AGENTS.md`）。
+- **ヘルスチェック（`/api/v1/health`）**: PostgreSQL と Redis まで確かめ、どれかが落ちていれば 503
+  （本文は空）。拡張機能は 200 以外で「ルームを作成」ボタンを無効にする。コンテナの
+  liveness / readiness には使わない（DB の障害で django が再起動を繰り返すため。probe は TCP）。
+  pytest は Redis なしで走るので、200 を期待するテストでは `_redis_ok` を差し替える。
 - **アナウンス**: `GET /api/v1/announcements` は配信中（`starts_at` ≤ 現在 < `ends_at`）だけを
   重要 → 新しい順で返す。認証不要・読み取り専用で、作成・編集・削除は管理画面だけ（REST の書き込み口は
   作らない。作るなら認証と `IsAdminUser` を付ける。既定の `DEFAULT_AUTHENTICATION_CLASSES` は空）。

@@ -149,6 +149,7 @@ function Panel({
       {state.mode === "create" && !state.joined ? (
         <CreatePanel
           onCreateRoom={onCreateRoom}
+          maintenance={state.connectionStatus === "maintenance"}
           draftSettings={state.draftRoomSettings}
           onChangeDraftSettings={(settings) =>
             store.setDraftRoomSettings(settings)

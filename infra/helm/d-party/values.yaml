@@ -146,6 +146,11 @@ nginx:
   # nginx -s quit による graceful 終了の猶予。
   terminationGracePeriodSeconds: 60
   preStopSleepSeconds: 5
+  # 計画メンテナンス。true にすると /healthz と /api/v1/announcements 以外の全リクエストへ
+  # 静的ページ（503）を返す。アナウンスは告知に使えるよう django へ通す。
+  # django / frontend が落ちているときは、この値に関係なく同じページが出る。
+  maintenance:
+    enabled: false
   resources:
     requests:
       cpu: 50m

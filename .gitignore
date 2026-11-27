@@ -35,3 +35,6 @@ storybook-static/
 
 # ── Logs / data ──────────────────────────────────────────────────────────
 *.log
+
+# ── wrangler（infra/cloudflare）のローカルキャッシュ ──
+.wrangler/
