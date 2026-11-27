@@ -237,7 +237,7 @@ kubectl -n registry get jobs -w
 
 > **frontend の build-arg**: `NEXT_PUBLIC_*` はビルド時に焼き込まれます。
 > `infra/build/buildkit-frontend-job.yaml` の `build-arg:NEXT_PUBLIC_BACKEND_HOST` 等を
-> 公開ドメイン（`docker-compose.prod.yml` と同じ値）に合わせて編集してください。
+> 公開ドメインに合わせて編集してください。
 
 > **ノード前提（rootless ビルド）**: rootless BuildKit は user namespace を使います。
 > Ubuntu 24.04 (arm64) では以下をノードで有効化してください。

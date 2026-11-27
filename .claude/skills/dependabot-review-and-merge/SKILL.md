@@ -16,7 +16,7 @@ description: Review, verify and merge the open Dependabot PRs on the d-party mon
 | `uv` (`/backend`) | backend の Python 依存 | pytest · mypy · ruff · makemigrations --check |
 | `npm` (`/`) | extension + frontend（**ロックファイルは 1 本**） | typecheck · lint · rspack build · next build · build-storybook · Docker smoke |
 | `docker` (`/backend`, `/frontend`) | ベースイメージ | hadolint · dockle · Docker smoke |
-| `docker-compose` (`/`) | compose のイメージ（nginx · postgres · redis · certbot · k6） | `docker compose config` · nginx の構文チェック · 起動確認 |
+| `docker-compose` (`/`) | compose のイメージ（nginx · postgres · redis · k6） | `docker compose config` · nginx の構文チェック · 起動確認 |
 | `github-actions` (`/`) | ワークフロー | actionlint |
 
 > **npm の PR は 1 本で両パッケージを動かしうる。** ロックファイルがルートに 1 本

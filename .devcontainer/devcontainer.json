@@ -129,7 +129,6 @@
   },
   "forwardPorts": [
     80,
-    443,
     3000,
     5432,
     6379,
@@ -138,10 +137,6 @@
   "portsAttributes": {
     "80": {
       "label": "Nginx (App)",
-      "onAutoForward": "silent"
-    },
-    "443": {
-      "label": "Nginx (HTTPS)",
       "onAutoForward": "silent"
     },
     "3000": {
