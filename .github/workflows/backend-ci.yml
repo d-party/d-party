@@ -80,10 +80,10 @@ jobs:
     name: Pytest (PostgreSQL)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # 依存とテストのコードを動かすジョブには書き込み権限を渡さない。
+    # カバレッジの投稿は coverage ジョブがする。
     permissions:
-      # カバレッジのコメントとデータブランチへの書き込み。
-      contents: write
-      pull-requests: write
+      contents: read
     # Redis は不要（conftest.py がインメモリに差し替える）。
     services:
       postgres:
@@ -115,6 +115,32 @@ jobs:
         run: uv run python manage.py makemigrations --check --dry-run
       - name: run pytest
         run: uv run pytest --cov --cov-report=xml
+      - name: Store coverage data
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-data
+          path: backend/.coverage
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  coverage:
+    name: Coverage comment
+    needs: pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # カバレッジのコメントとデータブランチへの書き込み。依存を入れず、テストも動かさない。
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: coverage-data
+          path: backend
       # fork の PR では投稿できないので continue-on-error（本文は artifact に残る）。
       - name: Coverage comment
         id: coverage_comment
