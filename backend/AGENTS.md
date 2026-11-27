@@ -76,6 +76,9 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
     パスワードで入って一覧から古い行を消すと登録し直せる。
   - テンプレートは Unfold のものをコピーせず、同名で継承してブロックだけ埋める
     （`login.html` の `login_after`）。要素の id は django-otp-webauthn のスクリプトとの契約。
+- **CSP**: `settings.py` の `SECURE_CSP_REPORT_ONLY`（今は Report-Only。ブロックはしない）。
+  インラインの `<script>` は許していないので、テンプレートに書くときは
+  `<script {% csp_nonce_attr %}>` にする。外部のオリジンから読むものを足すなら方針にも足す。
 
 ## コマンド
 

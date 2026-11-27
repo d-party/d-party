@@ -427,7 +427,7 @@ requires-dist = [
     { name = "channels-redis", specifier = ">=4.2,<4.4" },
     { name = "cryptography", specifier = ">=44.0" },
     { name = "daphne", specifier = ">=4.1" },
-    { name = "django", specifier = ">=5.2,<7.0" },
+    { name = "django", specifier = ">=6.0,<7.0" },
     { name = "django-axes", specifier = ">=7.0" },
     { name = "django-extensions", specifier = ">=3.2.3" },
     { name = "django-otp-webauthn", specifier = ">=0.10" },
