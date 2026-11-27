@@ -256,7 +256,7 @@ async def test_sync_response_from_a_guest_is_dropped(one_way):
 
 async def test_sync_response_checks_the_stored_host_flag():
     """接続が持っている is_host ではなく、DB の値で判定する（委譲は別の接続が書く）。"""
-    _, _, [(promoted, promoted_user), (asker, asker_user)] = await _room_with_guests(
+    host, _, [(promoted, promoted_user), (asker, asker_user)] = await _room_with_guests(
         "a", "b"
     )
     await database_sync_to_async(
@@ -273,7 +273,7 @@ async def test_sync_response_checks_the_stored_host_flag():
     )
 
     assert (await asker.receive_json_from())["action"] == "sync_response"
-    for communicator in (promoted, asker):
+    for communicator in (host, promoted, asker):
         await communicator.disconnect()
 
 

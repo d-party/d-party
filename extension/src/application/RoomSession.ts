@@ -247,6 +247,14 @@ export class RoomSession {
     // ホストの sync_request は自分には返らない（サーバはホストへだけ送り、送り主は除く）。
     // 受け付けの窓を開けると、偽の sync_response でホストの再生を動かされうる。
     if (this.isHost) return;
+    // 前の手動 sync に応答が来ないまま期限が過ぎていたら、そのトーストの予約は捨てる
+    // （自動の sync で「シンクしました」と出さない）。
+    if (
+      this.syncRequestedAt === null ||
+      now() - this.syncRequestedAt > RoomSession.SYNC_RESPONSE_TIMEOUT_MS
+    ) {
+      this.pendingManualSyncToast = false;
+    }
     if (opts.manual ?? true) this.pendingManualSyncToast = true;
     this.syncRequestedAt = now();
     this.send({ action: "sync_request", request_id: now() });
