@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from .factories import AnnouncementFactory
 from .models import Announcement
+from .versions import INVALID_VERSION
 
 pytestmark = pytest.mark.django_db
 
@@ -159,6 +160,67 @@ def test_add_form_rejects_long_message(admin_client):
     assert "message" in response.context["adminform"].form.errors
 
 
+def test_add_form_saves_version_bounds(admin_client):
+    admin_client.post(
+        reverse("admin:announcements_announcement_add"),
+        _form(min_extension_version="2.9.0", max_extension_version="2.10.0"),
+    )
+
+    announcement = Announcement.objects.get()
+    assert announcement.min_extension_version == "2.9.0"
+    assert announcement.max_extension_version == "2.10.0"
+
+
+def test_add_form_leaves_empty_bounds_unlimited(admin_client):
+    admin_client.post(
+        reverse("admin:announcements_announcement_add"),
+        _form(min_extension_version="", max_extension_version=""),
+    )
+
+    announcement = Announcement.objects.get()
+    assert announcement.min_extension_version is None
+    assert announcement.max_extension_version is None
+
+
+@pytest.mark.parametrize(
+    "version", ["2.1", "v2.1.0", "2.1.0-beta", "2.01.0", "65536.0.0", "1" * 17]
+)
+@pytest.mark.parametrize("field", ["min_extension_version", "max_extension_version"])
+def test_add_form_rejects_malformed_version(admin_client, field, version):
+    response = admin_client.post(
+        reverse("admin:announcements_announcement_add"), _form(**{field: version})
+    )
+
+    assert response.status_code == 200
+    assert response.context["adminform"].form.errors[field] == [INVALID_VERSION]
+    assert not Announcement.objects.exists()
+
+
+def test_add_form_rejects_too_long_version(admin_client):
+    response = admin_client.post(
+        reverse("admin:announcements_announcement_add"),
+        _form(min_extension_version="1" * 1000),
+    )
+
+    assert response.status_code == 200
+    assert "min_extension_version" in response.context["adminform"].form.errors
+    assert not Announcement.objects.exists()
+
+
+def test_add_form_rejects_upper_below_lower(admin_client):
+    # 文字列で比べると "2.9.0" > "2.10.0" になり、見逃してしまう。
+    response = admin_client.post(
+        reverse("admin:announcements_announcement_add"),
+        _form(min_extension_version="2.10.0", max_extension_version="2.9.0"),
+    )
+
+    assert response.status_code == 200
+    assert response.context["adminform"].form.errors["max_extension_version"] == [
+        "対象バージョンの上限は下限以上にしてください。"
+    ]
+    assert not Announcement.objects.exists()
+
+
 def test_change_form_renders(admin_client):
     announcement = AnnouncementFactory()
 
@@ -194,6 +256,19 @@ def test_changelist_shows_status(admin_client):
         "予約",
         "終了",
     ]:
+        assert text in content
+
+
+def test_changelist_shows_target_versions(admin_client):
+    AnnouncementFactory(min_extension_version="2.15.0", max_extension_version="2.16.3")
+    AnnouncementFactory(max_extension_version="2.14.1")
+    AnnouncementFactory()
+
+    content = admin_client.get(
+        reverse("admin:announcements_announcement_changelist")
+    ).content.decode()
+
+    for text in ["対象バージョン", "2.15.0 〜 2.16.3", "〜 2.14.1", "すべて"]:
         assert text in content
 
 

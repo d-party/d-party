@@ -2,8 +2,10 @@ from django.contrib import admin, messages
 from django.utils import timezone
 from unfold.admin import ModelAdmin
 from unfold.decorators import action, display
+from unfold.widgets import UnfoldAdminTextInputWidget
 
 from .models import Announcement, AnnouncementStatus
+from .versions import ExtensionVersionField
 
 
 class StatusFilter(admin.SimpleListFilter):
@@ -32,15 +34,29 @@ class AnnouncementAdmin(ModelAdmin):
         "message",
         "status_label",
         "level_label",
+        "target_versions",
         "starts_at",
         "ends_at",
         "updated_at",
     )
     list_filter = (StatusFilter, "level")
     search_fields = ("message",)
-    fields = ("message", "level", "starts_at", "ends_at", "created_at", "updated_at")
+    fields = (
+        "message",
+        "level",
+        "starts_at",
+        "ends_at",
+        "min_extension_version",
+        "max_extension_version",
+        "created_at",
+        "updated_at",
+    )
     readonly_fields = ("created_at", "updated_at")
     actions = ["end_now"]
+    # 独自のフィールドは Unfold の既定の見た目に当たらないので、文字の入力欄を指定する。
+    formfield_overrides = {
+        ExtensionVersionField: {"widget": UnfoldAdminTextInputWidget},
+    }
 
     @display(
         description="状態",
@@ -57,6 +73,10 @@ class AnnouncementAdmin(ModelAdmin):
     @display(description="種別", label={"info": "primary", "warning": "warning"})
     def level_label(self, obj: Announcement):
         return obj.level, obj.get_level_display()
+
+    @display(description="対象バージョン")
+    def target_versions(self, obj: Announcement) -> str:
+        return obj.target_versions()
 
     @action(description="選択したアナウンスの配信を今すぐ終了", permissions=["change"])
     def end_now(self, request, queryset):

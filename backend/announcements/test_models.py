@@ -96,3 +96,131 @@ def test_database_rejects_end_not_after_start():
 
 def test_str_is_the_message():
     assert str(AnnouncementFactory(message="お知らせ")) == "お知らせ"
+
+
+# --- 配信対象の拡張機能のバージョン -------------------------------------------
+
+
+def _targeting(lower: str | None, upper: str | None) -> Announcement:
+    return AnnouncementFactory(min_extension_version=lower, max_extension_version=upper)
+
+
+@pytest.mark.parametrize(
+    ("version", "expected"),
+    [
+        ("2.14.9", False),  # 下限の手前
+        ("2.15.0", True),  # 下限ちょうど
+        ("2.15.7", True),
+        ("2.16.3", True),  # 上限ちょうど
+        ("2.16.4", False),  # 上限の先
+        ("3.0.0", False),
+    ],
+)
+def test_for_extension_version_includes_both_ends(version, expected):
+    announcement = _targeting("2.15.0", "2.16.3")
+
+    matched = Announcement.objects.for_extension_version(version)
+
+    assert (announcement in matched) is expected
+
+
+@pytest.mark.parametrize(
+    ("lower", "upper", "version", "expected"),
+    [
+        ("2.15.0", None, "2.14.9", False),
+        ("2.15.0", None, "2.15.0", True),
+        ("2.15.0", None, "99.0.0", True),
+        (None, "2.14.1", "0.0.0", True),
+        (None, "2.14.1", "2.14.1", True),
+        (None, "2.14.1", "2.14.2", False),
+        (None, None, "0.0.0", True),
+        (None, None, "65535.65535.65535", True),
+    ],
+)
+def test_for_extension_version_with_open_ends(lower, upper, version, expected):
+    announcement = _targeting(lower, upper)
+
+    matched = Announcement.objects.for_extension_version(version)
+
+    assert (announcement in matched) is expected
+
+
+def test_for_extension_version_compares_numerically():
+    # 文字列で比べると "2.10.0" < "2.9.0" になり、どちらも逆に当たってしまう。
+    from_2_10 = _targeting("2.10.0", None)
+    up_to_2_9 = _targeting(None, "2.9.0")
+
+    assert list(Announcement.objects.for_extension_version("2.9.0")) == [up_to_2_9]
+    assert list(Announcement.objects.for_extension_version("2.10.0")) == [from_2_10]
+
+
+def test_version_bounds_are_read_back_as_text():
+    announcement = _targeting("2.10.0", "10.0.3")
+    announcement.refresh_from_db()
+
+    assert announcement.min_extension_version == "2.10.0"
+    assert announcement.max_extension_version == "10.0.3"
+
+
+def test_rows_without_bounds_have_no_version_limit():
+    announcement = AnnouncementFactory()
+    announcement.refresh_from_db()
+
+    assert announcement.min_extension_version is None
+    assert announcement.max_extension_version is None
+    assert announcement in Announcement.objects.for_extension_version("0.0.0")
+
+
+@pytest.mark.parametrize(
+    ("lower", "upper", "expected"),
+    [
+        ("2.15.0", "2.16.3", "2.15.0 〜 2.16.3"),
+        (None, "2.14.1", "〜 2.14.1"),
+        ("2.15.0", None, "2.15.0 〜"),
+        (None, None, "すべて"),
+    ],
+)
+def test_target_versions(lower, upper, expected):
+    assert _targeting(lower, upper).target_versions() == expected
+
+
+@pytest.mark.parametrize("upper", ["2.15.0", "2.15.1", "3.0.0", None])
+def test_clean_accepts_upper_not_below_lower(upper):
+    AnnouncementFactory.build(
+        min_extension_version="2.15.0", max_extension_version=upper
+    ).full_clean()
+
+
+def test_clean_rejects_upper_below_lower():
+    # 文字列で比べると "2.9.0" > "2.10.0" になり、見逃してしまう。
+    announcement = AnnouncementFactory.build(
+        min_extension_version="2.10.0", max_extension_version="2.9.0"
+    )
+
+    with pytest.raises(ValidationError) as excinfo:
+        announcement.full_clean()
+
+    assert excinfo.value.message_dict == {
+        "max_extension_version": ["対象バージョンの上限は下限以上にしてください。"]
+    }
+
+
+def test_clean_reports_only_the_malformed_bound():
+    announcement = AnnouncementFactory.build(
+        min_extension_version="2.15", max_extension_version="2.0.0"
+    )
+
+    with pytest.raises(ValidationError) as excinfo:
+        announcement.full_clean()
+
+    assert set(excinfo.value.message_dict) == {"min_extension_version"}
+
+
+def test_database_rejects_upper_below_lower():
+    # 管理画面を通らない書き込み（update など）も DB の制約で止める。
+    announcement = _targeting("2.10.0", "2.10.0")
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        Announcement.objects.filter(pk=announcement.pk).update(
+            max_extension_version="2.9.0"
+        )
