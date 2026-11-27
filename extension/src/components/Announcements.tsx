@@ -1,7 +1,9 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { TriangleExclamationPoint, X } from "lucide-react";
+import { Fragment } from "react";
 
 import type { Announcement } from "@/domain/announcement";
+import { parseAnnouncementText } from "@/domain/announcementText";
 import { cn } from "@d-party/ui";
 
 import { useAnnouncements } from "./useAnnouncements";
@@ -89,7 +91,7 @@ function AnnouncementRow({
             重要
           </span>
         )}
-        {message}
+        <AnnouncementText message={message} />
       </p>
       <button
         type="button"
@@ -101,5 +103,32 @@ function AnnouncementRow({
         <X className="size-3.5" aria-hidden />
       </button>
     </div>
+  );
+}
+
+/**
+ * 本文。`[テキスト](https://…)` だけをリンク（新しいタブで開く）にし、ほかは文字のまま出す。
+ * HTML としては扱わず、React のテキストと `<a>` で組む（`domain/announcementText.ts`）。
+ */
+function AnnouncementText({ message }: { message: string }): React.JSX.Element {
+  return (
+    <>
+      {parseAnnouncementText(message).map((segment, index) =>
+        segment.kind === "link" ? (
+          <a
+            // 本文が変わらない限り並びは変わらないので、位置をキーにしてよい。
+            key={index}
+            href={segment.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-sm text-primary underline decoration-primary/60 underline-offset-2 transition-colors hover:decoration-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {segment.text}
+          </a>
+        ) : (
+          <Fragment key={index}>{segment.text}</Fragment>
+        ),
+      )}
+    </>
   );
 }
