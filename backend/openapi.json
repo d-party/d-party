@@ -173,7 +173,7 @@
         "/api/v1/announcements": {
             "get": {
                 "operationId": "announcementsActive",
-                "description": "Announcements being delivered now (``starts_at`` <= now < ``ends_at``).\n\nRead-only and public: the extension's popup and sidebar fetch it. Ordered by\nimportance (warning first), then by the newest start. ``extension_version``\nnarrows the collection to the announcements targeting that extension version.",
+                "description": "Announcements being delivered now (``starts_at`` <= now < ``ends_at``).\n\nRead-only and public: the extension's popup and sidebar fetch it. Ordered by\nthe newest start (regardless of the level). ``extension_version``\nnarrows the collection to the announcements targeting that extension version.",
                 "parameters": [
                     {
                         "in": "query",
@@ -274,7 +274,7 @@
         "/api/v1/health": {
             "get": {
                 "operationId": "health",
-                "description": "Lightweight liveness probe. Returns 200 when the application is running.",
+                "description": "Readiness of the whole service: Django, PostgreSQL and Redis.\n\nReturns 200 when rooms can be created, 503 otherwise. The extension disables\nthe \"create room\" button on anything but 200. The body stays empty; which\ndependency failed is only logged.\n\nNot for container liveness probes: those must not depend on the database.",
                 "tags": [
                     "v1"
                 ],
@@ -283,6 +283,9 @@
                 ],
                 "responses": {
                     "200": {
+                        "description": "No response body"
+                    },
+                    "503": {
                         "description": "No response body"
                     }
                 }
@@ -679,7 +682,7 @@
                         "type": "string",
                         "readOnly": true,
                         "title": "本文",
-                        "description": "拡張機能に出す一言（60 文字まで）。"
+                        "description": "本文（管理画面で入力した生の文字列）。Markdown のインラインリンク `[テキスト](URL)` を含むことがある（ほかの Markdown は含めない）。リンクとして描画してよいのは、URL が https:// で始まってホストがあり、空白・制御文字・バックスラッシュ・ユーザー情報を含まず、テキストが空でないものだけ。それ以外は元の文字列のまま出す。HTML として解釈しないこと。"
                     },
                     "level": {
                         "allOf": [

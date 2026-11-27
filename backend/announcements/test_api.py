@@ -43,7 +43,7 @@ def test_returns_only_live_announcements(client):
     }
 
 
-def test_orders_warning_first_then_newest(client):
+def test_orders_newest_start_first_regardless_of_level(client):
     now = timezone.now()
     old_info = AnnouncementFactory(starts_at=now - 3 * HOUR, ends_at=now + HOUR)
     new_info = AnnouncementFactory(starts_at=now - HOUR, ends_at=now + HOUR)
@@ -53,7 +53,7 @@ def test_orders_warning_first_then_newest(client):
 
     data = client.get(URL).json()["data"]
 
-    assert [row["id"] for row in data] == [old_warning.pk, new_info.pk, old_info.pk]
+    assert [row["id"] for row in data] == [new_info.pk, old_warning.pk, old_info.pk]
 
 
 def test_same_start_puts_the_later_one_first(client):
@@ -133,16 +133,18 @@ def test_compares_versions_numerically(client):
 
 def test_version_filter_keeps_only_live_rows_and_the_order(client):
     now = timezone.now()
-    info = AnnouncementFactory(max_extension_version="3.0.0")
-    warning = AnnouncementFactory(
-        level=AnnouncementLevel.WARNING, min_extension_version="2.0.0"
+    older = AnnouncementFactory(
+        starts_at=now - 2 * HOUR, ends_at=now + HOUR, max_extension_version="3.0.0"
+    )
+    newer = AnnouncementFactory(
+        starts_at=now - HOUR, ends_at=now + HOUR, min_extension_version="2.0.0"
     )
     AnnouncementFactory(starts_at=now + HOUR, ends_at=now + 2 * HOUR)  # 予約
     AnnouncementFactory(starts_at=now - 2 * HOUR, ends_at=now - HOUR)  # 終了
 
     data = client.get(URL, {"extension_version": "2.15.0"}).json()["data"]
 
-    assert [row["id"] for row in data] == [warning.pk, info.pk]
+    assert [row["id"] for row in data] == [newer.pk, older.pk]
 
 
 def test_without_version_returns_every_live_row(client):

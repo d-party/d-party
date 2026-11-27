@@ -87,6 +87,14 @@ pnpm storybook
 - サイト共通（`SiteOgImage`）はビルド時に PNG 化する。ルーム別（`RoomOgImage`）は作品名を引くので動的。
 - `next/og`（Satori）の制約で、カードはインラインスタイルと flexbox だけで書く（Tailwind 不可）。
   Storybook の `OGP/*` でそのまま確認できる。日本語フォントは `public/fonts/` から読む。
+- フォントは `loadOgCardFonts()` から渡す（`lib/og/fonts.ts`）。読めなければカードを描かずに 500 にする
+  （next/og の既定のフォントは日本語を持たず、毎回フォントを取りに行って溜める）。ファイルは 1 度だけ読み、
+  Satori の解析のキャッシュ（Buffer がキー）を効かせる。解析済みのフォントは描いた字形を
+  捨てないので、描いた文字が一定数を超えたら Buffer を作り直してキャッシュを入れ替える。
+  配列は毎回新しく作る（Satori が配列をキーにして足していくため）。
+- ルーム名のように誰でも決められる文字列は `loadOgCardFonts(title)` が返す `title` を使う。
+  フォントに無い文字を落とし、カードに出る長さで切る（`ogSafeTitle`）。残すと `next/og` が
+  Google Fonts から取ってきて、消えないキャッシュに溜める。
 - ページが `openGraph` を定義すると、親の `openGraph` は画像ごと置き換わる。そのため
   `pageMetadata()` は `/opengraph-image` と `/twitter-image` を明示している。
 - `twitter-image.tsx` は隣の `opengraph-image.tsx` を再 export するだけ。

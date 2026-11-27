@@ -160,6 +160,133 @@ def test_add_form_rejects_long_message(admin_client):
     assert "message" in response.context["adminform"].form.errors
 
 
+def test_add_form_saves_message_with_links(admin_client):
+    message = "[お知らせ](https://d-party.net/news)と[使い方](https://d-party.net/docs)"
+
+    response = admin_client.post(
+        reverse("admin:announcements_announcement_add"), _form(message=message)
+    )
+
+    assert response.status_code == 302
+    assert Announcement.objects.get().message == message
+
+
+def test_add_form_counts_display_length_for_links(admin_client):
+    # 生の文字列は 60 文字を超えるが、表示される文字数（URL を除く）は 60 文字。
+    message = "あ" * 56 + "[いうえお](https://d-party.net/docs/announcements)"
+
+    response = admin_client.post(
+        reverse("admin:announcements_announcement_add"), _form(message=message)
+    )
+
+    assert response.status_code == 302
+    assert Announcement.objects.get().message == message
+
+
+def test_add_form_rejects_long_display_text_with_links(admin_client):
+    message = "あ" * 57 + "[いうえお](https://d-party.net/docs)"
+
+    response = admin_client.post(
+        reverse("admin:announcements_announcement_add"), _form(message=message)
+    )
+
+    assert response.status_code == 200
+    assert response.context["adminform"].form.errors["message"] == [
+        (
+            "表示される文字数は 60 文字までです（今は 61 文字。"
+            "リンクはテキストだけを数え、URL は数えません）。"
+        )
+    ]
+    assert not Announcement.objects.exists()
+
+
+def test_add_form_rejects_too_long_raw_message(admin_client):
+    message = "[あ](https://d-party.net/" + "a" * 500 + ")"
+
+    response = admin_client.post(
+        reverse("admin:announcements_announcement_add"), _form(message=message)
+    )
+
+    assert response.status_code == 200
+    assert "message" in response.context["adminform"].form.errors
+    assert not Announcement.objects.exists()
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://d-party.net/",
+        "javascript:alert(1)",
+        "javascript:alert",
+        "data:text/html,x",
+        "/docs",
+        "",
+        "https://d-party.net/a b",
+    ],
+)
+def test_add_form_rejects_disallowed_link(admin_client, url):
+    response = admin_client.post(
+        reverse("admin:announcements_announcement_add"),
+        _form(message=f"詳しくは[こちら]({url})"),
+    )
+
+    assert response.status_code == 200
+    assert response.context["adminform"].form.errors["message"]
+    assert not Announcement.objects.exists()
+
+
+def test_add_form_shows_link_error(admin_client):
+    response = admin_client.post(
+        reverse("admin:announcements_announcement_add"),
+        _form(message="[こちら](http://d-party.net/)"),
+    )
+
+    assert response.context["adminform"].form.errors["message"] == [
+        (
+            "「[こちら](http://d-party.net/)」の URL はリンクにできません。"
+            "https:// で始まり、空白を含まない URL だけを使えます。"
+        )
+    ]
+
+
+def test_add_form_escapes_message_in_errors(admin_client):
+    # エラーには本文の一部が入る。エスケープして出し、管理画面への XSS にしない。
+    response = admin_client.post(
+        reverse("admin:announcements_announcement_add"),
+        _form(message="[<script>alert(1)</script>](javascript:x)"),
+    )
+
+    content = response.content.decode()
+    assert "<script>alert(1)</script>" not in content
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in content
+
+
+def test_add_form_rejects_broken_link(admin_client):
+    response = admin_client.post(
+        reverse("admin:announcements_announcement_add"),
+        _form(message="[こちら](https://d-party.net/"),
+    )
+
+    assert response.status_code == 200
+    errors = response.context["adminform"].form.errors["message"]
+    assert any("リンクの書き方が崩れています" in error for error in errors)
+
+
+def test_add_form_explains_links_in_help_text(admin_client):
+    content = admin_client.get(
+        reverse("admin:announcements_announcement_add")
+    ).content.decode()
+
+    for text in [
+        "[テキスト](URL)",
+        "https:// で始まるものだけ",
+        "表示される文字数で 60 文字まで",
+        "URL を含めた全体は 500 文字まで",
+        "対象バージョンの下限",
+    ]:
+        assert text in content
+
+
 def test_add_form_saves_version_bounds(admin_client):
     admin_client.post(
         reverse("admin:announcements_announcement_add"),

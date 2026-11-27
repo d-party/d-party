@@ -289,7 +289,7 @@ export const getAnnouncementsActiveUrl = (params?: AnnouncementsActiveParams,) =
  * Announcements being delivered now (``starts_at`` <= now < ``ends_at``).
  *
  * Read-only and public: the extension's popup and sidebar fetch it. Ordered by
- * importance (warning first), then by the newest start. ``extension_version``
+ * the newest start (regardless of the level). ``extension_version``
  * narrows the collection to the announcements targeting that extension version.
  */
 export const announcementsActive = async (params?: AnnouncementsActiveParams, options?: Parameters<typeof customFetch>[1]): Promise<announcementsActiveResponse> => {
@@ -365,12 +365,19 @@ export type healthResponse200 = {
   status: 200
 }
 
+export type healthResponse503 = {
+  data: void
+  status: 503
+}
+
 export type healthResponseSuccess = (healthResponse200) & {
   headers: Headers;
 };
-;
+export type healthResponseError = (healthResponse503) & {
+  headers: Headers;
+};
 
-export type healthResponse = (healthResponseSuccess)
+export type healthResponse = (healthResponseSuccess | healthResponseError)
 
 export const getHealthUrl = () => {
 
@@ -381,7 +388,13 @@ export const getHealthUrl = () => {
 }
 
 /**
- * Lightweight liveness probe. Returns 200 when the application is running.
+ * Readiness of the whole service: Django, PostgreSQL and Redis.
+ *
+ * Returns 200 when rooms can be created, 503 otherwise. The extension disables
+ * the "create room" button on anything but 200. The body stays empty; which
+ * dependency failed is only logged.
+ *
+ * Not for container liveness probes: those must not depend on the database.
  */
 export const health = async ( options?: Parameters<typeof customFetch>[1]): Promise<healthResponse> => {
 

@@ -77,6 +77,8 @@ const SKIP_CONTROL_CLASSES = [
 
 const { store: sidebarStore, controller: sidebarController } = mountSidebar({
   onCreateRoom: () => {
+    // ボタンは無効化しているが、サーバが応答しない間は念のためここでも止める。
+    if (sidebarStore.getSnapshot().connectionStatus === "maintenance") return;
     addControlButtons();
     bindPlayerEvents();
     // タイトルは OGP 用。取れなければ空文字。

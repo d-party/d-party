@@ -1,7 +1,7 @@
 {
   "name": "d-party Dev Container",
-  // ハイフン付きのタグ（ubuntu-24.04 など）は 2025-10 で更新が止まっている。ubuntuXX.XX の形を使う。
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu26.04",
+  // ベースイメージと apt の設定は Dockerfile にある。
+  "build": { "dockerfile": "Dockerfile" },
   "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config graphviz && sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*",
   "postCreateCommand": "(cd backend && uv sync) && pre-commit install --install-hooks && pnpm install --frozen-lockfile && pnpm exec playwright install --with-deps --only-shell chromium",
   "features": {

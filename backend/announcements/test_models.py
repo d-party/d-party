@@ -8,7 +8,12 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from .factories import AnnouncementFactory
-from .models import MESSAGE_MAX_LENGTH, Announcement, AnnouncementStatus
+from .models import (
+    MESSAGE_DISPLAY_MAX_LENGTH,
+    MESSAGE_RAW_MAX_LENGTH,
+    Announcement,
+    AnnouncementStatus,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -67,13 +72,41 @@ def test_status_defaults_to_the_current_time():
     assert AnnouncementFactory().status() == AnnouncementStatus.LIVE
 
 
-def test_message_is_limited():
-    announcement = AnnouncementFactory.build(message="あ" * (MESSAGE_MAX_LENGTH + 1))
+@pytest.mark.parametrize(
+    "message",
+    [
+        "あ" * (MESSAGE_DISPLAY_MAX_LENGTH + 1),  # 表示される文字数
+        "[あ](https://d-party.net/" + "a" * MESSAGE_RAW_MAX_LENGTH + ")",  # 生の文字列
+        "[あ](http://d-party.net/)",  # 許可しない URL
+    ],
+)
+def test_message_is_validated(message):
+    announcement = AnnouncementFactory.build(message=message)
 
     with pytest.raises(ValidationError) as excinfo:
         announcement.full_clean()
 
     assert "message" in excinfo.value.message_dict
+
+
+def test_message_counts_display_length_not_raw_length():
+    # URL を含めると 60 文字を超えるが、表示される文字数は 60 文字。
+    url = "https://d-party.net/" + "a" * 100
+    message = "あ" * (MESSAGE_DISPLAY_MAX_LENGTH - 2) + f"[いう]({url})"
+    announcement = AnnouncementFactory.build(message=message)
+
+    announcement.full_clean()
+
+
+def test_message_column_holds_the_raw_maximum():
+    url = "https://d-party.net/"
+    message = f"[あ]({url}{'a' * (MESSAGE_RAW_MAX_LENGTH - len(url) - 5)})"
+    assert len(message) == MESSAGE_RAW_MAX_LENGTH
+
+    announcement = AnnouncementFactory(message=message)
+    announcement.refresh_from_db()
+
+    assert announcement.message == message
 
 
 @pytest.mark.parametrize("ends", [datetime.timedelta(0), -HOUR])
