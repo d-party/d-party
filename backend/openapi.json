@@ -173,7 +173,7 @@
         "/api/v1/announcements": {
             "get": {
                 "operationId": "announcementsActive",
-                "description": "Announcements being delivered now (``starts_at`` <= now < ``ends_at``).\n\nRead-only and public: the extension's popup and sidebar fetch it. Ordered by\nimportance (warning first), then by the newest start. ``extension_version``\nnarrows the collection to the announcements targeting that extension version.",
+                "description": "Announcements being delivered now (``starts_at`` <= now < ``ends_at``).\n\nRead-only and public: the extension's popup and sidebar fetch it. Ordered by\nthe newest start (regardless of the level). ``extension_version``\nnarrows the collection to the announcements targeting that extension version.",
                 "parameters": [
                     {
                         "in": "query",

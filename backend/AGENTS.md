@@ -64,7 +64,7 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
   liveness / readiness には使わない（DB の障害で django が再起動を繰り返すため。probe は TCP）。
   pytest は Redis なしで走るので、200 を期待するテストでは `_redis_ok` を差し替える。
 - **アナウンス**: `GET /api/v1/announcements` は配信中（`starts_at` ≤ 現在 < `ends_at`）だけを
-  重要 → 新しい順で返す。認証不要・読み取り専用で、作成・編集・削除は管理画面だけ（REST の書き込み口は
+  開始が新しい順（種別は見ない。同じ開始なら id の大きい順）で返す。認証不要・読み取り専用で、作成・編集・削除は管理画面だけ（REST の書き込み口は
   作らない。作るなら認証と `IsAdminUser` を付ける。既定の `DEFAULT_AUTHENTICATION_CLASSES` は空）。
   `Cache-Control: public, max-age=60` なので、管理画面での変更は最大 60 秒遅れて届く。
   開始 < 期限は DB の制約でも守る。
