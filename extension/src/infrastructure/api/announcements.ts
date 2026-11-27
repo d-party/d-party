@@ -1,5 +1,5 @@
 /**
- * 配信中のアナウンスの取得。失敗（ネットワーク・5xx・想定外の形）はすべて「何も無い」
+ * 配信中のアナウンスの取得。失敗（ネットワーク・4xx・5xx・想定外の形）はすべて「何も無い」
  * として扱い、呼び出し側の UI を壊さない。
  */
 import type { Announcement } from "@/domain/announcement";
@@ -9,10 +9,33 @@ import type {
   AnnouncementsResponse,
 } from "@/infrastructure/messages";
 
-/** backend を直接叩く。host_permissions を持つポップアップと background から使う。 */
-export async function fetchActiveAnnouncements(): Promise<Announcement[]> {
+/**
+ * この拡張機能のバージョン（manifest の `version`）。取れない環境（Storybook など
+ * `chrome.runtime` が無い・不完全な所）では `undefined`。
+ */
+export function currentExtensionVersion(): string | undefined {
   try {
-    const response = await announcementsActive();
+    const version: unknown = chrome.runtime.getManifest().version;
+    return typeof version === "string" && version !== "" ? version : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * backend を直接叩く。host_permissions を持つポップアップと background から使う。
+ * `extension_version` を付けて、このバージョンが配信対象のものだけを受け取る。
+ * バージョンが取れないときは付けない（backend はバージョンで絞り込まずに返す）。
+ */
+export async function fetchActiveAnnouncements(
+  extensionVersion: string | undefined = currentExtensionVersion(),
+): Promise<Announcement[]> {
+  try {
+    const response = await announcementsActive(
+      extensionVersion === undefined
+        ? undefined
+        : { extension_version: extensionVersion },
+    );
     const rows: unknown =
       response.status === 200 ? response.data?.data : undefined;
     if (!Array.isArray(rows)) return [];
