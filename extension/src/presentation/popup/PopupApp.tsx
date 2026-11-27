@@ -36,9 +36,16 @@ const TABS = [
   { value: "info", label: "情報", icon: Info },
 ] as const satisfies readonly { value: string; label: string; icon: LucideIcon }[];
 
-/** Inactive panels stay laid out, so the popup does not jump when switching tabs. */
+/**
+ * Inactive panels stay laid out, so the popup does not jump when switching tabs.
+ *
+ * `visibility` is animatable and inherited: a descendant with `transition-all`
+ * (Button, the stats bars) would transition the inherited `hidden` and stay
+ * visible for its duration, flashing over the next panel. Turn descendant
+ * transitions off while inactive so they hide at the same instant.
+ */
 const HIDDEN_WHEN_INACTIVE =
-  "data-[state=inactive]:invisible data-[state=inactive]:pointer-events-none";
+  "data-[state=inactive]:invisible data-[state=inactive]:pointer-events-none data-[state=inactive]:**:transition-none";
 
 /**
  * The 統計 panel sets the popup's height; the others overlay it and scroll
