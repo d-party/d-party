@@ -4,11 +4,16 @@
 
 | Name                                                    |    Stmts |     Miss |   Branch |   BrPart |   Cover |   Missing |
 |-------------------------------------------------------- | -------: | -------: | -------: | -------: | ------: | --------: |
+| announcements/\_\_init\_\_.py                           |        0 |        0 |        0 |        0 |    100% |           |
+| announcements/admin.py                                  |       45 |        0 |        6 |        0 |    100% |           |
+| announcements/apps.py                                   |        4 |        0 |        0 |        0 |    100% |           |
+| announcements/models.py                                 |       66 |        0 |       10 |        0 |    100% |           |
+| announcements/versions.py                               |       50 |        0 |       14 |        0 |    100% |           |
 | api/\_\_init\_\_.py                                     |        0 |        0 |        0 |        0 |    100% |           |
 | api/apps.py                                             |        3 |        0 |        0 |        0 |    100% |           |
-| api/serializers.py                                      |       35 |        0 |        0 |        0 |    100% |           |
+| api/serializers.py                                      |       43 |        0 |        0 |        0 |    100% |           |
 | api/urls.py                                             |        3 |        0 |        0 |        0 |    100% |           |
-| api/views.py                                            |      180 |        0 |       20 |        0 |    100% |           |
+| api/views.py                                            |      198 |        0 |       24 |        0 |    100% |           |
 | d\_party/\_\_init\_\_.py                                |        0 |        0 |        0 |        0 |    100% |           |
 | d\_party/asgi.py                                        |       12 |        0 |        2 |        0 |    100% |           |
 | d\_party/client\_ip.py                                  |       24 |        0 |        8 |        0 |    100% |           |
@@ -32,7 +37,7 @@
 | streamer/repository.py                                  |       75 |        0 |       12 |        0 |    100% |           |
 | streamer/routing.py                                     |        3 |        0 |        0 |        0 |    100% |           |
 | streamer/util.py                                        |        9 |        0 |        2 |        0 |    100% |           |
-| **TOTAL**                                               | **1070** |    **1** |  **170** |    **2** | **99%** |           |
+| **TOTAL**                                               | **1261** |    **1** |  **204** |    **2** | **99%** |           |
 
 
 ## Setup coverage badge
