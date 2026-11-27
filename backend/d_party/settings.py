@@ -28,8 +28,9 @@ if DEBUG:
     # ``["*"]`` にしない。DEBUG=1 のまま本番に出ても Host ヘッダを偽装させないため。
     ALLOWED_HOSTS += ["localhost", "127.0.0.1", "[::1]", "testserver"]
 # TLS は nginx / Cloudflare が終端し Django からは http に見えるので、https の Origin を
-# 明示的に信頼する。
-CSRF_TRUSTED_ORIGINS = [f"https://*.{MY_DOMAIN}"]
+# 明示的に信頼する。``*.`` で全サブドメインを信頼しない（別のサービスを載せたサブドメイン
+# から管理画面へ CSRF できてしまう）。
+CSRF_TRUSTED_ORIGINS = [f"https://{MY_DOMAIN}", f"https://www.{MY_DOMAIN}"]
 
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
