@@ -54,6 +54,16 @@ def test_orders_warning_first_then_newest(client):
     assert [row["id"] for row in data] == [old_warning.pk, new_info.pk, old_info.pk]
 
 
+def test_same_start_puts_the_later_one_first(client):
+    starts = timezone.now() - HOUR
+    first = AnnouncementFactory(starts_at=starts)
+    second = AnnouncementFactory(starts_at=starts)
+
+    data = client.get(URL).json()["data"]
+
+    assert [row["id"] for row in data] == [second.pk, first.pk]
+
+
 def test_empty_when_nothing_is_live(client):
     assert client.get(URL).json() == {"data": []}
 

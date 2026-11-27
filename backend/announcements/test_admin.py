@@ -8,6 +8,7 @@ import datetime
 
 import pytest
 from django.contrib.auth.models import Permission, User
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -98,18 +99,34 @@ def test_staff_without_permission_is_forbidden(client):
 
 
 def test_staff_with_add_permission_can_create(client):
-    user = User.objects.create_user(username="staff", is_staff=True)
-    user.user_permissions.set(
-        Permission.objects.filter(
-            codename__in=["add_announcement", "view_announcement"]
-        )
-    )
-    client.force_login(user)
+    client.force_login(_staff_with("add_announcement", "view_announcement"))
 
     response = client.post(reverse("admin:announcements_announcement_add"), _form())
 
     assert response.status_code == 302
     assert Announcement.objects.get().message == "新しいリアクションを追加しました"
+
+
+@override_settings(TIME_ZONE="Asia/Tokyo")
+def test_add_form_reads_times_in_the_site_time_zone(admin_client):
+    # 管理画面の入力は TIME_ZONE（日本時間）として読み、UTC で保存する。
+    admin_client.post(
+        reverse("admin:announcements_announcement_add"),
+        _form(
+            starts_at_0="2026-12-03",
+            starts_at_1="02:00:00",
+            ends_at_0="2026-12-03",
+            ends_at_1="06:00:00",
+        ),
+    )
+
+    announcement = Announcement.objects.get()
+    assert announcement.starts_at == datetime.datetime(
+        2026, 12, 2, 17, 0, tzinfo=datetime.UTC
+    )
+    assert announcement.ends_at == datetime.datetime(
+        2026, 12, 2, 21, 0, tzinfo=datetime.UTC
+    )
 
 
 def test_add_form_rejects_end_before_start(admin_client):
@@ -214,3 +231,36 @@ def test_end_now_stops_only_live_rows(admin_client):
     assert not Announcement.objects.live().exists()
     scheduled.refresh_from_db()
     assert scheduled.ends_at == now + 2 * HOUR
+
+
+def _staff_with(*codenames: str) -> User:
+    user = User.objects.create_user(username="staff", is_staff=True)
+    user.user_permissions.set(Permission.objects.filter(codename__in=codenames))
+    return user
+
+
+def test_end_now_needs_change_permission(client):
+    # 閲覧だけの staff は配信を止められない（一覧は見られる）。
+    client.force_login(_staff_with("view_announcement"))
+    live = AnnouncementFactory()
+    ends_at = live.ends_at
+
+    client.post(
+        reverse("admin:announcements_announcement_changelist"),
+        {"action": "end_now", "_selected_action": [live.pk]},
+    )
+
+    live.refresh_from_db()
+    assert live.ends_at == ends_at
+
+
+def test_end_now_with_change_permission(client):
+    client.force_login(_staff_with("view_announcement", "change_announcement"))
+    live = AnnouncementFactory()
+
+    client.post(
+        reverse("admin:announcements_announcement_changelist"),
+        {"action": "end_now", "_selected_action": [live.pk]},
+    )
+
+    assert not Announcement.objects.live().exists()

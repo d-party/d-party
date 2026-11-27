@@ -4,7 +4,7 @@ import urllib.parse
 
 from django.conf import settings
 from django.core.cache import cache
-from django.db.models import Count, Min
+from django.db.models import Case, Count, Min, When
 from django.db.models.functions import ExtractHour, TruncDate
 from django.utils import timezone
 from django.utils.cache import patch_cache_control
@@ -456,12 +456,11 @@ class AnnouncementsActiveAPI(APIView):
         responses={200: AnnouncementListResultSerializer},
     )
     def get(self, request, format=None) -> Response:
-        rows = sorted(
-            Announcement.objects.live(),
-            key=lambda row: (
-                row.level != AnnouncementLevel.WARNING,
-                -row.starts_at.timestamp(),
-            ),
+        # 開始が同じものは後から登録したもの（id が大きい方）を先にして、並びを決める。
+        rows = Announcement.objects.live().order_by(
+            Case(When(level=AnnouncementLevel.WARNING, then=0), default=1),
+            "-starts_at",
+            "-id",
         )
         response = Response({"data": AnnouncementSerializer(rows, many=True).data})
         patch_cache_control(response, public=True, max_age=ANNOUNCEMENTS_MAX_AGE)
