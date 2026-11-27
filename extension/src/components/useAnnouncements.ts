@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
   type Announcement,
-  undismissed,
+  currentAnnouncement,
   withDismissed,
 } from "@/domain/announcement";
 import { ChromeDismissedAnnouncementsRepository } from "@/infrastructure/storage/ChromeDismissedAnnouncementsRepository";
@@ -10,13 +10,14 @@ import { ChromeDismissedAnnouncementsRepository } from "@/infrastructure/storage
 const repo = new ChromeDismissedAnnouncementsRepository();
 
 export interface UseAnnouncements {
-  /** 閉じていないもの。取得や読み込みが終わるまでは空。 */
-  announcements: Announcement[];
+  /** 出す 1 件（閉じていないうちで一番新しいもの）。取得や読み込みが終わるまでは null。 */
+  announcement: Announcement | null;
   dismiss: (id: number) => void;
 }
 
 /**
- * `load` で配信中のアナウンスを 1 度取り、閉じた ID（`chrome.storage.local`）で除く。
+ * `load` で配信中のアナウンスを 1 度取り、閉じた ID（`chrome.storage.local`）で除いた先頭の
+ * 1 件を返す。
  * 別のコンテキスト（ポップアップ ⇔ サイドバー）で閉じたものにも追従する。
  * `load` は失敗しても空の配列で解決する前提（UI を壊さない）。
  */
@@ -72,7 +73,8 @@ export function useAnnouncements(
   }, []);
 
   return {
-    announcements: dismissedIds === null ? [] : undismissed(all, dismissedIds),
+    announcement:
+      dismissedIds === null ? null : currentAnnouncement(all, dismissedIds),
     dismiss,
   };
 }

@@ -54,8 +54,9 @@ rspack のエントリは `background` · `content-store` · `content-party` · 
   ヘッダーの下に出す。ポップアップは backend を直接、content script は background 経由
   （`{ type: "announcements" }`）で取る。どちらも orval のクライアントの引数で
   `extension_version`（manifest の `version`）を送り、配信対象のものだけを受け取る（取れない
-  環境では付けない）。取得の失敗は空として扱い何も出さない。× で閉じた ID は
-  `chrome.storage.local` の `dismissedAnnouncementIds` に残し、両方で二度と出さない。
+  環境では付けない）。取得の失敗は空として扱い何も出さない。出すのは閉じていないうちの先頭
+  （backend の並びで開始が一番新しいもの）の 1 件だけ。× で閉じた ID は
+  `chrome.storage.local` の `dismissedAnnouncementIds` に残し、両方で二度と出さず、次の 1 件を繰り上げる。
   見た目は控えめなテキスト行で、重要（`warning`）は色だけに頼らず警告アイコンと「重要」の文字で
   お知らせ（`info`）と区別する。
   - 本文の `[テキスト](URL)` は `domain/announcementText.ts` が読み、React の `<a>` とテキストで
