@@ -5,6 +5,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
+export * from './announcement';
+export * from './announcementLevelEnum';
+export * from './announcementListResult';
 export * from './apiMessage';
 export * from './count';
 export * from './countResult';

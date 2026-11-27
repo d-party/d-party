@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type {
+  AnnouncementListResult,
   ApiMessage,
   CountResult,
   HourlyAverageResult,
@@ -239,6 +240,45 @@ export const getLobbyResolveUrl = (roomId: string,) => {
 export const lobbyResolve = async (roomId: string, options?: Parameters<typeof customFetch>[1]): Promise<lobbyResolveResponse> => {
 
   return customFetch<lobbyResolveResponse>(getLobbyResolveUrl(roomId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type announcementsActiveResponse200 = {
+  data: AnnouncementListResult
+  status: 200
+}
+
+export type announcementsActiveResponseSuccess = (announcementsActiveResponse200) & {
+  headers: Headers;
+};
+;
+
+export type announcementsActiveResponse = (announcementsActiveResponseSuccess)
+
+export const getAnnouncementsActiveUrl = () => {
+
+
+
+
+  return `/api/v1/announcements`
+}
+
+/**
+ * Announcements being delivered now (``starts_at`` <= now < ``ends_at``).
+ *
+ * Read-only and public: the extension's popup and sidebar fetch it. Ordered by
+ * importance (warning first), then by the newest start.
+ */
+export const announcementsActive = async ( options?: Parameters<typeof customFetch>[1]): Promise<announcementsActiveResponse> => {
+
+  return customFetch<announcementsActiveResponse>(getAnnouncementsActiveUrl(),
   {
     ...options,
     method: 'GET'

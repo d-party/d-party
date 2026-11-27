@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "django_otp",
     "django_otp_webauthn",
     "streamer",
+    "announcements",
     "api",
 ]
 if DEBUG:
@@ -82,6 +83,10 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "d-party backend API",
     # パス（/api/v1/）の版。リリースの版とは連動させない。
     "VERSION": "1.0.0",
+    # 選択肢の型名（TypeScript の型名になる）。既定の ``LevelEnum`` では何の種別か分からない。
+    "ENUM_NAME_OVERRIDES": {
+        "AnnouncementLevelEnum": "announcements.models.AnnouncementLevel",
+    },
 }
 
 AUTHENTICATION_BACKENDS = [
@@ -281,6 +286,20 @@ UNFOLD = {
                         "title": _("ルーム詳細設定"),
                         "icon": "tune",
                         "link": reverse_lazy("admin:streamer_setting_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("お知らせ"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("アナウンス"),
+                        "icon": "campaign",
+                        "link": reverse_lazy(
+                            "admin:announcements_announcement_changelist"
+                        ),
                     },
                 ],
             },

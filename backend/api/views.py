@@ -7,15 +7,19 @@ from django.core.cache import cache
 from django.db.models import Count, Min
 from django.db.models.functions import ExtractHour, TruncDate
 from django.utils import timezone
+from django.utils.cache import patch_cache_control
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from announcements.models import Announcement, AnnouncementLevel
 from streamer.models import AnimeRoom, AnimeUser, ReactionType
 from streamer.reactions import reaction_counts_by_type
 
 from .serializers import (
+    AnnouncementListResultSerializer,
+    AnnouncementSerializer,
     ApiMessageSerializer,
     CountResultSerializer,
     HourlyAverageResultSerializer,
@@ -28,6 +32,10 @@ from .serializers import (
 
 # A strict ``major.minor.patch`` triple.
 _STRICT_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
+
+# 配信中のアナウンスをブラウザ（拡張機能の fetch）に覚えさせる秒数。管理画面での
+# 追加・終了が拡張機能に届くまでの遅れの上限になる。
+ANNOUNCEMENTS_MAX_AGE = 60
 
 # ``?days=N`` の既定と上限は 1 年。
 DEFAULT_STATS_DAYS = 365
@@ -430,3 +438,31 @@ class AnimeStoreLobbyResolveAPI(APIView):
                 "title": anime_room.title,
             }
         )
+
+
+class AnnouncementsActiveAPI(APIView):
+    """Announcements being delivered now (``starts_at`` <= now < ``ends_at``).
+
+    Read-only and public: the extension's popup and sidebar fetch it. Ordered by
+    importance (warning first), then by the newest start.
+    """
+
+    # docstring は OpenAPI の description になるので、実装の事情はコメントに書く。
+    # 書き込みの口は持たない（作成・編集は管理画面だけ）ので、GET 以外は 405 になる。
+    # 拡張機能はポップアップやサイドバーを開くたびに叩くので、短い max-age を付ける。
+
+    @extend_schema(
+        operation_id="announcementsActive",
+        responses={200: AnnouncementListResultSerializer},
+    )
+    def get(self, request, format=None) -> Response:
+        rows = sorted(
+            Announcement.objects.live(),
+            key=lambda row: (
+                row.level != AnnouncementLevel.WARNING,
+                -row.starts_at.timestamp(),
+            ),
+        )
+        response = Response({"data": AnnouncementSerializer(rows, many=True).data})
+        patch_cache_control(response, public=True, max_age=ANNOUNCEMENTS_MAX_AGE)
+        return response
