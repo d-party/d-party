@@ -1,0 +1,7 @@
+# actionlint の設定（ローカルと Repo/CI の reviewdog が自動で読む）。
+paths:
+  .github/workflows/**/*.yml:
+    ignore:
+      # jobs.<id>.cache-mode（2026-09 に GA）を、この版の actionlint がまだ知らない。
+      # actionlint が対応したらこの行を消す。
+      - 'unexpected key "cache-mode" for "job" section'

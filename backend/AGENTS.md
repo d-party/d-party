@@ -16,6 +16,7 @@ Django へ振り分ける。
 
 ```
 d_party/        settings.py · asgi.py（ProtocolTypeRouter / OriginValidator）· urls.py
+                · workers.py（gunicorn の worker。WebSocket の 1 メッセージの上限）
 streamer/       同時視聴のコア
   consumers.py    AnimePartyConsumer（create / join / leave / video_operation / reaction …）
   format.py       pydantic のメッセージ定義（公開プロトコル。受信の検証と送信の形）
@@ -26,7 +27,8 @@ streamer/       同時視聴のコア
   fields.py       EncryptedCharField（Fernet）
   management/commands/close_active_sessions.py   起動時の ghost 回収
   management/commands/close_expired_rooms.py     48 時間を超えたルームの強制クローズ（cron）
-api/            DRF（統計 · shields バッジ · バージョン確認 · ロビー解決）
+announcements/  拡張機能に出す短いお知らせ（announcements テーブル · 管理画面）
+api/            DRF（統計 · shields バッジ · バージョン確認 · ロビー解決 · 配信中のアナウンス）
 templates/admin/ 管理画面トップ（Unfold ダッシュボード）· ログイン画面とパスキー一覧への差し込み
 entrypoint.sh   close_active_sessions → runserver / gunicorn
 conftest.py     テストでは InMemoryChannelLayer を使う
@@ -44,22 +46,43 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
   `extension/src/domain/protocol.ts` と一致させる。基底型のフィールド（`response`）は
   `SerializeAsAny` を付けないとサブクラスのフィールドが直列化で落ちる。
 - **受信の検証**: クライアントの入力は `format.py` の `*Request` で検証する。長すぎる文字列は
-  弾かずに切り詰める（上限は `models.py` の定数）。検証エラーや想定外の例外では、
-  `handle_exception` が退室の後始末をしてから接続を閉じる。例外を素通しすると `disconnect` が
-  呼ばれず、在室者の行が alive のまま残る。
+  弾かずに切り詰める（保存する値の上限は `models.py`、配信するだけの値の上限は `format.py` の
+  定数）。配信するだけの値にも上限を付ける（ルームの全接続へ渡るので）。検証エラーや想定外の
+  例外では、`handle_exception` が退室の後始末をしてから接続を閉じる。例外を素通しすると
+  `disconnect` が呼ばれず、在室者の行が alive のまま残る。
+  - JSON として読めない・オブジェクトでない・バイナリ・大きすぎるフレームは、DCRF の
+    `handle_action` より前で落ちるので、`AnimePartyConsumer.receive` で同じ後始末をする。
+  - 1 メッセージの上限は uvicorn の `ws_max_size`（既定 16 MiB）を `d_party/workers.py` で
+    64 KiB にしている。`gunicorn.conf.py` の `worker_class` を `uvicorn_worker.UvicornWorker` に戻さない。
 - **論理削除**: `objects.alive()` / `delete()`（論理）/ `delete(hard=True)`（物理）の意味を変えない。
 - **暗号化**: `AnimeUser.user_name` の鍵は `SECRET_KEY` から作る。`SECRET_KEY` を変えると既存行は復号できない。
 - **REST API**: `api/urls.py` のパスとレスポンスの形は外部から参照される（shields は `{"schemaVersion": 1, ...}`）。
   レスポンスの形は `api/serializers.py` に宣言し、`@extend_schema` の `operation_id` が
   TypeScript の関数名になる。変えたら `openapi.json` を再生成する（手順はルートの `AGENTS.md`）。
+- **アナウンス**: `GET /api/v1/announcements` は配信中（`starts_at` ≤ 現在 < `ends_at`）だけを
+  重要 → 新しい順で返す。認証不要・読み取り専用で、作成・編集・削除は管理画面だけ（REST の書き込み口は
+  作らない。作るなら認証と `IsAdminUser` を付ける。既定の `DEFAULT_AUTHENTICATION_CLASSES` は空）。
+  `Cache-Control: public, max-age=60` なので、管理画面での変更は最大 60 秒遅れて届く。
+  本文の上限（`MESSAGE_MAX_LENGTH`）は拡張機能の幅に合わせている。開始 < 期限は DB の制約でも守る。
+  - 配信対象の拡張機能のバージョンは、下限・上限（どちらも任意・両端を含む）で絞れる。
+    `?extension_version=x.y.z` を付けると対象のものだけを返し、省略すると絞り込まない。形式が
+    不正なら 400（`{"message": ...}`）。拡張機能は manifest の `version` を付けて呼ぶ。
+  - バージョンは `announcements/versions.py` の `ExtensionVersionField` で、各部を 10 進 5 桁に
+    詰めた整数（`2.15.0` → `2_00015_00000`）として `bigint` の 1 列に持つ。DB の比較が数値の
+    順（`2.10.0` > `2.9.0`）になる。Python 側では `x.y.z` の文字列で扱い、比較の lookup に
+    文字列を渡せる。受け付けるのは数字 3 つで、各部は 0〜65535（Chrome の manifest と同じ）。
+    下限 ≤ 上限は `clean()` と DB の制約の両方で守る。
 - **観覧専用（`spectate`）**: `AnimeUser` を作らずにグループへ読み取り参加する（人数・一覧・
   ホスト委譲・自動削除に影響しない）。フロントのタイマー画面が使う。`host_send` / `user_send` は
   `anime_user is None` を必ずガードする。フロントのオリジンから張るので `asgi.py` で `MY_DOMAIN` を許可している。
 - **ルーム設定（`Setting`）**: create 時にすべて `False` で作る。変更はオーナー限定の
   `update_setting` で、`room_setting` をサーバから push する（クライアントからの read は無い）。
-  - `one_way`：非オーナーの `video_operation` を捨てる
+  - `one_way`：非オーナーの `video_operation` と `operation_notification` を捨てる
   - `owner_leave_delete`：オーナー退室でルームを消す
   - `disable_reaction`：配信も保存もしない
+- **再生状態の問い合わせ**: `sync_request` はホストへだけ届き、`sync_response` はホストからしか
+  受け付けない（設定に関係なく）。ゲストから通すと、宛先を選んで他人の再生を動かせる。
+  ホストかどうかは接続が持つ値ではなく、`repository.refresh` した DB の値で判定する。
 - **ghost の回収**: graceful でない停止で alive のまま残った行は、起動時の
   `close_active_sessions` が `updated_at` が 1 日以上前のものだけ論理削除する（別 Pod の稼働中セッションを巻き込まない）。
 - **ルームの寿命**: 作成（`created_at`）から 48 時間を超えたルームは、在室中でも
@@ -74,6 +97,12 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
   - 登録は管理画面の「パスキー」一覧から。登録済みのパスキーがあるアカウントへの追加は、
     パスキーでログインしたセッションからしかできない（ライブラリの仕様）。パスキーを失くしたら、
     パスワードで入って一覧から古い行を消すと登録し直せる。
+  - ログイン試行のロック（django-axes、本番だけ有効）はユーザー名と IP の組で効く。IP は
+    Cloudflare の `CF-Connecting-IP` から取り、IPv6 は /56 でまとめる（`d_party/client_ip.py`）。
+    このヘッダーはクライアントが偽れるので、信頼できるのは Cloudflare を通ったときだけ。
+    Cloudflare を通らずに nginx / django へ届く経路（NodePort · Ingress など）を作らない。
+    クラスタ内の Pod からは届くので、同居するサービスは信頼している前提。ヘッダーが無いと
+    本番では警告を出し、全員が nginx の IP として数えられる（ユーザー名だけのロックと同じ）。
   - テンプレートは Unfold のものをコピーせず、同名で継承してブロックだけ埋める
     （`login.html` の `login_after`）。要素の id は django-otp-webauthn のスクリプトとの契約。
 - **CSP**: `settings.py` の `SECURE_CSP_REPORT_ONLY`（今は Report-Only。ブロックはしない）。

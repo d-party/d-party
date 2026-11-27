@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "django_otp",
     "django_otp_webauthn",
     "streamer",
+    "announcements",
     "api",
 ]
 if DEBUG:
@@ -82,6 +83,10 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "d-party backend API",
     # パス（/api/v1/）の版。リリースの版とは連動させない。
     "VERSION": "1.0.0",
+    # 選択肢の型名（TypeScript の型名になる）。既定の ``LevelEnum`` では何の種別か分からない。
+    "ENUM_NAME_OVERRIDES": {
+        "AnnouncementLevelEnum": "announcements.models.AnnouncementLevel",
+    },
 }
 
 AUTHENTICATION_BACKENDS = [
@@ -285,6 +290,20 @@ UNFOLD = {
                 ],
             },
             {
+                "title": _("お知らせ"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("アナウンス"),
+                        "icon": "campaign",
+                        "link": reverse_lazy(
+                            "admin:announcements_announcement_changelist"
+                        ),
+                    },
+                ],
+            },
+            {
                 "title": _("アカウント"),
                 "separator": True,
                 "collapsible": True,
@@ -337,8 +356,11 @@ ASGI_APPLICATION = "d_party.asgi.application"
 # 管理画面のログイン試行制限（django-axes）。
 AXES_FAILURE_LIMIT = 10
 AXES_COOLOFF_TIME = 6
-# ユーザー名だけでロックする。
-AXES_LOCKOUT_PARAMETERS = ["username"]
+# ユーザー名と IP の組でロックする。ユーザー名だけだと、誰でもスタッフの名前で 10 回
+# 間違えるだけで、そのスタッフを AXES_COOLOFF_TIME 時間締め出せる。
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
+# IP は Cloudflare の CF-Connecting-IP から取る（d_party/client_ip.py）。
+AXES_CLIENT_IP_CALLABLE = "d_party.client_ip.client_ip"
 AXES_RESET_ON_SUCCESS = True
 
 if DEBUG:

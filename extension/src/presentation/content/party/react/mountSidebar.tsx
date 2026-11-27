@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 
+import { requestAnnouncements } from "@/infrastructure/api/announcements";
 import type {
   HealthCheckRequest,
   HealthCheckResponse,
@@ -63,7 +64,11 @@ export function mountSidebar(handlers: SidebarHandlers): MountedSidebar {
 
   createRoot(mountPoint).render(
     <PortalContainerContext value={mountPoint}>
-      <Sidebar store={store} {...handlers} />
+      <Sidebar
+        store={store}
+        {...handlers}
+        loadAnnouncements={requestAnnouncements}
+      />
     </PortalContainerContext>,
   );
 
