@@ -32,6 +32,8 @@ export interface SidebarProps {
   onDeleteRoom: () => void;
   onUpdateRoomSettings: (settings: RoomSettingsValue) => void;
   onTabChange: (tab: SidebarTab) => void;
+  /** 共有パネルに「タイマーのみの URL」を出すか（既定 true）。タイマー画面の無い DMM TV では false。 */
+  showTimerUrl?: boolean;
 }
 
 export function Sidebar({
@@ -41,6 +43,7 @@ export function Sidebar({
   onDeleteRoom,
   onUpdateRoomSettings,
   onTabChange,
+  showTimerUrl = true,
 }: SidebarProps): React.JSX.Element | null {
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
 
@@ -92,6 +95,7 @@ export function Sidebar({
                 onDeleteRoom={onDeleteRoom}
                 onUpdateRoomSettings={onUpdateRoomSettings}
                 onTabChange={onTabChange}
+                showTimerUrl={showTimerUrl}
               />
             </motion.div>
           )}
@@ -109,6 +113,7 @@ function Panel({
   onDeleteRoom,
   onUpdateRoomSettings,
   onTabChange,
+  showTimerUrl,
 }: SidebarProps & { state: SidebarState }): React.JSX.Element {
   const isOwner = state.users.some(
     (user) => user.user_id === state.selfUserId && user.is_host === true,
@@ -171,7 +176,7 @@ function Panel({
 
           <div className="min-h-0 flex-1 overflow-y-auto pt-3">
             <TabsContent value="share" className="h-full">
-              <SharePanel state={state} />
+              <SharePanel state={state} showTimerUrl={showTimerUrl} />
             </TabsContent>
             <TabsContent value="history" className="h-full">
               <HistoryPanel state={state} />

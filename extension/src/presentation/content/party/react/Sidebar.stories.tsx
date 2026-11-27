@@ -15,12 +15,15 @@ const SAMPLE_USERS: User[] = [
 const SAMPLE_URL =
   "http://localhost/anime-store/lobby/4f1c2e9a-1234-4abc-9def-0123456789ab";
 const SAMPLE_TITLE = "Dr.STONE SCIENCE FUTURE - 第1話 - RYUSUI VS. SENKU";
+const SAMPLE_DMM_URL =
+  "http://localhost/dmm-tv/lobby/4f1c2e9a-1234-4abc-9def-0123456789ab";
 
-function frame(store: SidebarStore) {
+function frame(store: SidebarStore, { showTimerUrl = true } = {}) {
   return (
     <div className="flex h-[560px] justify-end bg-neutral-300 p-3">
       <Sidebar
         store={store}
+        showTimerUrl={showTimerUrl}
         onCreateRoom={() => store.setJoined(true)}
         onLeave={() => store.hide()}
         onDeleteRoom={() => store.resetToCreate()}
@@ -61,6 +64,20 @@ export const ShareTab: Story = {
     store.updateUsers(SAMPLE_USERS);
     store.setActiveTab("share");
     return frame(store);
+  },
+};
+
+/** DMM TV のルームの共有タブ。タイマー画面が無いので「タイマーのみの URL」は出さない。 */
+export const ShareTabDmm: Story = {
+  render: () => {
+    const store = new SidebarStore();
+    store.setMode("join");
+    store.setJoined(true);
+    store.setShareLink(SAMPLE_DMM_URL);
+    store.setShareTitle(SAMPLE_TITLE);
+    store.updateUsers(SAMPLE_USERS);
+    store.setActiveTab("share");
+    return frame(store, { showTimerUrl: false });
   },
 };
 

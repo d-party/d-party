@@ -72,7 +72,14 @@ function serviceOf(url: string): { on: string; hashtag: string } {
     : { on: "dアニメストアで", hashtag: "dアニメストア" };
 }
 
-export function SharePanel({ state }: { state: SidebarState }): React.JSX.Element {
+export function SharePanel({
+  state,
+  showTimerUrl = true,
+}: {
+  state: SidebarState;
+  /** 「タイマーのみの URL」を出すか。タイマー画面（ロビーの `?timer=true`）は dアニメストアだけ。 */
+  showTimerUrl?: boolean;
+}): React.JSX.Element {
   const url = state.shareUrl;
   const { copied, copy } = useCopy(url);
   const service = serviceOf(url);
@@ -100,7 +107,7 @@ export function SharePanel({ state }: { state: SidebarState }): React.JSX.Elemen
         </TooltipContent>
       </Tooltip>
 
-      <TimerUrlAccordion url={timerUrl(url)} />
+      {showTimerUrl && <TimerUrlAccordion url={timerUrl(url)} />}
 
       <div className="flex items-center justify-center gap-3">
         <ShareIcon

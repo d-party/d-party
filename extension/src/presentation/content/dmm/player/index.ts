@@ -112,6 +112,8 @@ const { store: sidebarStore, controller: sidebarController } = mountSidebar({
   onTabChange: (tab: SidebarTab) => {
     if (tab === "users") session.requestUserList();
   },
+  // DMM のロビーにはタイマー画面（?timer=true）が無いので、タイマーのみの URL は出さない。
+  showTimerUrl: false,
 });
 
 const notifier = new ReactNotifier(sidebarStore);

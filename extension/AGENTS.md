@@ -41,7 +41,8 @@ rspack のエントリは `background` · `content-store` · `content-party` · 
 - ルーム設定は create メッセージに含めず、create の後にオーナーが `update_setting` で送る。
   現在値はサーバの `room_setting` で受け取る。一方通行では非オーナーは `video_operation` を送らず、
   リアクション禁止では送信せず自分にだけ表示する（`RoomSession`）。
-- 共有パネルの「タイマーのみの URL」はロビー URL に `?timer=true` を付けたもの。
+- 共有パネルの「タイマーのみの URL」はロビー URL に `?timer=true` を付けたもの。タイマー画面は
+  dアニメストアのロビーにしか無いので、DMM TV では `mountSidebar` に `showTimerUrl: false` を渡して出さない。
 
 ## ビルドと読み込み
 
