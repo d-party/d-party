@@ -34,6 +34,7 @@ export const USERS: User[] = [SAKURA, TAKESHI, YUUKI];
 /**
  * 運営からのアナウンス（架空）。撮影日 2026-11-27（金）の翌週のメンテナンス予告と、
  * このマニュアルの公開のお知らせ。本文は backend の上限（60 文字）に収める。
+ * `MANUAL_ANNOUNCEMENTS` は backend の並び（開始が新しい順）で、画面に出るのは先頭の 1 件。
  */
 export const MAINTENANCE_NOTICE: Announcement = {
   id: 101,

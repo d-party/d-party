@@ -7,7 +7,7 @@ import redis
 from django.conf import settings
 from django.core.cache import cache
 from django.db import connection
-from django.db.models import Case, Count, Min, When
+from django.db.models import Count, Min
 from django.db.models.functions import ExtractHour, TruncDate
 from django.utils import timezone
 from django.utils.cache import patch_cache_control
@@ -17,7 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from announcements import versions
-from announcements.models import Announcement, AnnouncementLevel
+from announcements.models import Announcement
 from streamer.models import AnimeRoom, AnimeUser, ReactionType
 from streamer.reactions import reaction_counts_by_type
 
@@ -512,7 +512,7 @@ class AnnouncementsActiveAPI(APIView):
     """Announcements being delivered now (``starts_at`` <= now < ``ends_at``).
 
     Read-only and public: the extension's popup and sidebar fetch it. Ordered by
-    importance (warning first), then by the newest start. ``extension_version``
+    the newest start (regardless of the level). ``extension_version``
     narrows the collection to the announcements targeting that extension version.
     """
 
@@ -542,11 +542,7 @@ class AnnouncementsActiveAPI(APIView):
                 )
             rows = rows.for_extension_version(version)
         # 開始が同じものは後から登録したもの（id が大きい方）を先にして、並びを決める。
-        rows = rows.order_by(
-            Case(When(level=AnnouncementLevel.WARNING, then=0), default=1),
-            "-starts_at",
-            "-id",
-        )
+        rows = rows.order_by("-starts_at", "-id")
         response = Response({"data": AnnouncementSerializer(rows, many=True).data})
         patch_cache_control(response, public=True, max_age=ANNOUNCEMENTS_MAX_AGE)
         return response

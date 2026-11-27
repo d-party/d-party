@@ -49,7 +49,7 @@ export const Sakura: Story = { decorators: [withMock(SAKURA_STORAGE)] };
 /** インストール直後（既定値）。 */
 export const FirstRun: Story = { decorators: [withMock({})] };
 
-/** 運営からのアナウンスが 2 件（重要とお知らせ）出ているところ。 */
+/** 運営からのアナウンスが出ているところ。配信中が 2 件あっても、出るのは一番新しい 1 件だけ。 */
 export const SakuraAnnouncements: Story = {
   decorators: [withMock(SAKURA_STORAGE)],
   args: { loadAnnouncements: announcementsOf(...MANUAL_ANNOUNCEMENTS) },

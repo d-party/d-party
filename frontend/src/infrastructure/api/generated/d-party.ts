@@ -289,7 +289,7 @@ export const getAnnouncementsActiveUrl = (params?: AnnouncementsActiveParams,) =
  * Announcements being delivered now (``starts_at`` <= now < ``ends_at``).
  *
  * Read-only and public: the extension's popup and sidebar fetch it. Ordered by
- * importance (warning first), then by the newest start. ``extension_version``
+ * the newest start (regardless of the level). ``extension_version``
  * narrows the collection to the announcements targeting that extension version.
  */
 export const announcementsActive = async (params?: AnnouncementsActiveParams, options?: Parameters<typeof customFetch>[1]): Promise<announcementsActiveResponse> => {

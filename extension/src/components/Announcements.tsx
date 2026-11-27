@@ -13,23 +13,25 @@ const LEVEL_LABEL = { info: "お知らせ", warning: "重要なお知らせ" } a
 export interface AnnouncementsProps {
   /** 配信中のアナウンスの取得。失敗しても空の配列で解決すること。 */
   load: () => Promise<Announcement[]>;
-  /** 各行の外側の余白。最後の 1 件を閉じたときに余白ごと畳む。 */
+  /** 行の外側の余白。閉じたときに余白ごと畳む。 */
   itemClassName?: string;
 }
 
 /**
- * 配信中のアナウンスを控えめなテキスト行で出す（ポップアップはタブの上、サイドバーは
- * ヘッダーの下）。何も無いとき・取得に失敗したときは何も描かない。
+ * 配信中のアナウンスのうち、閉じていない一番新しい 1 件だけを控えめなテキスト行で出す
+ * （ポップアップはタブの上、サイドバーはヘッダーの下）。× で閉じると、畳み終えてから次に
+ * 新しいものが出る。何も無いとき・取得に失敗したときは何も描かない。
  */
 export function Announcements({
   load,
   itemClassName,
 }: AnnouncementsProps): React.JSX.Element {
-  const { announcements, dismiss } = useAnnouncements(load);
+  const { announcement, dismiss } = useAnnouncements(load);
   const reduce = useReducedMotion();
   return (
-    <AnimatePresence initial={false}>
-      {announcements.map((announcement) => (
+    // 入れ替わりで 2 行が同時に見えないよう、前の行を畳み終えてから次を出す。
+    <AnimatePresence initial={false} mode="wait">
+      {announcement && (
         <motion.div
           key={announcement.id}
           initial={{ height: 0, opacity: 0 }}
@@ -45,7 +47,7 @@ export function Announcements({
             onDismiss={() => dismiss(announcement.id)}
           />
         </motion.div>
-      ))}
+      )}
     </AnimatePresence>
   );
 }
