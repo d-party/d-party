@@ -23,6 +23,7 @@ import { useAsync } from "react-use";
 import {
   statsActiveRoomPerDay,
   statsActiveUserPerDay,
+  statsHourlyAverageUser,
   statsReactionAllCount,
   statsReactionCount,
   statsRoomAliveCount,
@@ -31,6 +32,7 @@ import {
   statsUserAllCount,
 } from "@/infrastructure/api/generated/d-party";
 import type {
+  HourlyAverage,
   PerDayCount,
   ReactionTypeCount,
 } from "@/infrastructure/api/generated/model";
@@ -168,6 +170,118 @@ function BarChart({
   );
 }
 
+const formatAverage = (value: number): string =>
+  value.toLocaleString("ja-JP", { maximumFractionDigits: 2 });
+
+/** 0〜23 時の 24 本。ピークの時間帯だけ濃く塗り、x 軸に 3 時間おきの時刻を出す。 */
+function HourlyAverageChart({
+  data,
+  loading,
+}: {
+  data: HourlyAverage[];
+  loading: boolean;
+}): React.JSX.Element {
+  const peak = data.reduce<HourlyAverage | undefined>(
+    (best, row) => (row.average > (best?.average ?? 0) ? row : best),
+    undefined,
+  );
+
+  const chart = useMemo(() => {
+    const primary = cssColor("--primary", "oklch(0.637 0.237 25.331)");
+    const muted = cssColor("--muted-foreground", "oklch(0.705 0.015 286.067)");
+    const card = cssColor("--card", "oklch(0.215 0.01 270)");
+    const cardForeground = cssColor("--card-foreground", "oklch(0.985 0 0)");
+    const barColor = `color-mix(in oklch, ${primary} 55%, transparent)`;
+
+    const chartData = {
+      labels: data.map((d) => `${d.hour}`),
+      datasets: [
+        {
+          data: data.map((d) => d.average),
+          backgroundColor: data.map((d) =>
+            d.hour === peak?.hour ? primary : barColor,
+          ),
+          hoverBackgroundColor: primary,
+          borderRadius: 4,
+          borderSkipped: "bottom" as const,
+          categoryPercentage: 1,
+          barPercentage: 0.85,
+        },
+      ],
+    };
+
+    const options: ChartOptions<"bar"> = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      scales: {
+        x: {
+          grid: { display: false },
+          border: { display: false },
+          ticks: {
+            color: muted,
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (_value, index) => (index % 3 === 0 ? `${index}時` : ""),
+          },
+        },
+        y: { display: false, beginAtZero: true },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: card,
+          titleColor: cardForeground,
+          bodyColor: cardForeground,
+          borderColor: primary,
+          borderWidth: 1,
+          padding: 8,
+          displayColors: false,
+          callbacks: {
+            title: (items) => `${items[0].label}時台`,
+            label: (item) => `平均 ${formatAverage(item.parsed.y ?? 0)} 人`,
+          },
+        },
+      },
+    };
+
+    return { chartData, options };
+  }, [data, peak?.hour]);
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-6">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 className="font-semibold">1時間ごとの平均利用者数</h2>
+        {loading ? (
+          <Skeleton className="h-4 w-40" />
+        ) : peak ? (
+          <p className="text-sm text-muted-foreground">
+            ピーク{" "}
+            <span className="font-semibold text-foreground">{peak.hour}時台</span>
+            {" · "}平均{" "}
+            <span className="font-semibold text-foreground tabular-nums">
+              {formatAverage(peak.average)}
+            </span>{" "}
+            人
+          </p>
+        ) : null}
+      </div>
+      {loading ? (
+        <BarChartSkeleton />
+      ) : !peak ? (
+        <p className="text-sm text-muted-foreground">データがありません。</p>
+      ) : (
+        <div className="h-48">
+          <BarChartJS data={chart.chartData} options={chart.options} />
+        </div>
+      )}
+      <p className="mt-3 text-xs text-muted-foreground">
+        入室した時刻をもとに、各時間帯に入室したユーザー数の 1 日あたりの平均を表示しています。
+      </p>
+    </section>
+  );
+}
+
 function StatCard({
   label,
   value,
@@ -207,6 +321,7 @@ type StatsData = {
   userSeries: Bar[];
   roomSeries: Bar[];
   reactions: ReactionTypeCount[];
+  hourly: HourlyAverage[];
 };
 
 /** 200 の本体を取り出す。400 や nginx の 502 は例外にしてエラー表示へ倒す。 */
@@ -231,6 +346,7 @@ export function StatsDashboard({ days }: { days: number }): React.JSX.Element {
       userPerDay,
       roomPerDay,
       reactionByType,
+      hourly,
     ] = await Promise.all([
       statsUserAllCount({ days }),
       statsRoomAllCount({ days }),
@@ -240,6 +356,7 @@ export function StatsDashboard({ days }: { days: number }): React.JSX.Element {
       statsActiveUserPerDay({ days }),
       statsActiveRoomPerDay({ days }),
       statsReactionCount({ days }),
+      statsHourlyAverageUser({ days }),
     ]);
     return {
       totals: {
@@ -252,6 +369,7 @@ export function StatsDashboard({ days }: { days: number }): React.JSX.Element {
       userSeries: toBars(okData(userPerDay).data),
       roomSeries: toBars(okData(roomPerDay).data),
       reactions: okData(reactionByType).data,
+      hourly: okData(hourly).data,
     };
   }, [days]);
 
@@ -289,6 +407,8 @@ export function StatsDashboard({ days }: { days: number }): React.JSX.Element {
           <BarChart data={roomSeries} loading={loading} unit="ルーム" />
         </section>
       </div>
+
+      <HourlyAverageChart data={value?.hourly ?? []} loading={loading} />
 
       <section className="rounded-2xl border border-border bg-card p-6">
         <h2 className="mb-4 font-semibold">リアクション種別ごとの累計</h2>

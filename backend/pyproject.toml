@@ -1,11 +1,11 @@
 [project]
 name = "d-party-backend"
-version = "2.13.1"
+version = "2.14.1"
 description = "d-party backend — Django Channels powered watch-together service for dアニメストア"
 authors = [{ name = "U-Not", email = "euno.eng@gmail.com" }]
 requires-python = ">=3.15"
 dependencies = [
-    "django>=5.2,<7.0",
+    "django>=6.0,<7.0",
     "channels>=4.2",
     "channels-redis>=4.2,<4.4",
     "redis>=5,<9",
@@ -23,6 +23,7 @@ dependencies = [
     "python-dotenv>=1.0",
     "cryptography>=44.0",
     "drf-spectacular>=0.30.0",
+    "django-otp-webauthn>=0.10",
 ]
 
 [dependency-groups]
@@ -95,12 +96,27 @@ max-complexity = 10
 [tool.coverage.run]
 # python-coverage-comment-action はリポジトリ相対のパスを要求する。
 relative_files = true
+# import されなかったファイルも 0% として数える（source が無いと表から消える）。
+source = ["."]
+branch = true
 omit = [
+    ".venv/*",
     "*/migrations/*",
     "manage.py",
+    # テストとその支援コード。
     "*/tests.py",
     "*/test_*.py",
     "conftest.py",
+    "*/factories.py",
+    # gunicorn が読む設定値だけのファイル。起動は Backend/Build が確かめる。
+    "gunicorn.conf.py",
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    # サブクラスが必ず上書きする抽象メソッド。
+    "raise NotImplementedError",
 ]
 
 [tool.pytest.ini_options]
@@ -129,14 +145,6 @@ exclude = [
 [[tool.mypy.overrides]]
 module = ["*.migrations.*"]
 ignore_errors = true
-
-# consumers:
-# - union-attr: None ガードの後でも await を挟むと mypy が narrowing を解除する。
-# - arg-type: format.py のモデルへ dict を渡して pydantic に変換させている。
-# - assignment: response_data を別の Send 型で使い回している。
-[[tool.mypy.overrides]]
-module = ["streamer.consumers"]
-disable_error_code = ["union-attr", "arg-type", "assignment"]
 
 [tool.django-stubs]
 django_settings_module = "d_party.settings"

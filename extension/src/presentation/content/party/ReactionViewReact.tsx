@@ -2,17 +2,13 @@ import { createRoot } from "react-dom/client";
 
 import type { ReactionPlayOptions, ReactionView } from "@/application/ports";
 
-import {
-  ReactionLayer,
-  type ReactionLayerHandle,
-  type ReactionPush,
-} from "./react/reactions/ReactionLayer";
+import { ReactionLayer, hasAnimation } from "./react/reactions/ReactionLayer";
+import { ReactionStore } from "./react/reactions/reactionStore";
 
-/** Transparent layer over `.videoWrapper` that plays the Lottie animations. */
+/** Transparent layer over the player (`.videoWrapper` by default) that plays the Lottie animations. */
 export class ReactionViewReact implements ReactionView {
-  private handle: ReactionLayerHandle | null = null;
+  private readonly store = new ReactionStore();
   private mounted = false;
-  private pending: ReactionPush[] = [];
 
   /**
    * `resolveContainer` はリアクションを重ねるプレイヤー要素を返す。既定は dアニメの
@@ -20,24 +16,17 @@ export class ReactionViewReact implements ReactionView {
    */
   constructor(
     private readonly resolveContainer: () => HTMLElement | null = () =>
-      (document.getElementsByClassName("videoWrapper")[0] as
-        | HTMLElement
-        | undefined) ?? null,
-  ) { }
+      document.querySelector<HTMLElement>(".videoWrapper"),
+  ) {}
 
   play(id: string, opts?: ReactionPlayOptions): void {
-    const push: ReactionPush = {
+    this.ensureMounted();
+    if (!hasAnimation(id)) return;
+    this.store.push({
       id,
       userName: opts?.userName,
       mode: opts?.mode ?? "normal",
-    };
-    this.ensureMounted();
-    if (this.handle) {
-      this.handle.push(push);
-    } else {
-      // Mount is asynchronous (React effect); queue until the layer registers.
-      this.pending.push(push);
-    }
+    });
   }
 
   private ensureMounted(): void {
@@ -53,15 +42,6 @@ export class ReactionViewReact implements ReactionView {
     host.style.pointerEvents = "none";
     wrapper.appendChild(host);
     this.mounted = true;
-    const root = createRoot(host);
-    root.render(
-      <ReactionLayer
-        register={(h) => {
-          this.handle = h;
-          for (const p of this.pending) h.push(p);
-          this.pending = [];
-        }}
-      />,
-    );
+    createRoot(host).render(<ReactionLayer store={this.store} />);
   }
 }

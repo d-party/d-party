@@ -24,9 +24,10 @@ config:
 secret:
   # SECRET_KEY と POSTGRES_PASSWORD を持つ Secret。
   existingSecret: ""
-  # existingSecret 未指定時に chart が生成する平文（dev 用途のみ）。
-  SECRET_KEY: "change-me-please"
-  POSTGRES_PASSWORD: "change-me-please"
+  # existingSecret 未指定時に chart が Secret を生成するための平文（dev 用途のみ）。
+  # 既定値は持たない。どちらも未指定なら render を失敗させ、弱い値で起動させない。
+  SECRET_KEY: ""
+  POSTGRES_PASSWORD: ""
 
 # ── Django (ASGI / Channels) ────────────────────────────────────────────────
 django:
@@ -35,7 +36,8 @@ django:
     repository: ghcr.io/d-party/backend
     tag: "v0.0.0"          # 初期値。image-updater が semver で書き換える
     pullPolicy: IfNotPresent
-  # 2 以上にしてよい（close_active_sessions は古い行しか回収しない）。
+  # 2 以上にしてよい（close_active_sessions は古い行しか回収しない。セッションは 1 日以上
+  # 続かない前提）。
   replicaCount: 1
   # django だけを強いノードへ寄せるとき用。未設定ならグローバルの値を使う。
   nodeSelector: {}
@@ -76,6 +78,23 @@ django:
 migrate:
   enabled: true
   backoffLimit: 2
+
+# ── 期限切れルームの強制クローズ（CronJob）───────────────────────────────────
+# backend イメージ（django.image）で close_expired_rooms を定期実行する。閉じられずに残った
+# ルームが統計に数えられ続けないよう、作成から maxAgeHours を超えたルームを在室中でも閉じる。
+closeExpiredRooms:
+  enabled: true
+  # 毎時 17 分（クラスタのタイムゾーン。毎時なのでずれても影響しない）。
+  schedule: "17 * * * *"
+  maxAgeHours: 48
+  backoffLimit: 1
+  activeDeadlineSeconds: 600
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
 
 # ── Next.js フロントエンド ───────────────────────────────────────────────────
 frontend:
@@ -136,8 +155,13 @@ nginx:
 postgres:
   image:
     repository: postgres
-    tag: "16"
+    tag: "18"
     pullPolicy: IfNotPresent
+  # PGDATA に使う、ボリューム（/var/lib/postgresql/data）の中のディレクトリ名。
+  # メジャー版は互換の無いデータ形式を持つので、版ごとに分ける。上げるときは
+  # 新しい名前の空ディレクトリで initdb し、dump を restore する。旧版のディレクトリは
+  # 残るので、image.tag と dataSubdir を戻せば切り戻せる（手順は infra/README.md §3.6）。
+  dataSubdir: pgdata18
   auth:
     database: d_party
     username: d_party
@@ -202,7 +226,7 @@ priorityClass:
   stateful:
     name: d-party-stateful
     value: 100000
-  # django / frontend / nginx / migrate 用（低め）。
+  # django / frontend / nginx / migrate / close-expired-rooms 用（低め）。
   app:
     name: d-party-app
     value: 10000

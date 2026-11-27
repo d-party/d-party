@@ -1,34 +1,25 @@
 import datetime
-import os
 import re
 import urllib.parse
-from collections import defaultdict
+from collections import Counter
 
+from django.conf import settings
 from django.core.cache import cache
-from django.db.models import Count, Sum
-from django.db.models.functions import TruncDate
+from django.db.models import Count, Min
+from django.db.models.functions import ExtractHour, TruncDate
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from streamer.models import (
-    AnimeReaction,
-    AnimeRoom,
-    AnimeUser,
-    DmmReaction,
-    DmmReactionStat,
-    DmmRoom,
-    DmmUser,
-    ReactionStat,
-    ReactionType,
-)
+from streamer.models import SERVICES, AnimeRoom, DmmRoom, ReactionType
+from streamer.reactions import reaction_counts_by_type
 
 from .serializers import (
     ApiMessageSerializer,
     CountResultSerializer,
+    HourlyAverageResultSerializer,
     LobbyRedirectSerializer,
     PerDayResultSerializer,
     ReactionTypeCountResultSerializer,
@@ -36,21 +27,17 @@ from .serializers import (
     VersionCheckResultSerializer,
 )
 
-# 統計はサービス（dアニメ / DMM）を横断した d-party 全体の利用状況を表す。各集計は
-# 下のモデル群すべてを合算する（サービスを増やしてもここに追加すれば統計へ反映される）。
-ROOM_MODELS = (AnimeRoom, DmmRoom)
-USER_MODELS = (AnimeUser, DmmUser)
-# (生リアクション, 畳み込み集計) のペア。生は稼働中ルーム分、集計は終了ルーム分。
-REACTION_SOURCES = ((AnimeReaction, ReactionStat), (DmmReaction, DmmReactionStat))
+# 統計はサービス（dアニメストア / DMM TV）を横断した d-party 全体の利用状況を表す。各集計は
+# 全サービスのモデルを合算する（サービスは ``streamer.models.SERVICES`` に足せば反映される）。
+ROOM_MODELS = tuple(service.room for service in SERVICES)
+USER_MODELS = tuple(service.user for service in SERVICES)
 
 # A strict ``major.minor.patch`` triple.
 _STRICT_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
-# 統計 API は公開（認証不要）。``?days=N`` の既定と上限は 1 年。
+# ``?days=N`` の既定と上限は 1 年。
 DEFAULT_STATS_DAYS = 365
 MAX_STATS_DAYS = 365
-# 統計レスポンスのキャッシュ秒数。
-STATS_CACHE_SECONDS = int(os.getenv("STATS_CACHE_SECONDS", "300"))
 
 # OpenAPI スキーマ（``backend/openapi.json``）に載せる ``?days=N`` の定義。
 _DAYS_PARAMETER = OpenApiParameter(
@@ -78,27 +65,15 @@ def _stats_schema(operation_id: str, response, *, days: bool = True):
 
 
 def _parse_days(request) -> int | None:
-    """Parse ``?days=N`` into ``1..365``; ``None`` signals an invalid request.
-
-    Missing parameter defaults to ``DEFAULT_STATS_DAYS`` (1 year).
-    """
+    """Parse ``?days=N`` into ``1..MAX_STATS_DAYS``; ``None`` signals an invalid request."""
     raw = request.GET.get("days")
     if raw is None:
         return DEFAULT_STATS_DAYS
     try:
         days = int(raw)
-    except TypeError, ValueError:
+    except ValueError:
         return None
-    if days < 1 or days > MAX_STATS_DAYS:
-        return None
-    return days
-
-
-def _bad_days() -> Response:
-    return Response(
-        {"message": f"days パラメータは 1〜{MAX_STATS_DAYS} の整数で指定してください"},
-        status=status.HTTP_400_BAD_REQUEST,
-    )
+    return days if 1 <= days <= MAX_STATS_DAYS else None
 
 
 def _since(days: int) -> datetime.date:
@@ -110,54 +85,23 @@ def _since(days: int) -> datetime.date:
 
 
 def _cached(key: str, producer):
-    """Return a cached stats payload, computing (and storing) it on a miss."""
-    return cache.get_or_set(key, producer, STATS_CACHE_SECONDS)
+    return cache.get_or_set(key, producer, settings.STATS_CACHE_SECONDS)
 
 
-def _reaction_counts_by_type(since: datetime.date | None = None) -> dict[str, int]:
-    """Per-type reaction counts in ``[since, today]`` across all services.
-
-    ``since=None`` counts every reaction ever recorded.
-
-    Ended rooms are in the folded stat tables (``ReactionStat`` /
-    ``DmmReactionStat``); alive rooms are still in the raw tables
-    (``AnimeReaction`` / ``DmmReaction``). Keyed by the stored ``reaction_type``
-    value (e.g. ``"S"``).
-    """
-    merged: dict[str, int] = defaultdict(int)
-    for reaction_model, stat_model in REACTION_SOURCES:
-        folded_qs = stat_model.objects.all()
-        live_qs = reaction_model.objects.filter(room_id__deleted_at__isnull=True)
-        if since is not None:
-            folded_qs = folded_qs.filter(date__gte=since)
-            live_qs = live_qs.filter(created_at__date__gte=since)
-        folded = folded_qs.values("reaction_type").annotate(total=Sum("count"))
-        for row in folded:
-            merged[row["reaction_type"]] += row["total"]
-        live = live_qs.values("reaction_type").annotate(total=Count("reaction_id"))
-        for row in live:
-            merged[row["reaction_type"]] += row["total"]
-    return merged
-
-
-def _parse_strict_version(value: str) -> tuple[int, int, int] | None:
+def _parse_strict_version(value: str | None) -> tuple[int, ...] | None:
     """Parse a strict ``x.y.z`` version into a comparable tuple, else ``None``."""
-    if _STRICT_VERSION_RE.match(value):
-        major, minor, patch = (int(part) for part in value.split("."))
-        return (major, minor, patch)
-    return None
+    if value is None or not _STRICT_VERSION_RE.match(value):
+        return None
+    return tuple(int(part) for part in value.split("."))
 
 
 def _per_day_counts(model, since: datetime.date | None = None) -> list[dict]:
-    """Return ``[{"day": date, "count": n}, ...]`` grouped by creation day.
-
-    When ``since`` is given, only rows created on/after it are counted.
-    """
-    qs = model.objects
+    """``[{"day": date, "count": n}, ...]``。作成日ごと、``since`` 以降（省略時は全期間）。"""
+    rows = model.objects.all()
     if since is not None:
-        qs = qs.filter(created_at__date__gte=since)
+        rows = rows.filter(created_at__date__gte=since)
     return list(
-        qs.annotate(day=TruncDate("created_at"))
+        rows.annotate(day=TruncDate("created_at"))
         .values("day")
         .annotate(count=Count("created_at"))
         .order_by("day")
@@ -167,25 +111,18 @@ def _per_day_counts(model, since: datetime.date | None = None) -> list[dict]:
 def _resample_per_day(
     rows: list[dict], since: datetime.date | None = None
 ) -> list[dict]:
-    """Fill gaps so every calendar day has a count.
+    """Fill gaps so every calendar day up to today has a count.
 
-    The series runs up to today, and starts at ``since`` when given.
+    The series starts at ``since`` when given, else at the first row.
     """
     today = timezone.localdate()
-    counts = {row["day"]: int(row["count"]) for row in rows}
-    if since is not None:
-        start = since
-    elif rows:
-        start = rows[0]["day"]
-    else:
-        start = today
-    end = max(today, start)
-    result: list[dict] = []
-    day = start
-    while day <= end:
-        result.append({"day": day, "count": counts.get(day, 0)})
-        day += datetime.timedelta(days=1)
-    return result
+    counts = {row["day"]: row["count"] for row in rows}
+    start = since or (rows[0]["day"] if rows else today)
+    span = (max(today, start) - start).days
+    return [
+        {"day": day, "count": counts.get(day, 0)}
+        for day in (start + datetime.timedelta(days=n) for n in range(span + 1))
+    ]
 
 
 def _mean_per_day(rows: list[dict]) -> float:
@@ -194,12 +131,8 @@ def _mean_per_day(rows: list[dict]) -> float:
 
 
 def _combined_per_day(models, since: datetime.date | None = None) -> list[dict]:
-    """Merge per-day creation counts across several models (all services).
-
-    Returns ``[{"day": date, "count": n}, ...]`` sorted by day, summing each
-    day's count over every model. Feed into ``_resample_per_day`` to 0-fill.
-    """
-    merged: dict[datetime.date, int] = defaultdict(int)
+    """``_per_day_counts`` を複数のモデル（全サービス）で日ごとに合算する。"""
+    merged: Counter[datetime.date] = Counter()
     for model in models:
         for row in _per_day_counts(model, since):
             merged[row["day"]] += row["count"]
@@ -207,24 +140,64 @@ def _combined_per_day(models, since: datetime.date | None = None) -> list[dict]:
 
 
 def _sum_created(models, since: datetime.date) -> int:
-    """Total rows created on/after ``since`` across models (all services)."""
+    """``since`` 以降に作られた行数を全サービスで合算する。"""
     return sum(m.objects.filter(created_at__date__gte=since).count() for m in models)
 
 
 def _sum_all(models) -> int:
-    """Total rows (incl. logically deleted) across models (all services)."""
-    return sum(m.objects.all().count() for m in models)
+    """論理削除済みも含む行数を全サービスで合算する。"""
+    return sum(m.objects.count() for m in models)
 
 
 def _sum_alive(models) -> int:
-    """Total currently-alive rows across models (all services)."""
+    """alive な行数を全サービスで合算する。"""
     return sum(m.objects.alive().count() for m in models)
+
+
+def _hourly_average_entries(since: datetime.date) -> list[dict]:
+    """``[{"hour": 0..23, "average": x}, ...]``。時間帯ごとの 1 日あたり平均入室数。
+
+    入室時刻（参加ユーザーの ``created_at``。全サービスの合算）だけで数え、退室時刻は
+    見ない。時刻は settings の TIME_ZONE で切る。分母はその時間帯が来た日数で、期間は
+    ``since`` と最初の入室日の遅い方から今日まで。今日のまだ来ていない時間帯は分母に
+    入れない。
+    """
+    counts: Counter[int] = Counter()
+    firsts = []
+    for model in USER_MODELS:
+        rows = model.objects.filter(created_at__date__gte=since)
+        first = rows.aggregate(first=Min("created_at"))["first"]
+        if first is None:
+            continue
+        firsts.append(first)
+        counts.update(
+            dict(
+                rows.annotate(hour=ExtractHour("created_at"))
+                .values("hour")
+                .annotate(count=Count("pk"))
+                .values_list("hour", "count")
+            )
+        )
+    if not firsts:
+        return [{"hour": hour, "average": 0.0} for hour in range(24)]
+    first = min(firsts)
+    now = timezone.localtime()
+    days = (now.date() - max(since, timezone.localdate(first))).days + 1
+
+    def average(hour: int) -> float:
+        occurrences = days - (hour > now.hour)
+        return round(counts.get(hour, 0) / occurrences, 2) if occurrences else 0.0
+
+    return [{"hour": hour, "average": average(hour)} for hour in range(24)]
+
+
+def _mean_created_per_day(models) -> float:
+    """全期間の 1 日あたりの平均作成数（全サービスの合算）。"""
+    return _mean_per_day(_resample_per_day(_combined_per_day(models)))
 
 
 class HealthCheckAPI(APIView):
     """Lightweight liveness probe. Returns 200 when the application is running."""
-
-    permission_classes = [AllowAny]
 
     @extend_schema(operation_id="health", responses={200: None})
     def get(self, request, format=None) -> Response:
@@ -233,8 +206,6 @@ class HealthCheckAPI(APIView):
 
 class ChromeExtensionVersionCheckAPI(APIView):
     """Check whether a Chrome extension version is compatible with the backend."""
-
-    permission_classes = [AllowAny]
 
     @extend_schema(
         operation_id="versionCheck",
@@ -259,11 +230,9 @@ class ChromeExtensionVersionCheckAPI(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        current_version = _parse_strict_version(
-            str(request.GET.get("extension-version"))
-        )
+        current_version = _parse_strict_version(request.GET["extension-version"])
         required_version = _parse_strict_version(
-            str(os.getenv("CHROME_EXTENSION_REQUIRED_VERSION"))
+            settings.CHROME_EXTENSION_REQUIRED_VERSION
         )
         if current_version is None or required_version is None:
             return Response(
@@ -271,131 +240,132 @@ class ChromeExtensionVersionCheckAPI(APIView):
                 status=status.HTTP_406_NOT_ACCEPTABLE,
             )
 
-        return Response(
-            {"is_possible": current_version >= required_version},
-            status=status.HTTP_200_OK,
-        )
+        return Response({"is_possible": current_version >= required_version})
 
 
-class AnimeActiveUserPerDayAPI(APIView):
+class _StatsView(APIView):
+    """``?days=N`` の期間で集計し、結果をキャッシュして ``{"data": ...}`` で返す。
+
+    サブクラスは ``cache_key`` と ``produce`` を定義し、``get`` を ``_stats_schema`` 付きで
+    宣言する（``operation_id`` を view ごとに変えるため）。
+    """
+
+    cache_key: str
+
+    def produce(self, since: datetime.date):
+        raise NotImplementedError
+
+    def respond(self, request) -> Response:
+        days = _parse_days(request)
+        if days is None:
+            return Response(
+                {
+                    "message": f"days パラメータは 1〜{MAX_STATS_DAYS} の整数で指定してください"
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        since = _since(days)
+        data = _cached(f"stats:{self.cache_key}:{days}", lambda: self.produce(since))
+        return Response({"data": data})
+
+
+class AnimeActiveUserPerDayAPI(_StatsView):
     """Daily count of users that have ever been in a room."""
 
-    permission_classes = [AllowAny]
+    cache_key = "active-user-per-day"
+
+    def produce(self, since):
+        return _resample_per_day(_combined_per_day(USER_MODELS, since), since)
 
     @_stats_schema("statsActiveUserPerDay", PerDayResultSerializer)
     def get(self, request, format=None) -> Response:
-        days = _parse_days(request)
-        if days is None:
-            return _bad_days()
-        since = _since(days)
-
-        def produce():
-            return _resample_per_day(_combined_per_day(USER_MODELS, since), since)
-
-        return Response({"data": _cached(f"stats:active-user-per-day:{days}", produce)})
+        return self.respond(request)
 
 
-class AnimeActiveRoomPerDayAPI(APIView):
+class AnimeActiveRoomPerDayAPI(_StatsView):
     """Daily count of rooms created by users."""
 
-    permission_classes = [AllowAny]
+    cache_key = "active-room-per-day"
+
+    def produce(self, since):
+        return _resample_per_day(_combined_per_day(ROOM_MODELS, since), since)
 
     @_stats_schema("statsActiveRoomPerDay", PerDayResultSerializer)
     def get(self, request, format=None) -> Response:
-        days = _parse_days(request)
-        if days is None:
-            return _bad_days()
-        since = _since(days)
-
-        def produce():
-            return _resample_per_day(_combined_per_day(ROOM_MODELS, since), since)
-
-        return Response({"data": _cached(f"stats:active-room-per-day:{days}", produce)})
+        return self.respond(request)
 
 
-class AnimeRoomReactionCountAPI(APIView):
+class AnimeHourlyAverageUserAPI(_StatsView):
+    """Average users entering a room in each hour of the day (by entry time)."""
+
+    cache_key = "hourly-average-user"
+
+    def produce(self, since):
+        return _hourly_average_entries(since)
+
+    @_stats_schema("statsHourlyAverageUser", HourlyAverageResultSerializer)
+    def get(self, request, format=None) -> Response:
+        return self.respond(request)
+
+
+class AnimeRoomReactionCountAPI(_StatsView):
     """Per-type reaction counts."""
 
-    permission_classes = [AllowAny]
+    cache_key = "reaction-count"
+
+    def produce(self, since):
+        counts = reaction_counts_by_type(since)
+        return [
+            {"count": counts[value], "reaction_type": label}
+            for value, label in ReactionType.choices
+        ]
 
     @_stats_schema("statsReactionCount", ReactionTypeCountResultSerializer)
     def get(self, request, format=None) -> Response:
-        days = _parse_days(request)
-        if days is None:
-            return _bad_days()
-        since = _since(days)
-
-        def produce():
-            merged = _reaction_counts_by_type(since)
-            return [
-                {"count": merged.get(value, 0), "reaction_type": label}
-                for value, label in ReactionType.choices
-            ]
-
-        return Response({"data": _cached(f"stats:reaction-count:{days}", produce)})
+        return self.respond(request)
 
 
-class AnimeRoomReactionAllCountAPI(APIView):
+class AnimeRoomReactionAllCountAPI(_StatsView):
     """Total reaction count."""
 
-    permission_classes = [AllowAny]
+    cache_key = "reaction-all-count"
+
+    def produce(self, since):
+        return {"count": reaction_counts_by_type(since).total()}
 
     @_stats_schema("statsReactionAllCount", CountResultSerializer)
     def get(self, request, format=None) -> Response:
-        days = _parse_days(request)
-        if days is None:
-            return _bad_days()
-        since = _since(days)
-
-        def produce():
-            return sum(_reaction_counts_by_type(since).values())
-
-        count = _cached(f"stats:reaction-all-count:{days}", produce)
-        return Response({"data": {"count": count}})
+        return self.respond(request)
 
 
-class AnimeUserAllCountAPI(APIView):
+class AnimeUserAllCountAPI(_StatsView):
     """User count within the requested period (by creation date)."""
 
-    permission_classes = [AllowAny]
+    cache_key = "user-all-count"
+
+    def produce(self, since):
+        return {"count": _sum_created(USER_MODELS, since)}
 
     @_stats_schema("statsUserAllCount", CountResultSerializer)
     def get(self, request, format=None) -> Response:
-        days = _parse_days(request)
-        if days is None:
-            return _bad_days()
-        since = _since(days)
-
-        def produce():
-            return _sum_created(USER_MODELS, since)
-
-        count = _cached(f"stats:user-all-count:{days}", produce)
-        return Response({"data": {"count": count}})
+        return self.respond(request)
 
 
-class AnimeRoomAllCountAPI(APIView):
+class AnimeRoomAllCountAPI(_StatsView):
     """Room count within the requested period (by creation date)."""
 
-    permission_classes = [AllowAny]
+    cache_key = "room-all-count"
+
+    def produce(self, since):
+        return {"count": _sum_created(ROOM_MODELS, since)}
 
     @_stats_schema("statsRoomAllCount", CountResultSerializer)
     def get(self, request, format=None) -> Response:
-        days = _parse_days(request)
-        if days is None:
-            return _bad_days()
-        since = _since(days)
-
-        def produce():
-            return _sum_created(ROOM_MODELS, since)
-
-        count = _cached(f"stats:room-all-count:{days}", produce)
-        return Response({"data": {"count": count}})
+        return self.respond(request)
 
 
 class AnimeUserAliveCountAPI(APIView):
     """Currently connected user count."""
-
-    permission_classes = [AllowAny]
 
     @_stats_schema("statsUserAliveCount", CountResultSerializer, days=False)
     def get(self, request, format=None) -> Response:
@@ -405,8 +375,6 @@ class AnimeUserAliveCountAPI(APIView):
 class AnimeRoomAliveCountAPI(APIView):
     """Currently active room count."""
 
-    permission_classes = [AllowAny]
-
     @_stats_schema("statsRoomAliveCount", CountResultSerializer, days=False)
     def get(self, request, format=None) -> Response:
         return Response({"data": {"count": _sum_alive(ROOM_MODELS)}})
@@ -415,14 +383,17 @@ class AnimeRoomAliveCountAPI(APIView):
 class _ShieldsView(APIView):
     """Base view returning a shields.io endpoint badge payload (``schemaVersion`` 1)."""
 
-    permission_classes = [AllowAny]
+    # docstring は OpenAPI の description になるので、実装の事情はコメントに書く。
+    # README のバッジから認証なしで叩かれ、全期間を集計するので、統計 API と同じ秒数だけ
+    # キャッシュする。
 
     def shields_data(self) -> dict:
         raise NotImplementedError
 
     @extend_schema(responses={200: ShieldsBadgeSerializer})
     def get(self, request, format=None) -> Response:
-        return Response({"schemaVersion": 1, **self.shields_data()})
+        data = _cached(f"shields:{type(self).__name__}", self.shields_data)
+        return Response({"schemaVersion": 1, **data})
 
 
 class RoomCountShieldsAPI(_ShieldsView):
@@ -432,11 +403,9 @@ class RoomCountShieldsAPI(_ShieldsView):
 
 class RoomCountParDayShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
-        rows = _resample_per_day(_combined_per_day(ROOM_MODELS))
-        mean = f"{_mean_per_day(rows):.2f}/day"
         return {
             "label": "Room",
-            "message": mean,
+            "message": f"{_mean_created_per_day(ROOM_MODELS):.2f}/day",
             "color": "brightgreen",
             "cacheSeconds": 86400,
         }
@@ -449,11 +418,9 @@ class UserCountShieldsAPI(_ShieldsView):
 
 class UserCountParDayShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
-        rows = _resample_per_day(_combined_per_day(USER_MODELS))
-        mean = f"{_mean_per_day(rows):.2f}/day"
         return {
             "label": "User",
-            "message": mean,
+            "message": f"{_mean_created_per_day(USER_MODELS):.2f}/day",
             "color": "brightgreen",
             "cacheSeconds": 86400,
         }
@@ -461,8 +428,10 @@ class UserCountParDayShieldsAPI(_ShieldsView):
 
 class ReactionCountShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
-        total = sum(_reaction_counts_by_type().values())
-        return {"label": "TotalReaction", "message": str(total)}
+        return {
+            "label": "TotalReaction",
+            "message": str(reaction_counts_by_type().total()),
+        }
 
 
 class AnimeStoreLobbyResolveAPI(APIView):
@@ -471,45 +440,35 @@ class AnimeStoreLobbyResolveAPI(APIView):
     Called by the frontend's lobby page (``/anime-store/lobby/<room_id>``).
     """
 
-    permission_classes = [AllowAny]
-
     @extend_schema(
         operation_id="lobbyResolve",
         responses={200: LobbyRedirectSerializer, 404: ApiMessageSerializer},
     )
     def get(self, request, room_id, format=None) -> Response:
-        anime_store_domain = os.environ.get(
-            "D_ANIME_STORE_DOMAIN", "animestore.docomo.ne.jp"
-        )
-        try:
-            anime_room = AnimeRoom.objects.get(room_id=room_id)
-        except AnimeRoom.DoesNotExist:
+        anime_room = AnimeRoom.objects.filter(room_id=room_id).first()
+        if anime_room is None:
             return Response(
                 {"message": "ルームが見つかりません"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        if anime_room.deleted_at is not None:
+        if anime_room.is_dead():
             return Response(
                 {"message": "ルームは終了しています"},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        base_url = f"https://{anime_store_domain}/animestore/sc_d_pc?"
-        url_param = urllib.parse.urlencode(
-            {
-                "partId": anime_room.part_id,
-                "party": "join",
-                "room_id": str(room_id),
-            }
+        query = urllib.parse.urlencode(
+            {"partId": anime_room.part_id, "party": "join", "room_id": str(room_id)}
         )
         return Response(
             {
-                "redirect_url": base_url + url_param,
+                "redirect_url": (
+                    f"https://{settings.D_ANIME_STORE_DOMAIN}/animestore/sc_d_pc?{query}"
+                ),
                 "part_id": anime_room.part_id,
                 "room_id": str(room_id),
                 "title": anime_room.title,
-            },
-            status=status.HTTP_200_OK,
+            }
         )
 
 
@@ -527,22 +486,18 @@ class DmmTvLobbyResolveAPI(APIView):
     part_id / room_id / title）は anime 版と共通。
     """
 
-    permission_classes = [AllowAny]
-
     @extend_schema(
         operation_id="dmmLobbyResolve",
         responses={200: LobbyRedirectSerializer, 404: ApiMessageSerializer},
     )
     def get(self, request, room_id, format=None) -> Response:
-        dmm_tv_domain = os.environ.get("DMM_TV_DOMAIN", "tv.dmm.com")
-        try:
-            dmm_room = DmmRoom.objects.get(room_id=room_id)
-        except DmmRoom.DoesNotExist:
+        dmm_room = DmmRoom.objects.filter(room_id=room_id).first()
+        if dmm_room is None:
             return Response(
                 {"message": "ルームが見つかりません"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        if dmm_room.deleted_at is not None:
+        if dmm_room.is_dead():
             return Response(
                 {"message": "ルームは終了しています"},
                 status=status.HTTP_404_NOT_FOUND,
@@ -554,7 +509,7 @@ class DmmTvLobbyResolveAPI(APIView):
         else:
             season, content = "", dmm_room.part_id
 
-        base_url = f"https://{dmm_tv_domain}/vod/playback/on-demand/?"
+        base_url = f"https://{settings.DMM_TV_DOMAIN}/vod/playback/on-demand/?"
         params = {"content": content, "party": "join", "room_id": str(room_id)}
         if season:
             params["season"] = season
@@ -565,6 +520,5 @@ class DmmTvLobbyResolveAPI(APIView):
                 "part_id": dmm_room.part_id,
                 "room_id": str(room_id),
                 "title": dmm_room.title,
-            },
-            status=status.HTTP_200_OK,
+            }
         )

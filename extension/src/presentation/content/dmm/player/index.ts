@@ -11,9 +11,9 @@ import { PartyWebSocketClient } from "@/infrastructure/ws/PartyWebSocketClient";
 
 import { getParam } from "../../dom/utils";
 import { mountDmmPartyButton } from "../../dom/dmmPartyButton";
-import { mountSidebar, sidebarWidth } from "../../party/react/mountSidebar";
+import { mountSidebar } from "../../party/react/mountSidebar";
 import { mountPlayerControls } from "../../party/react/PlayerControls";
-import type { SidebarTab } from "../../party/react/sidebarStore";
+import { sidebarWidth, type SidebarTab } from "../../party/react/sidebarStore";
 import { ReactionViewReact } from "../../party/ReactionViewReact";
 import {
   PlayerControllerDmm,

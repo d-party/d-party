@@ -1,19 +1,20 @@
 import {
+  PERSONAL_STATS_STORAGE_KEY,
   emptyStats,
   normalizeStats,
   type PersonalStats,
 } from "@/domain/personalStats";
 import type { ReactionType } from "@/domain/reactions";
 
-const STORAGE_KEY = "personal_stats";
+import { onSyncKeysChanged } from "./onSyncKeysChanged";
 
 /** Read-modify-write, serialized through a promise chain so quick increments do not clobber each other. */
 export class ChromePersonalStatsRepository {
   private queue: Promise<void> = Promise.resolve();
 
   async getAll(): Promise<PersonalStats> {
-    const stored = await chrome.storage.sync.get([STORAGE_KEY]);
-    return normalizeStats(stored[STORAGE_KEY]);
+    const stored = await chrome.storage.sync.get([PERSONAL_STATS_STORAGE_KEY]);
+    return normalizeStats(stored[PERSONAL_STATS_STORAGE_KEY]);
   }
 
   /**
@@ -30,7 +31,7 @@ export class ChromePersonalStatsRepository {
       const stats = await this.getAll();
       if (stats.since === null) stats.since = Date.now();
       fn(stats);
-      await chrome.storage.sync.set({ [STORAGE_KEY]: stats });
+      await chrome.storage.sync.set({ [PERSONAL_STATS_STORAGE_KEY]: stats });
     });
   }
 
@@ -53,15 +54,13 @@ export class ChromePersonalStatsRepository {
 
   reset(): Promise<void> {
     return this.enqueue(() =>
-      chrome.storage.sync.set({ [STORAGE_KEY]: emptyStats() }),
+      chrome.storage.sync.set({ [PERSONAL_STATS_STORAGE_KEY]: emptyStats() }),
     );
   }
 
   onChange(listener: (stats: PersonalStats) => void): () => void {
-    const handler = () => {
-      void this.getAll().then(listener);
-    };
-    chrome.storage.sync.onChanged.addListener(handler);
-    return () => chrome.storage.sync.onChanged.removeListener(handler);
+    return onSyncKeysChanged([PERSONAL_STATS_STORAGE_KEY], () =>
+      this.getAll().then(listener),
+    );
   }
 }

@@ -15,6 +15,7 @@ src/
                                 + opengraph-image / twitter-image
   components/
     landing/ layout/ motion/ qa/ stats/
+    lobby/                      LobbyView（ロビーの client 部分。ページは metadata と Suspense だけ）
     timer/                      TimerView · openTimerPopup
     og/                         OGP カード（OgCard · SiteOgImage · RoomOgImage）
   infrastructure/               env.ts · api/（orval）· ws/timerClient.ts
@@ -35,7 +36,8 @@ pnpm storybook
 拡張機能と backend の両方と結合しているので変えないこと。
 
 1. 拡張機能の `content-version` が `.chrome_extension_field` の `innerText` に `"true"` / `"false"`
-   を書く。ページはこの要素を必ず描画し、1 秒ごとに読む。
+   を書く。ページはこの要素を必ず描画し、1 秒ごとに読む。拡張機能が hydrate より先に
+   書いても消えないよう、React には中身を触らせない（`dangerouslySetInnerHTML`）。
 2. `room_id` から dアニメストアの URL への解決は backend の `GET /api/v1/anime-store/lobby/{room_id}`。
 3. `"true"` なら dアニメストアへ移動する。`"false"` か 30 秒無応答なら、「タイマーを見る」と
    「インストール / アップデート」の選択肢を出す。

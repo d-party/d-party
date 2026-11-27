@@ -1,47 +1,20 @@
 import { createRoot } from "react-dom/client";
 
-import type { RoomSettings } from "@/domain/roomSettings";
 import type {
   HealthCheckRequest,
   HealthCheckResponse,
 } from "@/infrastructure/messages";
 import { PortalContainerContext } from "@d-party/ui";
 
-import { Sidebar } from "./Sidebar";
-import {
-  SidebarController,
-  SidebarStore,
-  type SidebarTab,
-} from "./sidebarStore";
+import { attachShadowStyles } from "./shadowStyles";
+import { Sidebar, type SidebarProps } from "./Sidebar";
+import { SidebarController, SidebarStore, sidebarWidth } from "./sidebarStore";
 
-export interface SidebarHandlers {
-  onCreateRoom: () => void;
-  onLeave: () => void;
-  onDeleteRoom: () => void;
-  onUpdateRoomSettings: (settings: RoomSettings) => void;
-  onTabChange?: (tab: SidebarTab) => void;
-}
+export type SidebarHandlers = Omit<SidebarProps, "store">;
 
 export interface MountedSidebar {
   store: SidebarStore;
   controller: SidebarController;
-}
-
-const EXPANDED_WIDTH = 320;
-const COLLAPSED_WIDTH = 44;
-
-export const SIDEBAR_WIDTHS = {
-  expanded: EXPANDED_WIDTH,
-  collapsed: COLLAPSED_WIDTH,
-} as const;
-
-export function sidebarWidth(state: {
-  visible: boolean;
-  collapsed: boolean;
-  mode: "create" | "join" | "normal";
-}): number {
-  if (!state.visible || state.mode === "normal") return 0;
-  return state.collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
 }
 
 /**
@@ -76,37 +49,22 @@ export function mountSidebar(handlers: SidebarHandlers): MountedSidebar {
   }
 
   const applyWidth = () => {
-    const state = store.getSnapshot();
-    host.style.width = `${sidebarWidth(state)}px`;
+    host.style.width = `${sidebarWidth(store.getSnapshot())}px`;
   };
   applyWidth();
   store.subscribe(applyWidth);
 
   const shadow = host.attachShadow({ mode: "open" });
-
-  const style = document.createElement("style");
-  shadow.appendChild(style);
-  void fetch(chrome.runtime.getURL("js/sidebar-style.css"))
-    .then((response) => response.text())
-    .then((css) => {
-      style.textContent = css;
-    });
+  attachShadowStyles(shadow);
 
   const mountPoint = document.createElement("div");
   mountPoint.style.height = "100%";
   shadow.appendChild(mountPoint);
 
   createRoot(mountPoint).render(
-    <PortalContainerContext.Provider value={mountPoint}>
-      <Sidebar
-        store={store}
-        onCreateRoom={handlers.onCreateRoom}
-        onLeave={handlers.onLeave}
-        onDeleteRoom={handlers.onDeleteRoom}
-        onUpdateRoomSettings={handlers.onUpdateRoomSettings}
-        onTabChange={handlers.onTabChange}
-      />
-    </PortalContainerContext.Provider>,
+    <PortalContainerContext value={mountPoint}>
+      <Sidebar store={store} {...handlers} />
+    </PortalContainerContext>,
   );
 
   scheduleHealthCheck(store);
@@ -120,20 +78,25 @@ export function mountSidebar(handlers: SidebarHandlers): MountedSidebar {
  * fetch は background に任せる。公開ページから localhost への fetch は Chrome の
  * Local Network Access で止められるが、host_permissions を持つ background は通る。
  */
-
 function scheduleHealthCheck(store: SidebarStore): void {
-  let done = false;
   const unsubscribe = store.subscribe(() => {
-    if (done) return;
-    const { visible } = store.getSnapshot();
-    if (!visible) return;
-    done = true;
+    if (!store.getSnapshot().visible) return;
     unsubscribe();
-    const request: HealthCheckRequest = { type: "healthCheck" };
-    chrome.runtime.sendMessage(request, (response?: HealthCheckResponse) => {
-      if (chrome.runtime.lastError || !response?.ok) {
-        store.setConnectionStatus("maintenance");
-      }
+    void isBackendHealthy().then((healthy) => {
+      if (!healthy) store.setConnectionStatus("maintenance");
     });
   });
+}
+
+async function isBackendHealthy(): Promise<boolean> {
+  const request: HealthCheckRequest = { type: "healthCheck" };
+  try {
+    const response = await chrome.runtime.sendMessage<
+      HealthCheckRequest,
+      HealthCheckResponse | undefined
+    >(request);
+    return response?.ok === true;
+  } catch {
+    return false;
+  }
 }

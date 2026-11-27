@@ -5,9 +5,9 @@ import datetime
 import pytest
 from django.utils import timezone
 
-from .cron import fold_room_reactions
 from .factories import AnimeRoomFactory
 from .models import AnimeReaction, ReactionStat
+from .reactions import fold_room_reactions
 
 
 def _make_reaction(room, reaction_type: str, when: datetime.datetime):

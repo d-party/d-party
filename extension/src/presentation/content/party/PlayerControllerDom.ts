@@ -16,6 +16,8 @@ export function episodeTitle(): string {
 }
 
 const SEEK_TOLERANCE_SECONDS = 0.5;
+/** Chrome が受け付ける playbackRate の上限。 */
+const MAX_PLAYBACK_RATE = 16;
 
 /** Drives the player by clicking its native controls. */
 export class PlayerControllerDom implements PlayerController {
@@ -101,12 +103,16 @@ export class PlayerControllerDom implements PlayerController {
   }
 
   private seek(option: SyncOption): void {
+    // 他の参加者から届いた値。有限でない値を currentTime に入れると例外になる。
+    if (!Number.isFinite(option.time)) return;
     this.guard.suppress();
     video().currentTime = option.time;
   }
 
   private changeRate(option: SyncOption): void {
     const rate = Number(option.rate);
+    // 範囲外の値を playbackRate に入れると例外になる。
+    if (!(rate > 0 && rate <= MAX_PLAYBACK_RATE)) return;
     if (video().playbackRate !== rate) {
       video().playbackRate = rate;
     }

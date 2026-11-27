@@ -26,7 +26,7 @@ infra/
   helm/d-party/              ← d-party 単体の Helm chart（このリポジトリの本体）
     Chart.yaml values.yaml
     templates/               nginx · django · frontend · postgres · redis · migrate(hook)
-                             · networkpolicy · priorityclass · ingress(任意)
+                             · close-expired-rooms(CronJob) · networkpolicy · priorityclass · ingress(任意)
   platform/                  ← クラスタ共有の基盤（d-party 専用ではない。詳細は platform/README.md）
     registry.yaml            ← クラスタ内ローカルレジストリ（registry:2）＋ NodePort
     k3s-registries.yaml      ← ノードの /etc/rancher/k3s/registries.yaml スニペット
@@ -105,7 +105,7 @@ flowchart LR
     NGINX -. initContainer .-> ST[collectstatic→emptyDir]
 ```
 
-- **postgres / redis は公式イメージ（`postgres:16` / `redis:8.10`）+ 自前 StatefulSet**。
+- **postgres / redis は公式イメージ（`postgres:18` / `redis:8.10`）+ 自前 StatefulSet**。
   > Bitnami の Helm chart は採用しません。Bitnami は 2025-08〜09 で公開カタログ
   > (`docker.io/bitnami`) を Legacy 化／削除し、無償の versioned イメージが
   > 廃止されました（出典: bitnami/charts#35164）。公式イメージなら ARM64 提供・
@@ -162,10 +162,17 @@ sequenceDiagram
 > 発火し `leave_party` が DB を後始末します。ハードクラッシュ（OOM / ノード障害 /
 > SIGKILL）では `disconnect` が走らず alive 行が残るため、起動時の
 > `close_active_sessions` が **`updated_at` が 1 日以上前の alive 行だけ**を回収します
-> （稼働中セッションは更新が新しいので消さない）。旧来の「全 alive 行を削除」設計と異なり
+> （`updated_at` は保存時にしか動かないので、「セッションは 1 日以上続かない」ことが前提）。
+> 回収したルームのリアクションは通常の終了と同じく `ReactionStat` へ畳み込みます。旧来の「全 alive 行を削除」設計と異なり
 > **複数レプリカでも他 Pod の生きたセッションを巻き込まない**ので、`replicaCount` を増やしても
-> 安全です（既定は RPi 想定で 1）。時間ベースの保持期間 cron は廃止しました（リアクションは
-> ルーム終了時に `ReactionStat` へ畳み込み）。
+> 安全です（既定は RPi 想定で 1）。リアクションはルーム終了時に `ReactionStat` へ
+> 畳み込みます。
+>
+> **ルームの寿命**：閉じられずに残ったルームが統計に数えられ続けないよう、CronJob
+> `<release>-close-expired-rooms` が毎時 `close_expired_rooms` を走らせ、**作成から 48 時間を
+> 超えたルームを在室中でも強制クローズ**します（`room_deleted` を配信）。間隔と閾値は
+> `closeExpiredRooms.schedule` / `closeExpiredRooms.maxAgeHours`、止めるなら
+> `closeExpiredRooms.enabled=false`。
 >
 > 完全な水平スケール時の残課題は `consumers.py` の `_pending_room_deletes`（猶予削除を
 > プロセスローカルの dict + asyncio.Task で持つ点）のみ。再参加が別ワーカーに着地すると
@@ -230,7 +237,7 @@ kubectl -n registry get jobs -w
 
 > **frontend の build-arg**: `NEXT_PUBLIC_*` はビルド時に焼き込まれます。
 > `infra/build/buildkit-frontend-job.yaml` の `build-arg:NEXT_PUBLIC_BACKEND_HOST` 等を
-> 公開ドメイン（`docker-compose.prod.yml` と同じ値）に合わせて編集してください。
+> 公開ドメインに合わせて編集してください。
 
 > **ノード前提（rootless ビルド）**: rootless BuildKit は user namespace を使います。
 > Ubuntu 24.04 (arm64) では以下をノードで有効化してください。
@@ -263,8 +270,8 @@ kubectl apply -n argocd -f infra/argocd/application.example.yaml
 
 ```bash
 # 構文・テンプレート検証（クラスタ不要）
-helm lint   infra/helm/d-party
-helm template d-party infra/helm/d-party | less
+helm lint   infra/helm/d-party --set secret.existingSecret=d-party-secret
+helm template d-party infra/helm/d-party --set secret.existingSecret=d-party-secret | less
 
 # クラスタへ直接入れる場合（GitOps を使わない暫定確認）
 helm upgrade --install d-party infra/helm/d-party \
@@ -284,6 +291,53 @@ kubectl -n d-party port-forward svc/d-party-nginx 8080:80
 # http://localhost:8080/api/...  REST API
 ```
 
+### 3.6 PostgreSQL のメジャー版を上げる
+
+メジャー版のデータ形式には互換が無いので、**新しい版の空のディレクトリで initdb し、dump を
+restore する**。PGDATA はボリュームの中の `postgres.dataSubdir`（例 `pgdata18`）なので、
+版ごとに名前を変えれば旧版のデータがそのまま残り、切り戻しに使える。
+DB が小さい（数十 MB）うちは、`pg_upgrade` より dump / restore の方が速くて確実。
+
+**k3s（Argo CD）**。サービスは数分止まる。`<旧>` / `<新>` は旧版・新版のディレクトリ名。
+
+1. この chart の `postgres.image.tag` と `postgres.dataSubdir` を上げる PR を用意し、CI を通す。
+2. Argo CD の自動同期を止めてから PR をマージする（そのままだと、空の新しい DB に
+   django がつながり、PostSync の migrate が空のスキーマを作ってしまう）:
+   `kubectl -n argocd patch application d-party --type merge -p '{"spec":{"syncPolicy":{"automated":null}}}'`
+3. 書き込みを止めて、最後の dump を取る:
+
+   ```bash
+   kubectl -n d-party scale deploy/d-party-django --replicas=0
+   kubectl -n d-party patch cronjob d-party-close-expired-rooms -p '{"spec":{"suspend":true}}'
+   kubectl -n d-party exec d-party-postgres-0 -- sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > d_party.dump
+   ```
+
+4. Argo CD で postgres の StatefulSet だけを同期する（hook は走らない）。新しい Pod が空の
+   `<新>` で initdb する。
+5. restore して統計を取り直す（dump には統計が入らない）:
+
+   ```bash
+   kubectl -n d-party exec -i d-party-postgres-0 -- sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --role="$POSTGRES_USER" --exit-on-error' < d_party.dump
+   kubectl -n d-party exec d-party-postgres-0 -- sh -c 'vacuumdb -U "$POSTGRES_USER" -d "$POSTGRES_DB" --analyze-in-stages'
+   ```
+
+6. テーブルごとの行数を dump と比べ、`manage.py migrate --check` が通ることを確かめる。
+7. 自動同期を戻す（`application.yaml` の `syncPolicy` を当て直す）。django の replicas は
+   chart の値に戻り、PostSync の migrate は空振りで終わる。CronJob の `suspend` は chart が
+   持たない欄なので server-side apply では戻らない。手で戻す:
+   `kubectl -n d-party patch cronjob d-party-close-expired-rooms -p '{"spec":{"suspend":false}}'`
+8. 数週間様子を見てから、ボリュームの中の旧版のディレクトリ `<旧>` を消す。
+
+**切り戻し**（7 より前）: StatefulSet の image と PGDATA を旧版に戻し、django を戻す。旧版の
+データには触れていない。7 の後は新しい書き込みがあるので、新版から dump して旧版へ restore する。
+
+**手元（docker compose）**: 16 → 18 で compose のマウント先が `./postgres/data` から
+`./postgres/data18` に変わった。手元のデータが要らなければそのまま `docker compose up -d` で
+空の DB ができる（README の migrate 手順へ）。持ってくるなら、上げる前の compose
+（`postgres:16`）で `docker compose exec postgres pg_dump -U <user> -d <db> -Fc > d_party.dump` を
+取り、上げた後に `docker compose exec -T postgres pg_restore -U <user> -d <db> --no-owner --role=<user> < d_party.dump`。
+`./postgres/data` は不要になったら消してよい。
+
 ---
 
 ## 4. 採用コンポーネントとメンテ状況（デファクト確認）
@@ -296,7 +350,7 @@ kubectl -n d-party port-forward svc/d-party-nginx 8080:80
 | 公開／トンネル | **Cloudflare Tunnel (cloudflared)** | Cloudflare 公式、活発 |
 | クラスタ内ビルド | **moby/buildkit（rootless）** | Moby/CNCF 系、活発。daemonless で K8s Job 向き |
 | ローカルレジストリ | **registry:2（CNCF Distribution）** | CNCF プロジェクト、ARM64 提供、業界標準 |
-| DB | **postgres:16（公式）** | Docker 公式、ARM64 提供、長期メンテ |
+| DB | **postgres:18（公式）** | Docker 公式、ARM64 提供、長期メンテ |
 | キャッシュ/レイヤ | **redis:8.10（公式）** | Docker 公式、ARM64 提供 |
 | リバースプロキシ | **nginx:1.31.9（公式）** | Docker 公式 |
 | 永続化 | **local-path-provisioner** | k3s 同梱の既定 StorageClass |

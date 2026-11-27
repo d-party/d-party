@@ -1,6 +1,14 @@
 import factory
 
-from .models import AnimeRoom, AnimeUser, DmmRoom, DmmSetting, DmmUser, Setting
+from .models import (
+    DEFAULT_USER_ICON,
+    AnimeRoom,
+    AnimeUser,
+    DmmRoom,
+    DmmSetting,
+    DmmUser,
+    Setting,
+)
 
 
 class AnimeRoomFactory(factory.django.DjangoModelFactory):
@@ -9,8 +17,6 @@ class AnimeRoomFactory(factory.django.DjangoModelFactory):
 
     part_id = "123456"
     title = factory.Faker("sentence", nb_words=3)
-    updated_at = factory.Faker("date")
-    created_at = factory.Faker("date")
 
 
 class AnimeUserFactory(factory.django.DjangoModelFactory):
@@ -18,11 +24,9 @@ class AnimeUserFactory(factory.django.DjangoModelFactory):
         model = AnimeUser
 
     user_name = factory.Faker("name")
-    user_icon = "FaRegUser"
+    user_icon = DEFAULT_USER_ICON
     room_id = factory.SubFactory(AnimeRoomFactory)
     is_host = False
-    updated_at = factory.Faker("date")
-    created_at = factory.Faker("date")
 
 
 class SettingFactory(factory.django.DjangoModelFactory):
@@ -39,12 +43,8 @@ class DmmRoomFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = DmmRoom
 
-    # num_people / sum_people は実カラムではなくなった（参加ユーザーから導出する）。
-    # AnimeRoomFactory と同じく、ここでは設定しない。
     part_id = "c7tzzizzvhuj53zhmpf9aa2c0"
     title = factory.Faker("sentence", nb_words=3)
-    updated_at = factory.Faker("date")
-    created_at = factory.Faker("date")
 
 
 class DmmUserFactory(factory.django.DjangoModelFactory):
@@ -52,11 +52,9 @@ class DmmUserFactory(factory.django.DjangoModelFactory):
         model = DmmUser
 
     user_name = factory.Faker("name")
-    user_icon = "FaRegUser"
+    user_icon = DEFAULT_USER_ICON
     room_id = factory.SubFactory(DmmRoomFactory)
     is_host = False
-    updated_at = factory.Faker("date")
-    created_at = factory.Faker("date")
 
 
 class DmmSettingFactory(factory.django.DjangoModelFactory):

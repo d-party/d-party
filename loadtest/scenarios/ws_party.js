@@ -61,13 +61,14 @@ async function runRoom() {
     // 2) guest を順次 join
     for (let i = 1; i < ROOM_SIZE; i += 1) {
       const guest = new Participant(TARGET, { name: `guest${i}-vu${__VU}`, metrics, headers: HEADERS });
+      // connect や参加が失敗しても finally で閉じられるよう、先に登録する。
+      participants.push(guest);
       await guest.connect();
       const joinedP = guest.waitFor('join');
       const tj = Date.now();
       guest.send(joinMsg({ roomId, userName: `guest-${__VU}-${i}` }));
       await joinedP;
       joinTime.add(Date.now() - tj);
-      participants.push(guest);
     }
     roomSetup.add(true);
 

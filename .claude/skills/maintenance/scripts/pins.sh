@@ -112,10 +112,8 @@ collect() {
   # ── PostgreSQL / Redis / nginx ──
   local name
   for name in postgres redis nginx; do
-    for f in docker-compose.yml docker-compose.prod.yml; do
-      v=$(grep -oE "image: $name:[^ ]+" "$f" | sed 's/^image: //' | first)
-      pin "$name" "$f" "$v" "$(minor "${v#*:}" | grep . || major "${v#*:}")"
-    done
+    v=$(grep -oE "image: $name:[^ ]+" docker-compose.yml | sed 's/^image: //' | first)
+    pin "$name" "docker-compose.yml" "$v" "$(minor "${v#*:}" | grep . || major "${v#*:}")"
     v=$(helm_tag "$name")
     pin "$name" "infra/helm/d-party/values.yaml" "$v" "$(minor "$v" | grep . || major "$v")"
     while IFS= read -r line; do

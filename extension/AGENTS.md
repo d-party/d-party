@@ -17,6 +17,7 @@ src/
     ports.ts         PartySocket / PlayerController / SidebarView / Notifier などの境界
     ActionGuard.ts   受信した操作を送り返さないためのフラグ
   infrastructure/  ws/ · storage/（chrome.storage.sync）· notifier/ · api/ · env.ts
+  styles/          theme.css（popup と sidebar が共有するテーマトークン）· sidebar.css
   presentation/    注入先ごとのエントリ
     background/      service worker
     content/store/   作品ページ

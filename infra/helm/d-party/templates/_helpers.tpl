@@ -38,6 +38,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "d-party.nginx.fullname" -}}{{ include "d-party.fullname" . }}-nginx{{- end -}}
 {{- define "d-party.postgres.fullname" -}}{{ include "d-party.fullname" . }}-postgres{{- end -}}
 {{- define "d-party.redis.fullname" -}}{{ include "d-party.fullname" . }}-redis{{- end -}}
+{{- define "d-party.closeExpiredRooms.fullname" -}}{{ include "d-party.fullname" . }}-close-expired-rooms{{- end -}}
 
 {{/* 機微値を載せる Secret 名（existingSecret 優先） */}}
 {{- define "d-party.secretName" -}}

@@ -5,7 +5,7 @@ Raspberry Pi (arm64) の k3s クラスタへ Helm でデプロイし、Argo CD �
 
 ```
 helm/d-party/   d-party の Helm chart（nginx · django · frontend · postgres · redis · migrate hook
-                · networkpolicy · priorityclass · ingress（任意））
+                · close-expired-rooms CronJob · networkpolicy · priorityclass · ingress（任意））
 platform/       クラスタ共有の基盤（ローカルレジストリと各ノードの registries.yaml）
 build/          rootless BuildKit で arm64 ネイティブビルドし、共有レジストリへ push する Job
 argocd/         Argo CD Application の雛形（実体は運用リポジトリ）
@@ -28,8 +28,8 @@ argocd/         Argo CD Application の雛形（実体は運用リポジトリ�
   1012 で切れ、拡張機能は自動再接続しない。
 
 ```bash
-helm lint infra/helm/d-party
-helm template d-party infra/helm/d-party | less
+helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret
+helm template d-party infra/helm/d-party --set secret.existingSecret=d-party-secret | less
 
 k3d cluster create d-party --agents 2
 helm upgrade --install d-party infra/helm/d-party -n d-party --create-namespace \

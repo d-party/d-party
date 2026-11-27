@@ -1,4 +1,5 @@
 import uuid
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
 from django.db import models
@@ -10,6 +11,17 @@ from .mixins import (
     LogicalDeletionMixin,
     LogicalDeletionQuerySet,
 )
+
+# 列の長さ。WebSocket の入力検証（``format.py``）も同じ値を使う。
+PART_ID_MAX_LENGTH = 16
+# DMM TV の part_id（``season/content`` の id）は dアニメストアの数値 partId より長い。
+DMM_PART_ID_MAX_LENGTH = 128
+TITLE_MAX_LENGTH = 255
+USER_NAME_MAX_LENGTH = 20
+USER_ICON_MAX_LENGTH = 64
+DEFAULT_USER_NAME = "user"
+# react-icons (Font Awesome 6) のキー。
+DEFAULT_USER_ICON = "FaRegUser"
 
 
 class BaseRoomQuerySet(LogicalDeletionQuerySet):
@@ -57,9 +69,9 @@ class BaseRoom(LogicalDeletionMixin):
     """ルームの共通スキーマ。具象は ``AnimeRoom`` / ``DmmRoom``。"""
 
     room_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    part_id = models.CharField(max_length=16)
+    part_id = models.CharField(max_length=PART_ID_MAX_LENGTH)
     # 作成時に拡張機能が送る作品名（以後は更新しない）。OGP などに使う。
-    title = models.CharField(max_length=255, blank=True, default="")
+    title = models.CharField(max_length=TITLE_MAX_LENGTH, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -116,9 +128,13 @@ class BaseUser(LogicalDeletionMixin):
     """参加ユーザーの共通スキーマ。具象は ``AnimeUser`` / ``DmmUser``。"""
 
     user_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user_name = EncryptedCharField(default="user", max_length=20)
-    # react-icons (Font Awesome 6) のキー。個人情報ではないので平文。
-    user_icon = models.CharField(default="FaRegUser", max_length=64)
+    user_name = EncryptedCharField(
+        default=DEFAULT_USER_NAME, max_length=USER_NAME_MAX_LENGTH
+    )
+    # 個人情報ではないので平文。
+    user_icon = models.CharField(
+        default=DEFAULT_USER_ICON, max_length=USER_ICON_MAX_LENGTH
+    )
     is_host = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -162,7 +178,7 @@ class BaseRoomHistory(models.Model):
 class BaseReactionStat(models.Model):
     """日次 × 種別に畳み込んだリアクションの集計（共通スキーマ）。
 
-    ルーム終了時に ``cron.fold_room_reactions`` がそのルームのリアクションをここへ加算し、
+    ルーム終了時に ``reactions.fold_room_reactions`` がそのルームのリアクションをここへ加算し、
     元の行は物理削除する。``(date, reaction_type)`` で一意。
 
     具象（``ReactionStat`` / ``DmmReactionStat``）は制約・インデックス名が衝突しないよう
@@ -172,6 +188,10 @@ class BaseReactionStat(models.Model):
     date = models.DateField()
     reaction_type = models.CharField(max_length=3, choices=ReactionType.choices)
     count = models.PositiveIntegerField(default=0)
+
+    # ``BaseSetting`` と同じく、具象を ``type[BaseReactionStat]`` として扱う集計
+    # （``reactions.py``）から ``.objects`` を型安全に参照するため（挙動は既定と同一）。
+    objects = models.Manager()
 
     class Meta:
         abstract = True
@@ -229,7 +249,7 @@ class DmmRoom(BaseRoom):
     # DMM TV の content/season id は英数字で 25 文字前後あり、dアニメストアの数値 partId
     # より長い。抽象基底の part_id(max_length=16) を DMM 向けに拡張する（既存 anime 側の
     # スキーマには影響しない。抽象基底フィールドの上書きは Django が許可している）。
-    part_id = models.CharField(max_length=128)
+    part_id = models.CharField(max_length=DMM_PART_ID_MAX_LENGTH)
 
 
 class DmmSetting(BaseSetting):
@@ -264,3 +284,44 @@ class DmmReactionStat(BaseReactionStat):
             )
         ]
         indexes = [models.Index(fields=["date"])]
+
+
+# ---------------------------------------------------------------------------
+# サービスごとのモデル一式。consumer・永続化（``repository.py``）・集計
+# （``reactions.py``）・統計 API は、これを受け取ってサービスに依存せず動く。
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Service:
+    """1 つの動画配信サービスが使う具象モデルの組。"""
+
+    room: type[BaseRoom]
+    user: type[BaseUser]
+    reaction: type[BaseReaction]
+    setting: type[BaseSetting]
+    reaction_stat: type[BaseReactionStat]
+
+    @property
+    def part_id_max_length(self) -> int:
+        max_length = self.room._meta.get_field("part_id").max_length
+        assert max_length is not None  # noqa: S101 - CharField は必ず持つ
+        return max_length
+
+
+ANIME_STORE = Service(
+    room=AnimeRoom,
+    user=AnimeUser,
+    reaction=AnimeReaction,
+    setting=Setting,
+    reaction_stat=ReactionStat,
+)
+DMM_TV = Service(
+    room=DmmRoom,
+    user=DmmUser,
+    reaction=DmmReaction,
+    setting=DmmSetting,
+    reaction_stat=DmmReactionStat,
+)
+# 統計はこの全サービスを合算する（サービスを増やしたらここへ足す）。
+SERVICES = (ANIME_STORE, DMM_TV)

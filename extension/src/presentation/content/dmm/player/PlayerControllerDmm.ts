@@ -25,6 +25,9 @@ const VIDEO_SELECTORS = [
   "video",
 ];
 
+/** Chrome が受け付ける playbackRate の上限。 */
+const MAX_PLAYBACK_RATE = 16;
+
 export function findDmmVideo(): HTMLVideoElement | null {
   for (const selector of VIDEO_SELECTORS) {
     const el = document.querySelector<HTMLVideoElement>(selector);
@@ -130,7 +133,8 @@ export class PlayerControllerDmm implements PlayerController {
 
   private seek(option: SyncOption): void {
     const v = this.video();
-    if (!v) return;
+    // 他の参加者から届いた値。有限でない値を currentTime に入れると例外になる。
+    if (!v || !Number.isFinite(option.time)) return;
     this.guard.suppress();
     v.currentTime = option.time;
   }
@@ -139,7 +143,9 @@ export class PlayerControllerDmm implements PlayerController {
     const v = this.video();
     if (!v) return;
     const rate = Number(option.rate);
-    if (!Number.isNaN(rate) && v.playbackRate !== rate) {
+    // 範囲外の値を playbackRate に入れると例外になる。
+    if (!(rate > 0 && rate <= MAX_PLAYBACK_RATE)) return;
+    if (v.playbackRate !== rate) {
       v.playbackRate = rate;
     }
   }

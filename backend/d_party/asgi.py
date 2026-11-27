@@ -14,23 +14,22 @@ from django.conf import settings
 
 import streamer.routing
 
+# 拡張機能は dアニメストアのページから、タイマー画面は公開サイトからつなぐ。
 # OriginValidator は scheme を省いた値をホスト名として照合し、既定ポートも同一視する。
-allowed_hosts = [os.environ["D_ANIME_STORE_DOMAIN"]]
-
-# 拡張機能（D_ANIME_STORE_DOMAIN）に加え、タイマー画面のフロント（MY_DOMAIN）も許可する。
-_my_domain = os.environ["MY_DOMAIN"]
-allowed_hosts += [_my_domain, "www." + _my_domain]
-
+allowed_origins = [
+    settings.D_ANIME_STORE_DOMAIN,
+    settings.MY_DOMAIN,
+    f"www.{settings.MY_DOMAIN}",
+]
 if settings.DEBUG:
-    allowed_hosts += ["*"]
-
+    allowed_origins.append("*")
 
 application = ProtocolTypeRouter(
     {
         "http": django_asgi_app,
         # 認証を使わないので AuthMiddlewareStack は挟まない。
         "websocket": OriginValidator(
-            URLRouter(streamer.routing.websocket_urlpatterns), allowed_hosts
+            URLRouter(streamer.routing.websocket_urlpatterns), allowed_origins
         ),
     }
 )

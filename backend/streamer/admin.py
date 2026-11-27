@@ -2,8 +2,11 @@ from django.contrib import admin
 from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
-from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
+from django_otp_webauthn.admin import (
+    WebAuthnCredentialAdmin as BaseWebAuthnCredentialAdmin,
+)
+from django_otp_webauthn.models import WebAuthnCredential
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
@@ -24,7 +27,7 @@ from .models import (
     permissions=["change", "delete"],
 )
 def logically_delete(modeladmin, request, queryset):
-    queryset.update(deleted_at=now())
+    queryset.delete()
 
 
 @admin.action(
@@ -32,7 +35,7 @@ def logically_delete(modeladmin, request, queryset):
     permissions=["change", "delete"],
 )
 def revive(modeladmin, request, queryset):
-    queryset.update(deleted_at=None)
+    queryset.revive()
 
 
 class LogicalDeletionModelAdmin(ModelAdmin):
@@ -174,3 +177,11 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
 @admin.register(Group)
 class GroupAdmin(BaseGroupAdmin, ModelAdmin):
     pass
+
+
+# django-otp-webauthn は admin に登録しないので、unfold の見た目でここに登録する。
+# 一覧の上に「パスキーを登録」ボタンを足している（templates/admin/django_otp_webauthn/）。
+@admin.register(WebAuthnCredential)
+class WebAuthnCredentialAdmin(BaseWebAuthnCredentialAdmin, ModelAdmin):
+    # 持ち主を付け替えると、そのパスキーで他人としてログインできてしまう。
+    readonly_fields = [*BaseWebAuthnCredentialAdmin.readonly_fields, "user"]

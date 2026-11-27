@@ -1,9 +1,17 @@
-# 週次保守。Claude Code が skill を無人で実行する（dependabot-review-and-merge → release）。
+# 週次保守。Dependabot PR を Claude Code が調べて判定し（review）、判定を機械的な条件で
+# 確かめてからマージし（merge）、規則どおりにリリースを切る（release）。
 # 無人実行のルールは各 SKILL.md の「非対話モード」節。
+#
+# 権限の分け方:
+#   - review は未マージの依存のコードを install / build / test で動かし、PR 本文や上流の
+#     changelog のような第三者が書いたテキストも読む。だから書き込み権限を持たせない
+#     （GitHub が Dependabot の PR の CI に読み取り専用のトークンを渡すのと同じ前提）。
+#   - merge は書き込み権限を持つが、依存のコードも LLM も動かさない。
+#     review の判定は候補としてだけ使い、条件は .github/scripts/dependabot-merge.sh が確かめる。
+#   - release も LLM を使わない（.github/scripts/weekly-release.sh）。
 #
 # GITHUB_TOKEN の制約:
 #   - GITHUB_TOKEN による push / マージは後続のワークフローを起動しない。
-#     Dependabot ブランチへ push すると PR の CI が回らず検証できないので、push はしない。
 #     マージ後の main で走る push トリガのワークフロー（storybook-deploy など）も起動しない。
 #   - GITHUB_TOKEN には `workflows` 権限が無いため、.github/workflows/ を書き換える
 #     PR（github-actions ecosystem）はマージできない。検証結果をコメントして人に回す。
@@ -18,7 +26,7 @@ on:
   workflow_dispatch:
     inputs:
       release:
-        description: "Run the release skill after the Dependabot review"
+        description: "Run the weekly release after the Dependabot review"
         required: false
         type: boolean
         default: true
@@ -31,20 +39,20 @@ concurrency:
 permissions: {}
 
 jobs:
-  dependabot:
-    name: Review & merge Dependabot PRs
+  review:
+    name: Review Dependabot PRs
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    # 読み取りだけ。マージ・コメント・push はこのジョブからはできない。
     permissions:
-      contents: write
-      pull-requests: write
-      issues: write
+      contents: read
+      pull-requests: read
       actions: read
       checks: read
     # backend の pytest 用。
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18
         env:
           POSTGRES_DB: d_party
           POSTGRES_USER: d_party
@@ -57,6 +65,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
+      # 読み取り専用（上の permissions）。gh pr view / gh run view 用。
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       SECRET_KEY: django-insecure-ci
       DEBUG: "1"
@@ -78,10 +87,12 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          # 依存のコードから .git/config 経由でトークンを読めないようにする。
+          persist-credentials: false
 
       # ゲートのツールは先に入れておく（Claude に入れさせない）。
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.3
+        uses: astral-sh/setup-uv@v10.4.0
         with:
           working-directory: backend
           cache-dependency-glob: "uv.lock"
@@ -95,6 +106,7 @@ jobs:
           node-version: 26
           cache: pnpm
 
+      # 検証用に PR を束ねるローカルの merge commit に要る。push はしない。
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
@@ -109,6 +121,7 @@ jobs:
             これは GitHub Actions 上の無人実行です。ユーザーへの質問はできません。
             SKILL.md の「非対話モード（GitHub Actions の定期実行）」節のルールを
             他のすべての手順より優先して守ってください。
+            判定は、その節の形でリポジトリのルートの `maintenance-verdict.json` に書いてください。
           # ゲートの build / storybook / pytest は数分かかるので Bash の上限を延ばす。
           settings: |
             {
@@ -118,12 +131,46 @@ jobs:
               }
             }
           claude_args: |
-            --allowedTools "Skill,Bash,Read,Edit,Write,Glob,Grep,WebFetch,WebSearch,TodoWrite"
+            --allowedTools "Skill,Bash,Read,Edit,Write,Glob,Grep,WebFetch,TodoWrite"
+
+      - name: Upload the verdict
+        uses: actions/upload-artifact@v7
+        with:
+          name: dependabot-verdict
+          path: maintenance-verdict.json
+          if-no-files-found: error
+          retention-days: 7
+
+  merge:
+    name: Merge approved Dependabot PRs
+    needs: review
+    runs-on: ubuntu-latest
+    # Dependabot の rebase を最大 30 分待つ。
+    timeout-minutes: 60
+    # 依存のコードと LLM を動かさないジョブにだけ書き込み権限を渡す。
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: dependabot-verdict
+          path: ${{ runner.temp }}/verdict
+
+      - name: Merge and comment
+        run: .github/scripts/dependabot-merge.sh "$RUNNER_TEMP/verdict/maintenance-verdict.json"
 
   release:
     name: Cut the weekly release
-    needs: dependabot
-    # dependabot が失敗しても main にあるもの（マージ済みの分）はリリースしてよい。
+    needs: [review, merge]
+    # review や merge が失敗しても main にあるもの（マージ済みの分）はリリースしてよい。
     # 手動実行で release=false のときだけ止める。
     if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.release) }}
     runs-on: ubuntu-latest
@@ -131,34 +178,18 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+      # 保留の issue を立てる。
       issues: write
+      # release.yml の dispatch。
       actions: write
       checks: read
-      packages: read
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: main
           fetch-depth: 0
+          persist-credentials: false
 
-      - uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          prompt: |
-            Skill ツールで `release` を実行してください。
-            これは GitHub Actions 上の無人実行です。ユーザーへの質問はできません。
-            SKILL.md の「非対話モード（GitHub Actions の定期実行）」節のルールで
-            バンプ種別を決め、そのほかの手順より優先して守ってください。
-          # release.yml の arm64 ビルドを待つので Bash の上限を延ばす。
-          settings: |
-            {
-              "env": {
-                "BASH_DEFAULT_TIMEOUT_MS": "1800000",
-                "BASH_MAX_TIMEOUT_MS": "3600000"
-              }
-            }
-          claude_args: |
-            --allowedTools "Skill,Bash,Read,Glob,Grep,TodoWrite"
+      - name: Decide and dispatch the release
+        run: .github/scripts/weekly-release.sh

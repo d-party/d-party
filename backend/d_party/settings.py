@@ -5,6 +5,7 @@ from pathlib import Path
 
 from django.templatetags.static import static
 from django.urls import reverse_lazy
+from django.utils.csp import CSP
 from django.utils.translation import gettext_lazy as _
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -13,13 +14,25 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 
 DEBUG = os.environ["DEBUG"] == "1"
 
-ALLOWED_HOSTS = [os.environ["MY_DOMAIN"], "www." + os.environ["MY_DOMAIN"], "django"]
+# 公開サイトのドメインと、拡張機能が動く動画配信サービス（dアニメストア・DMM TV）のドメイン。
+MY_DOMAIN = os.environ["MY_DOMAIN"]
+D_ANIME_STORE_DOMAIN = os.environ["D_ANIME_STORE_DOMAIN"]
+DMM_TV_DOMAIN = os.environ.get("DMM_TV_DOMAIN", "tv.dmm.com")
+
+# これより古い拡張機能にはロビーで更新を促す（``x.y.z``）。
+CHROME_EXTENSION_REQUIRED_VERSION = os.environ.get("CHROME_EXTENSION_REQUIRED_VERSION")
+
+# 統計 API のレスポンスをキャッシュする秒数。
+STATS_CACHE_SECONDS = int(os.environ.get("STATS_CACHE_SECONDS", "300"))
+
+ALLOWED_HOSTS = [MY_DOMAIN, f"www.{MY_DOMAIN}", "django"]
 if DEBUG:
     # ``["*"]`` にしない。DEBUG=1 のまま本番に出ても Host ヘッダを偽装させないため。
     ALLOWED_HOSTS += ["localhost", "127.0.0.1", "[::1]", "testserver"]
 # TLS は nginx / Cloudflare が終端し Django からは http に見えるので、https の Origin を
-# 明示的に信頼する。
-CSRF_TRUSTED_ORIGINS = ["https://*." + os.environ["MY_DOMAIN"]]
+# 明示的に信頼する。``*.`` で全サブドメインを信頼しない（別のサービスを載せたサブドメイン
+# から管理画面へ CSRF できてしまう）。
+CSRF_TRUSTED_ORIGINS = [f"https://{MY_DOMAIN}", f"https://www.{MY_DOMAIN}"]
 
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
@@ -40,20 +53,29 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django_extensions",
     "channels",
     "rest_framework",
     "drf_spectacular",
     "axes",
+    "django_otp",
+    "django_otp_webauthn",
     "streamer",
     "api",
 ]
+if DEBUG:
+    # shell_plus などの開発用コマンド。本番では読み込まない。
+    INSTALLED_APPS += ["django_extensions"]
 
 # OpenAPI スキーマは `manage.py spectacular` でファイル（backend/openapi.json）に書き出す。
 # スキーマを配信する URL は持たない。
 REST_FRAMEWORK = {
-    # REST API はすべて公開（認証なし）。スキーマにも認証を載せない。
+    # REST API はすべて公開（認証・権限なし）。スキーマにも認証を載せない。
     "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    # JSON だけを返す。既定に入っている Browsable API（HTML の画面とフォーム）は出さない。
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    # 受け取るのも JSON だけ（フォームやファイルのアップロードは受けない）。
+    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
@@ -66,18 +88,42 @@ SPECTACULAR_SETTINGS = {
 AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesBackend",
     "django.contrib.auth.backends.ModelBackend",
+    # パスキーでのログイン。検証済みの credential から user を引くだけで、パスワードは見ない。
+    "django_otp_webauthn.backends.WebAuthnBackend",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "django.middleware.csp.ContentSecurityPolicyMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # AuthenticationMiddleware の後に置く（user.is_verified() を生やす）。
+    "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "axes.middleware.AxesMiddleware",
 ]
+
+# Content-Security-Policy。Django が HTML を返すのは管理画面だけ。
+# まず Report-Only で出す（ブロックはせず、違反はブラウザのコンソールに出る）。違反が
+# 出ないことを本番で確かめたら、同じ内容を SECURE_CSP へ移して強制する。
+SECURE_CSP_REPORT_ONLY = {
+    "default-src": [CSP.SELF],
+    # 'unsafe-eval' は Unfold の Alpine.js が式を評価するのに要る。インラインの <script> は
+    # 許さず、テンプレートで {% csp_nonce_attr %} を付けたものだけを通す。
+    "script-src": [CSP.SELF, CSP.UNSAFE_EVAL, CSP.NONCE],
+    # Unfold / htmx / Alpine.js が <style> と style 属性を使う。
+    "style-src": [CSP.SELF, CSP.UNSAFE_INLINE],
+    "img-src": [CSP.SELF, "data:"],
+    "font-src": [CSP.SELF],
+    "connect-src": [CSP.SELF],
+    "object-src": [CSP.NONE],
+    "base-uri": [CSP.SELF],
+    "form-action": [CSP.SELF],
+    "frame-ancestors": [CSP.NONE],
+}
 
 ROOT_URLCONF = "d_party.urls"
 
@@ -85,12 +131,14 @@ TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         # unfold の admin/index.html をダッシュボードで上書きする。
-        "DIRS": [os.path.join(BASE_DIR, "templates")],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
                 "django.template.context_processors.request",
+                # テンプレートの {% csp_nonce_attr %} に nonce を渡す。
+                "django.template.context_processors.csp",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
@@ -98,7 +146,6 @@ TEMPLATES = [
     },
 ]
 
-# redis
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
 CHANNEL_LAYERS = {
@@ -117,8 +164,6 @@ CACHES = {
     }
 }
 
-# Database
-
 DATABASES = {
     "default": {
         "ENGINE": os.environ["DATABASE_ENGINE"],
@@ -130,25 +175,15 @@ DATABASES = {
     }
 }
 
-# Password validation
-
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    {"NAME": f"django.contrib.auth.password_validation.{validator}"}
+    for validator in (
+        "UserAttributeSimilarityValidator",
+        "MinimumLengthValidator",
+        "CommonPasswordValidator",
+        "NumericPasswordValidator",
+    )
 ]
-
-
-# Internationalization
 
 LANGUAGE_CODE = os.environ["LANGUAGE_CODE"]
 
@@ -167,6 +202,27 @@ UNFOLD = {
         "light": lambda request: static("branding/dp-mini.png"),
         "dark": lambda request: static("branding/dp-mini.png"),
     },
+    # 公開サイト（frontend/public/favicon/）と同じ画像を置いている
+    "SITE_FAVICONS": [
+        {
+            "rel": "icon",
+            "sizes": "32x32",
+            "type": "image/png",
+            "href": lambda request: static("branding/favicon-32x32.png"),
+        },
+        {
+            "rel": "icon",
+            "sizes": "16x16",
+            "type": "image/png",
+            "href": lambda request: static("branding/favicon-16x16.png"),
+        },
+        {
+            "rel": "apple-touch-icon",
+            "sizes": "180x180",
+            "type": "image/png",
+            "href": lambda request: static("branding/apple-touch-icon.png"),
+        },
+    ],
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "SHOW_BACK_BUTTON": False,
@@ -240,6 +296,13 @@ UNFOLD = {
                         "link": reverse_lazy("admin:auth_user_changelist"),
                     },
                     {
+                        "title": _("パスキー"),
+                        "icon": "passkey",
+                        "link": reverse_lazy(
+                            "admin:django_otp_webauthn_webauthncredential_changelist"
+                        ),
+                    },
+                    {
                         "title": _("グループ"),
                         "icon": "shield_person",
                         "link": reverse_lazy("admin:auth_group_changelist"),
@@ -263,21 +326,16 @@ UNFOLD = {
 }
 
 
-# Static files (CSS, JavaScript, Images)
-
 STATIC_URL = "static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "static/")
+STATIC_ROOT = BASE_DIR / "static"
 # 公開ページは frontend が持つので、static は管理画面の素材だけ。
-STATICFILES_DIRS = [os.path.join(BASE_DIR, "assets")]
-
-# Default primary key field type
+STATICFILES_DIRS = [BASE_DIR / "assets"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Channels
 ASGI_APPLICATION = "d_party.asgi.application"
 
-# axes
+# 管理画面のログイン試行制限（django-axes）。
 AXES_FAILURE_LIMIT = 10
 AXES_COOLOFF_TIME = 6
 # ユーザー名だけでロックする。
@@ -286,3 +344,17 @@ AXES_RESET_ON_SUCCESS = True
 
 if DEBUG:
     AXES_ENABLED = False
+
+# パスキー（WebAuthn）。管理画面のログインにだけ使う。
+# RP ID を変えると登録済みのパスキーはすべて使えなくなる（移行はできない）。
+OTP_WEBAUTHN_RP_ID = os.environ["MY_DOMAIN"]
+OTP_WEBAUTHN_RP_NAME = "d-party"
+OTP_WEBAUTHN_ALLOWED_ORIGINS = [
+    "https://" + os.environ["MY_DOMAIN"],
+    "https://www." + os.environ["MY_DOMAIN"],
+]
+if DEBUG:
+    # nginx 経由と runserver 直の両方から管理画面に入る。
+    OTP_WEBAUTHN_ALLOWED_ORIGINS += ["http://localhost", "http://localhost:8000"]
+# パスキーでログインした後の行き先（?next= が無いとき）。
+LOGIN_REDIRECT_URL = "admin:index"

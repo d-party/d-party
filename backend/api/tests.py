@@ -1,7 +1,7 @@
 import datetime
-import os
 
 import pytest
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
@@ -44,9 +44,7 @@ class TestVersionCheckAPI(APITestCase):
     @pytest.mark.django_db
     def test_version_check_possible_edgecase_ok_200(self):
         """最小バージョンと同じなら可。"""
-        get_params = {
-            "extension-version": str(os.getenv("CHROME_EXTENSION_REQUIRED_VERSION"))
-        }
+        get_params = {"extension-version": settings.CHROME_EXTENSION_REQUIRED_VERSION}
         response = self.client.get(self.endpoint, get_params)
         assert response.status_code == status.HTTP_200_OK
         assert response.data["is_possible"]
@@ -96,7 +94,11 @@ class TestAnimeStoreLobbyResolveAPI(APITestCase):
         assert response.data["part_id"] == "654321"
         assert response.data["room_id"] == str(room.room_id)
         assert response.data["title"] == "鬼滅の刃 - 第1話 - 残酷"
-        assert "partId=654321" in response.data["redirect_url"]
+        # 拡張機能は転送先の URL から ``party`` と ``room_id`` を読んで参加する。
+        assert response.data["redirect_url"] == (
+            f"https://{settings.D_ANIME_STORE_DOMAIN}/animestore/sc_d_pc"
+            f"?partId=654321&party=join&room_id={room.room_id}"
+        )
 
     @pytest.mark.django_db
     def test_lobby_resolve_not_found_404(self):
@@ -149,6 +151,14 @@ class TestDmmTvLobbyResolveAPI(APITestCase):
         import uuid
 
         response = self.client.get(self.endpoint(uuid.uuid4()))
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    @pytest.mark.django_db
+    def test_lobby_resolve_ended_room_404(self):
+        """論理削除済み（終了した）ルームでは 404 が返ることを確認"""
+        room = DmmRoomFactory()
+        room.delete()
+        response = self.client.get(self.endpoint(room.room_id))
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -211,7 +221,7 @@ class TestStatsPeriodScope(APITestCase):
     @pytest.mark.django_db
     def test_reaction_counts_come_from_reactionstat_and_live(self):
         """リアクション集計は ReactionStat（畳み込み済み）と alive ルームの合算。"""
-        today = timezone.now().date()
+        today = timezone.localdate()
         ReactionStat.objects.create(date=today, reaction_type="S", count=5)
         live_room = AnimeRoomFactory()  # alive
         self._make_reaction(live_room, "S", timezone.now())
@@ -267,7 +277,7 @@ class TestStatsCache(APITestCase):
 
     @pytest.mark.django_db
     def test_response_is_cached(self):
-        today = timezone.now().date()
+        today = timezone.localdate()
         ReactionStat.objects.create(date=today, reaction_type="S", count=3)
 
         first = self.client.get(self.endpoint, {"days": "30"})

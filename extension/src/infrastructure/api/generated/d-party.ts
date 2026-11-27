@@ -7,12 +7,14 @@
 import type {
   ApiMessage,
   CountResult,
+  HourlyAverageResult,
   LobbyRedirect,
   PerDayResult,
   ReactionTypeCountResult,
   ShieldsBadge,
   StatsActiveRoomPerDayParams,
   StatsActiveUserPerDayParams,
+  StatsHourlyAverageUserParams,
   StatsReactionAllCountParams,
   StatsReactionCountParams,
   StatsRoomAllCountParams,
@@ -753,6 +755,56 @@ export const getStatsUserAllCountUrl = (params?: StatsUserAllCountParams,) => {
 export const statsUserAllCount = async (params?: StatsUserAllCountParams, options?: Parameters<typeof customFetch>[1]): Promise<statsUserAllCountResponse> => {
 
   return customFetch<statsUserAllCountResponse>(getStatsUserAllCountUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type statsHourlyAverageUserResponse200 = {
+  data: HourlyAverageResult
+  status: 200
+}
+
+export type statsHourlyAverageUserResponse400 = {
+  data: ApiMessage
+  status: 400
+}
+
+export type statsHourlyAverageUserResponseSuccess = (statsHourlyAverageUserResponse200) & {
+  headers: Headers;
+};
+export type statsHourlyAverageUserResponseError = (statsHourlyAverageUserResponse400) & {
+  headers: Headers;
+};
+
+export type statsHourlyAverageUserResponse = (statsHourlyAverageUserResponseSuccess | statsHourlyAverageUserResponseError)
+
+export const getStatsHourlyAverageUserUrl = (params?: StatsHourlyAverageUserParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/statistics/anime-store/hourly-average-user?${stringifiedParams}` : `/api/v1/statistics/anime-store/hourly-average-user`
+}
+
+/**
+ * Average users entering a room in each hour of the day (by entry time).
+ */
+export const statsHourlyAverageUser = async (params?: StatsHourlyAverageUserParams, options?: Parameters<typeof customFetch>[1]): Promise<statsHourlyAverageUserResponse> => {
+
+  return customFetch<statsHourlyAverageUserResponse>(getStatsHourlyAverageUserUrl(params),
   {
     ...options,
     method: 'GET'

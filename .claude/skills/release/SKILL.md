@@ -132,8 +132,10 @@ gh api "orgs/d-party/packages/container/frontend/versions" -q '.[0].metadata.con
 
 ## 非対話モード（GitHub Actions の定期実行）
 
-`.github/workflows/maintenance.yml` が週 1 回、Dependabot の処理の後にこの skill を
-無人で動かす。ユーザーに質問できないので、§1 の確認を以下の規則に置き換える。
+`.github/workflows/maintenance.yml` が週 1 回、Dependabot の処理の後にこの節の規則で
+リリースを切る。実行するのは Claude ではなく `.github/scripts/weekly-release.sh`
+（`actions: write` を持つジョブに、誰でも書ける PR や issue の本文を読む LLM を置かないため）。
+この節はそのスクリプトの仕様。規則を変えるときはスクリプトも合わせて直す。
 対話セッションではこの節は無視する。
 
 ### リリースするかどうか
@@ -173,7 +175,8 @@ major は自動で選ばない。拡張機能とバックエンドの互換が�
   チェックがすべて成功していたことで確認する
   （`gh pr list -R d-party/d-party --state merged --search "merged:>=<前回タグの日付>"` →
   `gh pr view <N> --json statusCheckRollup`）。
-- main で直近に走った run に失敗があり、その後の run で解消されていなければリリースしない。
+- main で直近に走った run に失敗があり、その後の run で解消されていなければリリースしない
+  （ワークフローごとの最新の run で見る。fork の PR の run は head branch が main でも数えない）。
 - 開いている Dependabot PR は release blocker ではない。
 
 ### 止めるとき・失敗したとき
@@ -189,6 +192,5 @@ gh issue create -R d-party/d-party --title "週次リリース保留: <理由の
 
 ### 監視
 
-`gh run watch` は Bash の上限（30 分）に収まらないことがあるので、
-`gh run view "$RUN" --json status,conclusion` を数分おきに見て `completed` を待つ。
-完了したら §4 の確認を行い、結果を `$GITHUB_STEP_SUMMARY` に書く。
+`gh run watch "$RUN" --exit-status` で完了を待ち、作られたタグと run の URL を
+`$GITHUB_STEP_SUMMARY` に書く。

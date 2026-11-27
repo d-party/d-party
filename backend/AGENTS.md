@@ -10,22 +10,26 @@ Django へ振り分ける。
 | 言語 / 依存管理 | Python 3.15 / uv（`pyproject.toml` · `uv.lock`） |
 | フレームワーク | Django 6 · Channels 4 · DRF（スキーマは drf-spectacular）· djangochannelsrestframework |
 | ASGI | 本番 gunicorn + uvicorn-worker / dev（`DEBUG=1`）runserver |
-| DB / レイヤ | PostgreSQL 16 / Redis 7（`channels-redis`） |
+| DB / レイヤ | PostgreSQL 18 / Redis 8（`channels-redis`） |
 | Lint・型 | ruff（format · lint · import 順序 · SAST · 複雑度）/ mypy（django-stubs · drf-stubs） |
 | テスト | pytest（pytest-django · pytest-asyncio · factory-boy · pytest-cov） |
 
 ```
 d_party/        settings.py · asgi.py（ProtocolTypeRouter / OriginValidator）· urls.py
 streamer/       同時視聴のコア
-  consumers.py    AnimePartyConsumer（create / join / leave / video_operation / reaction …）
-  format.py       pydantic のメッセージ定義（公開プロトコル）
-  models.py       AnimeRoom / AnimeUser / AnimeReaction / AnimeRoomHistory / Setting
+  consumers.py    BasePartyConsumer（create / join / leave / video_operation / reaction …）と、
+                  モデル一式（Service）だけを差し替える AnimePartyConsumer / DmmPartyConsumer
+  format.py       pydantic のメッセージ定義（公開プロトコル。受信の検証と送信の形）
+  repository.py   consumer が await で呼ぶ永続化（ルーム・参加者・設定）
+  reactions.py    リアクションの集計（ルーム終了時の ReactionStat への畳み込み · 全サービス合算の種別ごとの累計）
+  models.py       抽象基底（BaseRoom ほか）と具象（dアニメストア: AnimeRoom / AnimeUser / AnimeReaction /
+                  AnimeRoomHistory / Setting / ReactionStat、DMM TV: Dmm*）· サービスの組（ANIME_STORE / DMM_TV）
   mixins.py       LogicalDeletionMixin（論理削除）
   fields.py       EncryptedCharField（Fernet）
-  cron.py         fold_room_reactions（ルーム終了時にリアクションを ReactionStat へ畳み込む）
-  management/commands/close_active_sessions.py
+  management/commands/close_active_sessions.py   起動時の ghost 回収
+  management/commands/close_expired_rooms.py     48 時間を超えたルームの強制クローズ（cron）
 api/            DRF（統計 · shields バッジ · バージョン確認 · ロビー解決）
-templates/admin/ 管理画面トップ（Unfold ダッシュボード）
+templates/admin/ 管理画面トップ（Unfold ダッシュボード）· ログイン画面とパスキー一覧への差し込み
 entrypoint.sh   close_active_sessions → runserver / gunicorn
 conftest.py     テストでは InMemoryChannelLayer を使う
 manage.py       /env_files/*.env があれば読む
@@ -33,12 +37,19 @@ manage.py       /env_files/*.env があれば読む
 
 compose・nginx・env はルートが持ち、`backend/` は build context として参照される。
 ホストの解決先は env（`DATABASE_HOST` · `REDIS_HOST` など）で差し替える。
+env を読むのは `settings.py` だけにし、ほかは `django.conf.settings` から参照する。
+任意の env は `STATS_CACHE_SECONDS`（統計 API と shields バッジのキャッシュ秒数。既定 300）と
+`DMM_TV_DOMAIN`（DMM TV のロビー解決が返す再生ページのドメイン。既定 `tv.dmm.com`）。
 
 ## 壊してはいけないもの
 
 - **WebSocket プロトコル**: `format.py` の `action` 値・フィールド名・ネストは
   `extension/src/domain/protocol.ts` と一致させる。基底型のフィールド（`response`）は
   `SerializeAsAny` を付けないとサブクラスのフィールドが直列化で落ちる。
+- **受信の検証**: クライアントの入力は `format.py` の `*Request` で検証する。長すぎる文字列は
+  弾かずに切り詰める（上限は `models.py` の定数）。検証エラーや想定外の例外では、
+  `handle_exception` が退室の後始末をしてから接続を閉じる。例外を素通しすると `disconnect` が
+  呼ばれず、在室者の行が alive のまま残る。
 - **論理削除**: `objects.alive()` / `delete()`（論理）/ `delete(hard=True)`（物理）の意味を変えない。
 - **暗号化**: `AnimeUser.user_name` の鍵は `SECRET_KEY` から作る。`SECRET_KEY` を変えると既存行は復号できない。
 - **REST API**: `api/urls.py` のパスとレスポンスの形は外部から参照される（shields は `{"schemaVersion": 1, ...}`）。
@@ -54,6 +65,23 @@ compose・nginx・env はルートが持ち、`backend/` は build context と�
   - `disable_reaction`：配信も保存もしない
 - **ghost の回収**: graceful でない停止で alive のまま残った行は、起動時の
   `close_active_sessions` が `updated_at` が 1 日以上前のものだけ論理削除する（別 Pod の稼働中セッションを巻き込まない）。
+- **ルームの寿命**: 作成（`created_at`）から 48 時間を超えたルームは、在室中でも
+  `close_expired_rooms` が強制クローズする（統計に alive のまま残さない）。ホストの `delete_room` と同じく
+  リアクションを畳み込み、ユーザーとルームを論理削除し、`room_deleted` を配信する。起動時ではなく
+  cron で走らせる（k3s では Helm の CronJob）。
+- **管理画面のパスキー**: django-otp-webauthn。パスワードのログインも残している。
+  - URL は `/admin/passkey/`。nginx が Django へ流すのは `/admin/` 配下だけなので外へ出さない。
+    `urls.py` では `admin.site.urls` より前に置く。
+  - RP ID は `MY_DOMAIN`。変えると登録済みのパスキーはすべて使えなくなる。dev（`localhost`）と
+    本番のパスキーは別物。
+  - 登録は管理画面の「パスキー」一覧から。登録済みのパスキーがあるアカウントへの追加は、
+    パスキーでログインしたセッションからしかできない（ライブラリの仕様）。パスキーを失くしたら、
+    パスワードで入って一覧から古い行を消すと登録し直せる。
+  - テンプレートは Unfold のものをコピーせず、同名で継承してブロックだけ埋める
+    （`login.html` の `login_after`）。要素の id は django-otp-webauthn のスクリプトとの契約。
+- **CSP**: `settings.py` の `SECURE_CSP_REPORT_ONLY`（今は Report-Only。ブロックはしない）。
+  インラインの `<script>` は許していないので、テンプレートに書くときは
+  `<script {% csp_nonce_attr %}>` にする。外部のオリジンから読むものを足すなら方針にも足す。
 
 ## コマンド
 
@@ -64,12 +92,24 @@ uv run mypy .        # settings が env を要求するので CI と同じダミ
 uv run pytest        # Redis は不要。PostgreSQL は要る（`test_<POSTGRES_DB>` を作って使う）
 uv run pip-licenses
 docker compose exec django python manage.py close_active_sessions
+docker compose exec django python manage.py close_expired_rooms   # --hours で閾値を変えられる
 ```
 
 コンテナ外で要る env: `SECRET_KEY` `DEBUG` `MY_DOMAIN` `POSTGRES_DB` `POSTGRES_PASSWORD`
 `DATABASE_USER` `DATABASE_HOST` `DATABASE_PORT` `DATABASE_ENGINE` `REDIS_HOST` `REDIS_PORT`
 `LANGUAGE_CODE` `TIME_ZONE` `D_ANIME_STORE_DOMAIN` `CHROME_EXTENSION_REQUIRED_VERSION`。
 Dev Container からは `DATABASE_HOST=localhost` でつながる。
+
+## テストとカバレッジ
+
+- テストは対象のアプリの中に `test_<対象>.py` で置く（`tests.py` は consumer と API の既存分）。
+- `uv run pytest --cov --cov-report=term-missing:skip-covered` で漏れている行と分岐が出る。
+- 計測の設定は `pyproject.toml` の `[tool.coverage.*]`。分岐も数え、import されないファイルも
+  0% として数える（`source = ["."]`）。
+- 計測から外すのは、テストとその支援コード（`factories.py` · `conftest.py`）、生成物
+  （`migrations/`）、プロセスの起動だけを担うもの（`manage.py` · `gunicorn.conf.py`。起動は
+  `Backend/Build` が確かめる）に限る。テストを書けるコードを `omit` や `# pragma: no cover` で
+  隠さない。
 
 migration はコミット済み。モデルを変えたときだけ `makemigrations` して生成物をコミットする。
 

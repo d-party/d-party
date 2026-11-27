@@ -49,6 +49,21 @@ class PerDayResultSerializer(serializers.Serializer):
     data = PerDayCountSerializer(many=True)  # type: ignore[assignment]
 
 
+class HourlyAverageSerializer(serializers.Serializer):
+    hour = serializers.IntegerField(
+        min_value=0,
+        max_value=23,
+        help_text="時間帯（0〜23 時。サーバのタイムゾーン）。",
+    )
+    average = serializers.FloatField(
+        help_text="その時間帯に入室したユーザー数の 1 日あたりの平均。"
+    )
+
+
+class HourlyAverageResultSerializer(serializers.Serializer):
+    data = HourlyAverageSerializer(many=True)  # type: ignore[assignment]
+
+
 class ReactionTypeCountSerializer(serializers.Serializer):
     count = serializers.IntegerField()
     reaction_type = serializers.CharField()

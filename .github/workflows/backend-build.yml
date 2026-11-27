@@ -45,7 +45,7 @@ jobs:
     # コンテナは --network host で 127.0.0.1 のサービスを見る。
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18
         env:
           POSTGRES_DB: d_party
           POSTGRES_USER: d_party

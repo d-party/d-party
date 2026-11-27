@@ -1,0 +1,29 @@
+{% extends "admin/login.html" %}
+
+{% load i18n unfold otp_webauthn %}
+
+{% comment %}
+unfold の admin/login.html に「パスキーでログイン」を足す。パスワードのフォームには触らず、
+unfold が空けている login_after ブロックだけを埋める。ボタンは <template> に置き、
+ブラウザが WebAuthn に対応しているときだけ django-otp-webauthn のスクリプトが
+placeholder へ差し込む。
+{% endcomment %}
+
+{% block login_after %}
+    {# スクリプトがログイン後の行き先（?next=）をここから読む。 #}
+    <input type="hidden" name="next" value="{{ next }}">
+
+    <span id="passkey-verification-placeholder"></span>
+
+    <template id="passkey-verification-available-template">
+        <div class="flex flex-col gap-3 mt-3">
+            {% component "unfold/components/button.html" with type="button" variant="default" icon="passkey" class="w-full" extra_attrs='id="passkey-verification-button"' %}
+                {% translate "パスキーでログイン" %}
+            {% endcomponent %}
+
+            <p id="passkey-verification-status-message" role="status" class="text-center text-font-subtle-light text-sm dark:text-font-subtle-dark"></p>
+        </div>
+    </template>
+
+    {% render_otp_webauthn_auth_scripts username_field_selector="input[name='username']" %}
+{% endblock %}

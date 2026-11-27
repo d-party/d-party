@@ -11,7 +11,7 @@
 #             build · build-storybook · license（extension + frontend + packages/ui）
 #   bundle    拡張機能の本番バンドル（build:prod と manifest の参照先）
 #   smoke     frontend を起動して実際にページを叩く（web と同じ実行で回す。ビルドが無ければ FAIL）
-#   compose   docker compose config（dev · prod · loadtest）
+#   compose   docker compose config（dev · loadtest）
 #   nginx     docker-compose.yml の nginx イメージでテンプレートを nginx -t にかける
 #   infra     helm lint · helm template
 #   repo      actionlint · shellcheck · yamllint
@@ -236,7 +236,6 @@ gate_smoke() {
 # ── docker compose ───────────────────────────────────────────────────────────
 gate_compose() {
   step "compose: dev" . docker compose config -q
-  step "compose: prod" . docker compose -f docker-compose.yml -f docker-compose.prod.yml config -q
   step "compose: loadtest" . docker compose -f docker-compose.yml -f docker-compose.override.yml \
     -f docker-compose.loadtest.yml --profile loadtest config -q
 }
@@ -245,23 +244,15 @@ gate_compose() {
 # Nginx/CI はイメージを固定で持つので、compose の nginx を上げる PR は CI では検査されない。
 # ここでは compose が実際に使うイメージでテンプレートを検査する。
 nginx_test() {
-  local template=$1 image certs=$LOG_DIR/nginx-certs
+  local template=$1 image
   image=$(docker compose config --format json | jq -r '.services.nginx.image')
   echo "image: $image"
-  if [ ! -f "$certs/ssl-dhparams.pem" ]; then
-    mkdir -p "$certs/live/localhost"
-    openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost" \
-      -keyout "$certs/live/localhost/privkey.pem" -out "$certs/live/localhost/fullchain.pem"
-    openssl dhparam -dsaparam -out "$certs/ssl-dhparams.pem" 2048
-    : >"$certs/options-ssl-nginx.conf"
-  fi
   # shellcheck disable=SC2016
   # コンテナ内の sh に渡す。$MY_DOMAIN などはここで展開しない。
   docker run --rm \
     -e MY_DOMAIN=localhost -e DJANGO_UPSTREAM=127.0.0.1:8000 -e FRONTEND_UPSTREAM=127.0.0.1:3000 \
     -v "$ROOT/$template:/etc/nginx/templates/default.conf.template:ro" \
     -v "$ROOT/nginx/mime.types:/etc/nginx/mime.types:ro" \
-    -v "$certs:/etc/letsencrypt:ro" \
     --entrypoint sh "$image" -c '
       envsubst "\$MY_DOMAIN \$DJANGO_UPSTREAM \$FRONTEND_UPSTREAM" \
         < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
@@ -269,11 +260,28 @@ nginx_test() {
 }
 
 gate_nginx() {
-  step "nginx: dev template" . nginx_test nginx/templates/http.conf.template
-  step "nginx: prod template" . nginx_test nginx/templates-prod/default.conf.template
+  step "nginx: template" . nginx_test nginx/templates/http.conf.template
 }
 
 # ── infra ────────────────────────────────────────────────────────────────────
+# 検査は infra-ci.yml と揃える。秘密値は既定を持たないので、外部 Secret 名か平文を渡す。
+helm_lint() {
+  helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret
+}
+
+helm_template_generated_secret() {
+  helm template d-party infra/helm/d-party \
+    --set secret.SECRET_KEY=ci --set secret.POSTGRES_PASSWORD=ci >/dev/null
+}
+
+# 秘密値なしで render できてしまったら失敗。
+helm_template_no_secret_rejected() {
+  if helm template d-party infra/helm/d-party >/dev/null 2>&1; then
+    echo "秘密値なしで render できてしまう"
+    return 1
+  fi
+}
+
 helm_template_prod() {
   helm template d-party infra/helm/d-party \
     --set config.MY_DOMAIN=d-party.example \
@@ -285,8 +293,9 @@ gate_infra() {
     skip "infra: helm" "helm が無い"
     return
   fi
-  step "infra: helm lint" . helm lint infra/helm/d-party
-  step "infra: helm template (defaults)" . helm template d-party infra/helm/d-party
+  step "infra: helm lint" . helm_lint
+  step "infra: helm template (chart-generated secret)" . helm_template_generated_secret
+  step "infra: helm template (no secret is rejected)" . helm_template_no_secret_rejected
   step "infra: helm template (existingSecret + domain)" . helm_template_prod
 }
 

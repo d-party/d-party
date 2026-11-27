@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 /** Not a static export: lobby room ids are only known at runtime. */
 const nextConfig: NextConfig = {
   output: "standalone",
+  // 応答に `X-Powered-By: Next.js` を付けない。
+  poweredByHeader: false,
   // @d-party/ui はソースのまま公開している。
   transpilePackages: ["@d-party/ui"],
 };

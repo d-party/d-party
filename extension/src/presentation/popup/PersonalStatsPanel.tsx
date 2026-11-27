@@ -1,9 +1,16 @@
-import { Clock, DoorOpen, RotateCcw, Smile, Sparkles } from "lucide-react";
+import {
+  Clock,
+  DoorOpen,
+  type LucideIcon,
+  RotateCcw,
+  Smile,
+  Sparkles,
+} from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { totalReactions } from "@/domain/personalStats";
-import { REACTION_TYPES, REACTION_META } from "@/domain/reactions";
+import { REACTION_META, REACTION_TYPES } from "@/domain/reactions";
 
 import { usePersonalStats } from "./usePersonalStats";
 
@@ -27,7 +34,7 @@ function StatCard({
   label,
   value,
 }: {
-  icon: typeof Clock;
+  icon: LucideIcon;
   label: string;
   value: string;
 }): React.JSX.Element {
@@ -62,7 +69,6 @@ export function PersonalStatsPanel(): React.JSX.Element {
 
   return (
     <div className="space-y-3">
-      {/* Headline figures */}
       <div className="grid grid-cols-2 gap-2">
         <StatCard
           icon={Sparkles}
@@ -86,7 +92,6 @@ export function PersonalStatsPanel(): React.JSX.Element {
         />
       </div>
 
-      {/* Reaction breakdown by kind */}
       <section className="rounded-xl border bg-card p-4 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold">リアクション内訳</h2>
         {reactionTotal === 0 ? (
@@ -123,7 +128,6 @@ export function PersonalStatsPanel(): React.JSX.Element {
         )}
       </section>
 
-      {/* Reset + measuring-since footnote */}
       <div className="flex items-center justify-between gap-2 px-1">
         <p className="text-[11px] text-muted-foreground">
           {since ? `${since} から計測` : "ブラウザに保存されます"}

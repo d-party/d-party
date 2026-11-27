@@ -2,7 +2,7 @@
 
 # d-party
 
-**dアニメストアの動画を、離れた友だちと「同時視聴」する。**
+dアニメストアの動画を、離れた友だちと同時視聴するためのブラウザ拡張機能とサーバ。
 
 [![Backend/CI](https://github.com/d-party/d-party/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/backend-ci.yml)
 [![Backend/Build](https://github.com/d-party/d-party/actions/workflows/backend-build.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/backend-build.yml)
@@ -20,51 +20,48 @@
 
 </div>
 
----
-
 ## d-party とは
 
-dアニメストアには「一緒に観る」機能がありません。d-party は**ブラウザ拡張機能**を入れるだけで、
-再生・一時停止・シークを参加者全員へ同期し、リアクションを飛ばし合えるようにします。
+dアニメストアには複数人で一緒に観る機能がありません。d-party のブラウザ拡張機能を入れると、
+再生・一時停止・シークが同じルームの参加者全員に同期され、リアクションも送り合えます。
 
-- **無料・広告なし。** 必要なのは各自のdアニメストア契約だけです。
-- **アカウント登録なし。** ルームの URL を共有するだけで始められます。
-- **動画は各自のブラウザが再生します。** サーバが中継するのは「誰がどこを観ているか」という
-  同期メッセージだけで、映像そのものは一切扱いません。
-
+- 無料で、広告はありません。必要なのは各自のdアニメストア契約だけです。
+- アカウント登録は不要です。ルームの URL を共有すれば始められます。
+- 動画は各自のブラウザが再生します。サーバが中継するのは再生位置などの同期メッセージだけで、
+  映像は扱いません。
 
 ## リポジトリ構成
 
 | パス | 中身 | スタック |
 | --- | --- | --- |
-| [`backend/`](backend/AGENTS.md) | Django バックエンド | Python 3.15 · Django 6 · Channels · DRF · PostgreSQL 16 · Redis 7 |
+| [`backend/`](backend/AGENTS.md) | Django バックエンド | Python 3.15 · Django 6 · Channels · DRF · PostgreSQL 18 · Redis 8 |
 | [`extension/`](extension/AGENTS.md) | ブラウザ拡張機能 | Manifest V3 · TypeScript · React 19 · rspack · Tailwind CSS v4 |
 | [`frontend/`](frontend/AGENTS.md) | ユーザー向け公開サイト | Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 |
-| `packages/ui/` | 両者が共有する shadcn/ui プリミティブ | TypeScript · Radix · Tailwind CSS v4 |
+| `packages/ui/` | extension と frontend が共有する shadcn/ui プリミティブ | TypeScript · Radix · Tailwind CSS v4 |
 | [`infra/`](infra/README.md) | k3s (Raspberry Pi) デプロイ | Helm chart · Argo CD · rootless BuildKit |
 | [`loadtest/`](loadtest/README.md) | WebSocket 負荷試験 | k6 |
 | `nginx/` | リバースプロキシの設定 | docker compose |
 
-`extension/` · `frontend/` · `packages/ui/` は **pnpm workspace** の 3 パッケージで、
-ロックファイルはルートの `pnpm-lock.yaml` 1 本です。ビルド・lint・型検査の
-オーケストレーションは [Turborepo](https://turborepo.com/)（`turbo.json`）が行います。
+`extension/`・`frontend/`・`packages/ui/` は pnpm workspace のパッケージで、ロックファイルは
+ルートの `pnpm-lock.yaml` だけです。ビルド・lint・型検査は [Turborepo](https://turborepo.com/)
+（`turbo.json`）でまとめて実行します。
 
-> `extension/` はブラウザ名を含まない名前にしています。Manifest V3 なので Edge など
-> Chromium 系ブラウザでもそのまま読み込めます。
+拡張機能は Manifest V3 なので、Chrome 以外の Chromium 系ブラウザ（Edge など）でも読み込めます。
 
 ## はじめかた
 
 ### 必要なもの
 
-- **Docker** + Docker Compose v2
-- **Chromium 系ブラウザ**（拡張機能の動作確認用）
-- コンテナ無しで動かす場合: **Python 3.15** + [uv](https://docs.astral.sh/uv/) /
-  **Node.js 26** + [pnpm](https://pnpm.io/) 12
+- Docker と Docker Compose v2
+- Chromium 系ブラウザ（拡張機能の動作確認用）
+- コンテナを使わない場合は Python 3.15 と [uv](https://docs.astral.sh/uv/)、
+  Node.js 26 と [pnpm](https://pnpm.io/) 12
 
-> **Dev Container を推奨します。** VS Code でこのフォルダを開き
-> **Dev Containers: Reopen in Container** を選ぶと、上記に加えて CI と同じ lint
-> （actionlint / shellcheck / yamllint / pre-commit）· helm · k3d · k6 · GitHub CLI が揃い、
-> `uv sync` と `pnpm install` と `pre-commit install` まで自動で走ります。
+Dev Container を使うのが簡単です。VS Code でこのフォルダを開いて
+「Dev Containers: Reopen in Container」を選ぶと、上記のほかに CI と同じ lint ツール
+（actionlint・shellcheck・yamllint・pre-commit）、helm、k3d、k6、GitHub CLI が入ります。
+手順 1 の `pnpm install`・`uv sync`・`pre-commit install` も初回起動時に実行されるので、
+手順 2 から始めてください。
 
 ### 1. クローンして依存を入れる
 
@@ -77,8 +74,6 @@ pnpm install              # extension + frontend + packages/ui（ルートで 1 
 pre-commit install        # backend 向けのフック。ルートで実行する
 ```
 
-> Dev Container を使う場合、この手順は初回起動時に自動で走ります。
-
 ### 2. スタックを起動する
 
 ```bash
@@ -87,21 +82,20 @@ docker compose exec django python manage.py migrate
 docker compose exec django python manage.py collectstatic --noinput
 ```
 
-`docker compose up -d` は **開発モード**です（`docker-compose.override.yml` が自動で
-読み込まれます）。frontend は `pnpm dev`（Turbopack HMR）で立ち上がるため、初回は依存の
-インストールと初回コンパイルで数分かかります（ヘルスチェックの猶予は 3 分）。
+`docker-compose.override.yml` が自動で読み込まれるので、これは開発用の構成で起動します。
+frontend は `pnpm dev` で動くため、初回は依存のインストールとコンパイルに数分かかります
+（ヘルスチェックは 3 分まで待ちます）。
 
 | URL | 内容 |
 | --- | --- |
 | <http://localhost> | アプリ（Nginx 経由） |
-| <http://localhost:8000> | Django 直接 |
+| <http://localhost:8000> | Django（Nginx を通さない） |
 | <http://localhost:8000/admin/> | 管理画面（Unfold） |
 
-2 回目以降は `docker compose up -d` だけです。
+2 回目以降は `docker compose up -d` だけで起動します。
 
-> PostgreSQL は **VS Code の SQLTools 拡張**（Dev Container 同梱）から
-> `d-party (compose postgres)` 接続で開けます。Redis は **Redis for VS Code 拡張**で、
-> 初回だけ `127.0.0.1:6379` を登録してください。
+Dev Container では、PostgreSQL を VS Code の SQLTools 拡張の `d-party (compose postgres)`
+接続で開けます。Redis は Redis for VS Code 拡張に `127.0.0.1:6379` を登録して見ます。
 
 ### 3. 拡張機能を読み込む
 
@@ -110,24 +104,24 @@ pnpm --filter d-party-chrome-extension run build
 ```
 
 1. ブラウザで `chrome://extensions`（Edge は `edge://extensions`）を開く
-2. **デベロッパーモード** を有効化する
-3. **パッケージ化されていない拡張機能を読み込む** で `extension/dist/` を選ぶ
+2. 「デベロッパーモード」を有効にする
+3. 「パッケージ化されていない拡張機能を読み込む」で `extension/dist/` を選ぶ
 
-接続先は `extension/src/infrastructure/env.ts` に集約しており、**ビルド時の環境変数
-`D_PARTY_ENV`** で切り替わります（未指定 = `localhost` / http / ws、`production` =
-`d-party.net` / https / wss）。上の `pnpm build` は未指定なのでローカルスタックを向きます。
+接続先はビルド時の環境変数 `D_PARTY_ENV` で決まります。未指定なら `localhost`（http / ws）、
+`production` なら `d-party.net`（https / wss）です。上のコマンドは未指定なので、ローカルの
+バックエンドに繋がります。定義は `extension/src/infrastructure/env.ts` にあります。
 
-> dアニメストアの実ページから `localhost` のバックエンドへ繋ぐときは、Chrome の
-> Private Network Access ブロックを無効化する必要があります
-> （`chrome://flags/#block-insecure-private-network-requests` を Disabled）。
+dアニメストアのページから `localhost` のバックエンドへ繋ぐには、Chrome の
+`chrome://flags/#block-insecure-private-network-requests` を Disabled にしてください。
+既定では Private Network Access の制限で接続がブロックされます。
 
 ## 開発
 
 ### よく使うコマンド
 
-ルートの `package.json` から Turborepo 経由でまとめて回せます。`turbo` が依存関係
-（`api:generate` → `lint` / `typecheck` / `build`）と出力キャッシュを管理するので、
-変わっていないタスクは再実行されません。
+ルートの `package.json` のスクリプトは、Turborepo で全パッケージに対して実行されます。
+`lint`・`typecheck`・`build` の前には `api:generate` が走り、入力が変わっていないタスクは
+キャッシュが使われます。
 
 ```bash
 pnpm run api:generate     # OpenAPI から REST クライアントを生成
@@ -144,7 +138,7 @@ turbo run lint --filter=d-party-chrome-extension
 turbo run lint typecheck build --filter='...[origin/main]'
 ```
 
-backend は Python なので workspace の外です。
+backend は pnpm workspace に含まれないので、`backend/` で直接実行します。
 
 ```bash
 cd backend
@@ -159,91 +153,73 @@ uv run ruff check .
 actionlint                                   # Repo/CI
 shellcheck $(git ls-files '*.sh')            # Repo/CI
 yamllint .                                   # Repo/CI
-helm lint infra/helm/d-party                 # Infra/CI
+helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret  # Infra/CI
 pre-commit run --all-files
 ```
 
-> **ruff はグローバルに入れないでください。** `backend/uv.lock` にピン留めしたものを
-> `uv run ruff` で使います。`uvx ruff` だと常に最新が取れてしまい、整形結果が CI とズレます。
+ruff は `uv run ruff` で実行してください。`backend/uv.lock` で固定した版が使われます。
+グローバルに入れた ruff や `uvx ruff` は版が違うことがあり、整形結果が CI と食い違います。
 
-ワークフローそのものを回したい場合は `act`（Dev Container 同梱）をリポジトリのルートで。
+ワークフロー自体を実行したいときは、リポジトリのルートで `act` を使います
+（Dev Container に入っています）。
 
 ### Storybook
 
-UI コンポーネントのカタログを GitHub Pages へ公開しています（`main` へのマージ時に自動デプロイ）。
+UI コンポーネントの Storybook を GitHub Pages で公開しています。`main` にマージすると更新されます。
 
 - <https://d-party.github.io/d-party/extension/> — 拡張機能（明るいテーマ）
 - <https://d-party.github.io/d-party/frontend/> — 公開サイト（暗いテーマ）
 - ローカル: `pnpm --filter d-party-frontend run storybook`（<http://localhost:6006>）
 
-共有の `packages/ui` は両方に現れます。テーマトークンが異なるので、同じプリミティブを
-2 つの配色で確認できます。
+`packages/ui` のコンポーネントは両方に載っており、それぞれのテーマでの見た目を確認できます。
 
 ### CI
 
-ワークフローはルートの `.github/workflows/` に集約し、`paths` フィルタで触った
-ディレクトリに対応するものだけを回します。`<Scope>/CI` は lint と型検査とテスト、
-`<Scope>/Build` は「出荷するものが実際に組み上がって動くか」を見ます。
+ワークフローはすべてルートの `.github/workflows/` にあり、`paths` フィルタによって、
+変更したディレクトリに対応するものだけが走ります。`<Scope>/CI` は lint・型検査・テストを、
+`<Scope>/Build` は成果物をビルドして実際に動くことを確認します。
 
 | ワークフロー | 対象 |
 | --- | --- |
 | `Backend/CI` | ruff · pytest · mypy · license-check |
-| `Backend/Build` | イメージを組んで migrate し、起動して API が応答するまで確認 |
-| `Frontend/CI` · `Extension/CI` | 生成物の drift · typecheck · lint · license-check |
-| `Frontend/Build` | next build · storybook · イメージを起動してページ疎通 |
-| `Extension/Build` | 本番ビルド · manifest の参照先の実在確認 · zip · storybook |
+| `Backend/Build` | イメージをビルドして migrate し、起動後に API が応答することを確認 |
+| `Frontend/CI` · `Extension/CI` | 生成コードの差分検出 · typecheck · lint · license-check |
+| `Frontend/Build` | next build · storybook · イメージを起動してページの応答を確認 |
+| `Extension/Build` | 本番ビルド · manifest が参照するファイルの存在確認 · zip · storybook |
 | `Infra/CI` | helm lint · helm template |
 | `Nginx/CI` | nginx テンプレートの構文チェック |
 | `Repo/CI` | actionlint · shellcheck · yamllint · CodeQL |
-| `Storybook/Deploy` | 両 Storybook を GitHub Pages のサブパスへ公開 |
-| `Release` | 統一リリース（手動実行） |
+| `Storybook/Deploy` | 2 つの Storybook を GitHub Pages に公開 |
+| `Release` | 全パッケージのリリース（手動実行） |
 
-依存のキャッシュはロックファイルのハッシュをキーにしています（pnpm ストア →
-`pnpm-lock.yaml`、uv → `backend/uv.lock`、Turborepo と Next の `.next/cache` →
-`hashFiles('pnpm-lock.yaml')`）。
+依存のキャッシュはロックファイルのハッシュをキーにしています。pnpm ストア、Turborepo、
+Next の `.next/cache` は `pnpm-lock.yaml`、uv は `backend/uv.lock` です。
 
-### 環境設定（dev / prod の出し分け）
+### 環境変数
 
-環境固有の設定は 3 つの env ファイルに分け、compose のオーバーレイで切り替えます。
+compose が読む環境変数は次の env ファイルに分けてあります。どちらも開発用の値で、本番（k3s）の
+値は Helm の values と Secret が与えます。
 
 | ファイル | 用途 | 主なキー |
 | --- | --- | --- |
-| `.env.global` | dev / prod 共有 | `POSTGRES_*` · `*_UPSTREAM` · `TZ` · `D_ANIME_STORE_DOMAIN` |
-| `.env.dev` | 開発のみ | `DEBUG=1` · `MY_DOMAIN=localhost` · `NEXT_PUBLIC_*`（http / ws） |
-| `.env.prod` | 本番のみ | `DEBUG=0` · `MY_DOMAIN=d-party.net` · `CERTBOT_EMAIL` · `NEXT_PUBLIC_*`（https / wss） |
-
-> 環境固有値（`DEBUG` / `MY_DOMAIN` など）は **`.env.global` に置かないでください。**
-> backend の `manage.py` が `/env_files/.env.global` を `override=True` で読むため、
-> ここに残すと本番起動時に dev の値で上書きされます。
+| `.env.global` | 全サービス共通 | `POSTGRES_*` · `*_UPSTREAM` · `TZ` · `D_ANIME_STORE_DOMAIN` |
+| `.env.dev` | 接続先など | `DEBUG=1` · `MY_DOMAIN=localhost` · `NEXT_PUBLIC_*`（http / ws） |
 
 ## 本番デプロイ
 
-### A. docker compose + Let's Encrypt（単一ホスト）
-
-nginx が TLS を終端し、certbot（webroot / http-01）が証明書を自動取得・自動更新します。
-
-```bash
-# .env.prod の MY_DOMAIN と CERTBOT_EMAIL を実値にしてから
-./init-letsencrypt.sh --staging      # まずテスト証明書で疎通確認
-./init-letsencrypt.sh --production
-
-docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-    --profile letsencrypt up -d
-```
-
-certbot は 12 時間ごとに `renew` を試み、nginx は 6 時間ごとに reload して新しい証明書を
-取り込みます。証明書と秘密鍵は `./certbot/`（gitignore 済み）に置かれます。
-
-### B. k3s (Raspberry Pi) + Helm + Argo CD
-
-Raspberry Pi で組んだ k3s クラスタへ Helm chart をデプロイし、CD は Argo CD（GitOps）。
-ドメイン解決と TLS は Cloudflare Tunnel がエッジで終端します。設定一式は
+Raspberry Pi の k3s クラスタに Helm chart をデプロイし、Argo CD で同期します。外部からの
+アクセスは Cloudflare Tunnel 経由で、TLS も Cloudflare 側で終端します。設定は
 [`infra/`](infra/README.md) にあります。
 
-リリースは GitHub Actions の `Release` ワークフロー（`workflow_dispatch`）1 本で完結します。
-全パッケージの version を揃えてタグを打ち、backend / frontend のイメージ（**amd64 / arm64 の
-マルチアーキテクチャ**）を GHCR へ push し、拡張機能を Chrome Web Store へ upload します。
-GHCR に上がった `vX.Y.Z` タグを argocd-image-updater が拾い、Argo CD がローリング更新します。
+リリースは GitHub Actions の `Release` ワークフローを手動で実行します。このワークフローは
+次のことを行います。
+
+1. 全パッケージの version を揃えてタグを打つ
+2. backend と frontend のイメージ（amd64 / arm64）を GHCR に push する
+3. 拡張機能を Chrome Web Store にアップロードする
+
+GHCR に `vX.Y.Z` タグのイメージが上がると argocd-image-updater が検知し、Argo CD が
+ローリング更新します。
 
 ## 負荷試験
 
@@ -260,4 +236,4 @@ LOADTEST_VUS=20 LOADTEST_ROOM_SIZE=5 LOADTEST_DURATION=2m \
   -f docker-compose.loadtest.yml --profile loadtest run --rm k6
 ```
 
-パラメータと計測メトリクスの詳細は [`loadtest/README.md`](loadtest/README.md) を参照してください。
+パラメータと計測している指標は [`loadtest/README.md`](loadtest/README.md) にあります。

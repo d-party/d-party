@@ -8,6 +8,8 @@
 export * from './apiMessage';
 export * from './count';
 export * from './countResult';
+export * from './hourlyAverage';
+export * from './hourlyAverageResult';
 export * from './lobbyRedirect';
 export * from './perDayCount';
 export * from './perDayResult';
@@ -16,6 +18,7 @@ export * from './reactionTypeCountResult';
 export * from './shieldsBadge';
 export * from './statsActiveRoomPerDayParams';
 export * from './statsActiveUserPerDayParams';
+export * from './statsHourlyAverageUserParams';
 export * from './statsReactionAllCountParams';
 export * from './statsReactionCountParams';
 export * from './statsRoomAllCountParams';

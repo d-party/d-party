@@ -24,6 +24,10 @@ urlpatterns = [
         views.AnimeActiveUserPerDayAPI.as_view(),
     ),
     path(
+        "v1/statistics/anime-store/hourly-average-user",
+        views.AnimeHourlyAverageUserAPI.as_view(),
+    ),
+    path(
         "v1/statistics/anime-store/active-room-per-day",
         views.AnimeActiveRoomPerDayAPI.as_view(),
     ),
