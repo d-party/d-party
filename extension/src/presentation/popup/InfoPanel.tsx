@@ -2,7 +2,7 @@ import { BookOpen, ExternalLink, Heart, Home, Tv } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 import { FaChrome } from "react-icons/fa6";
 
-import { SITE_URL, USAGE_URL } from "@/infrastructure/env";
+import { DOCS_URL, SITE_URL } from "@/infrastructure/env";
 
 interface InfoLink {
   href: string;
@@ -21,9 +21,9 @@ const LINKS: InfoLink[] = [
     icon: Home,
   },
   {
-    href: USAGE_URL,
+    href: DOCS_URL,
     label: "使い方",
-    description: "同時視聴の始め方ガイド",
+    description: "画像つきの利用マニュアル",
     icon: BookOpen,
   },
   {

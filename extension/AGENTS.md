@@ -43,6 +43,9 @@ rspack のエントリは `background` · `content-store` · `content-party` · 
   現在値はサーバの `room_setting` で受け取る。一方通行では非オーナーは `video_operation` を送らず、
   リアクション禁止では送信せず自分にだけ表示する（`RoomSession`）。
 - 共有パネルの「タイマーのみの URL」はロビー URL に `?timer=true` を付けたもの。
+- 初回インストール時に開くページとポップアップ「情報」タブの「使い方」は、公開サイトの利用マニュアル
+  （`DOCS_URL` = `/docs`）。開いたかどうかの記録は `chrome.storage.local` の `usagePageOpened`
+  （旧 `/usage` の頃の名前）。キーを変えると既存の利用者にもう一度開くので変えない。
 - アナウンス（`components/Announcements.tsx`）はポップアップではタブの上、サイドバーでは
   ヘッダーの下に出す。ポップアップは backend を直接、content script は background 経由
   （`{ type: "announcements" }`）で取る。どちらも orval のクライアントの引数で
