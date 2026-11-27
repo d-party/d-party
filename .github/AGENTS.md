@@ -42,6 +42,11 @@
 Actions のキャッシュは同じキーへ上書きできない。turbo のキーにワークフロー名とジョブ名を
 入れているのは、ジョブ同士で取り合わないようにするため。
 
+main のキャッシュは release.yml のビルドも復元する。main の権限で走り、未レビューの依存の
+コードを動かすジョブ（`maintenance.yml` の `review`）は `cache-mode: read` にして、キャッシュを
+書き換えられないようにする。キャッシュを使わない書き込み権限のジョブは `cache-mode: none`。
+`cache-mode` をこの版の actionlint はまだ知らないので、`actionlint.yaml` でその指摘だけ外している。
+
 ## リリース（`release.yml`）
 
 1. 最新タグ `vX.Y.Z` と `bump_type` から次の版を決める。

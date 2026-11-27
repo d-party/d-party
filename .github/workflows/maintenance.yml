@@ -49,6 +49,9 @@ jobs:
       pull-requests: read
       actions: read
       checks: read
+    # 依存のコードがキャッシュを書き換えると、main のキャッシュを復元する release.yml の
+    # ビルドまで届く（スケジュール実行は main のキャッシュに書ける）。読むだけにする。
+    cache-mode: read
     # backend の pytest 用。
     services:
       postgres:
@@ -87,7 +90,8 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          # 依存のコードから .git/config 経由でトークンを読めないようにする。
+          # このジョブのトークンは読み取り専用で、隠してはいない（job の env に GH_TOKEN があり、
+          # claude-code-action も .git/config に書く）。push しないので保存しない。
           persist-credentials: false
 
       # ゲートのツールは先に入れておく（Claude に入れさせない）。
@@ -151,6 +155,10 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      # head commit のチェック結果（statusCheckRollup）を読む。
+      checks: read
+      statuses: read
+    cache-mode: none
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -183,6 +191,7 @@ jobs:
       # release.yml の dispatch。
       actions: write
       checks: read
+    cache-mode: none
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:

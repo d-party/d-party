@@ -25,7 +25,9 @@ hold() {
     printf '\nrun: %s\n' "$run_url"
   )
   # 同じタイトルの open な issue があればそこへコメントする（重複させない）。
-  existing=$(gh issue list -R "$repo" --state open --search 'in:title 週次リリース保留' --json number --jq '.[0].number // empty')
+  # 誰でも issue を立てられるので、github-actions が立てたものだけを使う。
+  existing=$(gh issue list -R "$repo" --state open --author app/github-actions \
+    --search 'in:title 週次リリース保留' --json number --jq '.[0].number // empty')
   if [ -n "$existing" ]; then
     gh issue comment "$existing" -R "$repo" --body "$body"
   else
@@ -53,7 +55,9 @@ breaking=()
 while IFS= read -r s; do breaking+=("破壊的変更の印: $s"); done < <(
   printf '%s\n' "${subjects[@]}" | grep -E '^[A-Za-z]+(\([^)]*\))?!:' || true
 )
-if git log --no-merges --format='%B' "$range" | grep -q 'BREAKING CHANGE'; then
+# `git log | grep -q` は pipefail の下では、grep が先に終わって git が SIGPIPE で落ち、
+# 一致しても偽になる。git 自身に探させる。
+if [ -n "$(git log --no-merges -E --grep='BREAKING[ -]CHANGE' --format=%h "$range")" ]; then
   breaking+=("commit 本文に BREAKING CHANGE がある")
 fi
 if [ "${#breaking[@]}" -gt 0 ]; then
@@ -61,8 +65,9 @@ if [ "${#breaking[@]}" -gt 0 ]; then
   exit 0
 fi
 
-# feat があれば minor。同じ期間に Revert "<件名>" で打ち消されたものは数えない。
-reverted=$(printf '%s\n' "${subjects[@]}" | sed -n 's/^Revert "\(.*\)"$/\1/p')
+# feat があれば minor。同じ期間に Revert "<件名>" で打ち消されたものは数えない
+# （squash で付く末尾の " (#123)" は、Revert の側にも打ち消された側にも付きうる）。
+reverted=$(printf '%s\n' "${subjects[@]}" | sed -En 's/^Revert "(.*)"( \(#[0-9]+\))?$/\1/p')
 feats=$(printf '%s\n' "${subjects[@]}" | grep -E '^feat(\([^)]*\))?:' | grep -vxF -f <(printf '%s\n' "$reverted") || true)
 if [ -n "$feats" ]; then bump="minor"; else bump="patch"; fi
 
@@ -87,10 +92,11 @@ while IFS= read -r line; do red+=("$line"); done < <(
 )
 # main で直近に走った run（ワークフローごとの最新）に失敗が残っていないか。fork の PR の run は
 # head branch が main でも数えない。このワークフロー自身も数えない（今回の run が走っている）。
+# event が dynamic の run（Dependabot の更新ジョブなど）はリポジトリのコードの状態ではない。
 while IFS= read -r line; do red+=("$line"); done < <(
   jq -r --arg self "${GITHUB_WORKFLOW:-}" '
     [.[] | select(.status == "completed" and .workflowName != $self
-                  and (.event | IN("pull_request", "pull_request_target") | not))]
+                  and (.event | IN("pull_request", "pull_request_target", "dynamic") | not))]
     | group_by(.workflowName) | map(max_by(.createdAt))
     | .[] | select(.conclusion | IN("failure", "timed_out", "startup_failure"))
     | "\(.workflowName) の最新の run が失敗している: \(.url)"' <<<"$runs"
@@ -101,8 +107,12 @@ if [ "${#red[@]}" -gt 0 ]; then
 fi
 
 # 起動。publish は false（公開は人が行う）、release_note は空（GitHub の自動生成）。
-started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-gh workflow run release.yml -R "$repo" --ref main -f bump_type="$bump" -f publish=false
+# run を探すときの起点。ランナーと GitHub の時計のずれを見込んで少し前にする。
+started=$(date -u -d '-30 seconds' +%Y-%m-%dT%H:%M:%SZ)
+if ! gh workflow run release.yml -R "$repo" --ref main -f bump_type="$bump" -f publish=false; then
+  hold "release.yml を起動できない" "bump: $bump"
+  exit 1
+fi
 log "## 週次リリース" "" "- $latest 以降の commit: ${#subjects[@]} 件 → **$bump**" "- release.yml を dispatch した（publish=false）"
 
 run=""
