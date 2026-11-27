@@ -292,5 +292,6 @@ git status --porcelain            # next build が tsconfig.json を書き換え
 ## 無人実行
 
 この skill は対話セッション用。`.github/workflows/maintenance.yml` の週次実行は
-`dependabot-review-and-merge` と `release` を直接呼び、それぞれの「非対話モード」で動く
-（`publish` は `false`）。patch 固定と自動公開は無人実行には適用しない。
+`dependabot-review-and-merge` を「非対話モード」で呼んで判定だけをさせ、マージは
+`.github/scripts/dependabot-merge.sh`、リリースは `release` の「非対話モード」の規則を
+実装した `.github/scripts/weekly-release.sh` が行う（`publish` は `false`）。patch 固定と自動公開は無人実行には適用しない。

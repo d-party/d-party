@@ -47,7 +47,7 @@ spec:
             - filename=frontend/Dockerfile
             - --opt
             - platform=linux/arm64
-            # ↓ 公開ドメインに合わせて編集する（docker-compose.prod.yml と同じ値）。
+            # ↓ 公開ドメインに合わせて編集する。
             - --opt
             - build-arg:NEXT_PUBLIC_BACKEND_PROTOCOL=https://
             - --opt

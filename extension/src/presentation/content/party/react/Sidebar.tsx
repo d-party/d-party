@@ -9,7 +9,9 @@ import {
 } from "lucide-react";
 import { useSyncExternalStore } from "react";
 
+import { Announcements } from "@/components/Announcements";
 import { Logo } from "@/components/Logo";
+import type { Announcement } from "@/domain/announcement";
 import type { RoomSettings as RoomSettingsValue } from "@/domain/roomSettings";
 import {
   Tabs,
@@ -32,6 +34,8 @@ export interface SidebarProps {
   onDeleteRoom: () => void;
   onUpdateRoomSettings: (settings: RoomSettingsValue) => void;
   onTabChange: (tab: SidebarTab) => void;
+  /** 配信中のアナウンスの取得。省略するとアナウンスを出さない。 */
+  loadAnnouncements?: () => Promise<Announcement[]>;
 }
 
 export function Sidebar({
@@ -41,6 +45,7 @@ export function Sidebar({
   onDeleteRoom,
   onUpdateRoomSettings,
   onTabChange,
+  loadAnnouncements,
 }: SidebarProps): React.JSX.Element | null {
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
 
@@ -92,6 +97,7 @@ export function Sidebar({
                 onDeleteRoom={onDeleteRoom}
                 onUpdateRoomSettings={onUpdateRoomSettings}
                 onTabChange={onTabChange}
+                loadAnnouncements={loadAnnouncements}
               />
             </motion.div>
           )}
@@ -109,6 +115,7 @@ function Panel({
   onDeleteRoom,
   onUpdateRoomSettings,
   onTabChange,
+  loadAnnouncements,
 }: SidebarProps & { state: SidebarState }): React.JSX.Element {
   const isOwner = state.users.some(
     (user) => user.user_id === state.selfUserId && user.is_host === true,
@@ -135,6 +142,9 @@ function Panel({
           </button>
         </div>
       </header>
+      {loadAnnouncements && (
+        <Announcements load={loadAnnouncements} itemClassName="px-2" />
+      )}
 
       {state.mode === "create" && !state.joined ? (
         <CreatePanel

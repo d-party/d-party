@@ -1,9 +1,11 @@
 import { createRoot } from "react-dom/client";
 
+import { requestAnnouncements } from "@/infrastructure/api/announcements";
 import type {
   HealthCheckRequest,
   HealthCheckResponse,
 } from "@/infrastructure/messages";
+import { applyTheme } from "@/styles/theme";
 import { PortalContainerContext } from "@d-party/ui";
 
 import { attachShadowStyles } from "./shadowStyles";
@@ -59,11 +61,16 @@ export function mountSidebar(handlers: SidebarHandlers): MountedSidebar {
 
   const mountPoint = document.createElement("div");
   mountPoint.style.height = "100%";
+  applyTheme(mountPoint);
   shadow.appendChild(mountPoint);
 
   createRoot(mountPoint).render(
     <PortalContainerContext value={mountPoint}>
-      <Sidebar store={store} {...handlers} />
+      <Sidebar
+        store={store}
+        {...handlers}
+        loadAnnouncements={requestAnnouncements}
+      />
     </PortalContainerContext>,
   );
 

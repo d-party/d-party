@@ -1,6 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
+import {
+  loadOf,
+  SAMPLE_INFO,
+  SAMPLE_WARNING,
+} from "@/components/announcementSamples";
+import type { Announcement } from "@/domain/announcement";
 import type { User } from "@/domain/protocol";
+import { installChromeMock } from "@/presentation/popup/storybookChromeMock";
 
 import { Sidebar } from "./Sidebar";
 import { SidebarStore } from "./sidebarStore";
@@ -16,7 +23,10 @@ const SAMPLE_URL =
   "http://localhost/anime-store/lobby/4f1c2e9a-1234-4abc-9def-0123456789ab";
 const SAMPLE_TITLE = "Dr.STONE SCIENCE FUTURE - 第1話 - RYUSUI VS. SENKU";
 
-function frame(store: SidebarStore) {
+function frame(
+  store: SidebarStore,
+  loadAnnouncements?: () => Promise<Announcement[]>,
+) {
   return (
     <div className="flex h-[560px] justify-end bg-neutral-300 p-3">
       <Sidebar
@@ -26,6 +36,7 @@ function frame(store: SidebarStore) {
         onDeleteRoom={() => store.resetToCreate()}
         onUpdateRoomSettings={(settings) => store.setRoomSettings(settings)}
         onTabChange={() => {}}
+        loadAnnouncements={loadAnnouncements}
       />
     </div>
   );
@@ -66,6 +77,7 @@ export const ShareTab: Story = {
     const store = new SidebarStore();
     store.setMode("join");
     store.setJoined(true);
+    store.setConnectionStatus("connected");
     store.setShareLink(SAMPLE_URL);
     store.setShareTitle(SAMPLE_TITLE);
     store.updateUsers(SAMPLE_USERS);
@@ -80,6 +92,7 @@ export const HistoryTab: Story = {
     const store = new SidebarStore();
     store.setMode("join");
     store.setJoined(true);
+    store.setConnectionStatus("connected");
     store.updateUsers(SAMPLE_USERS);
     store.addHistory({
       direction: "system",
@@ -131,6 +144,7 @@ export const UsersTab: Story = {
     const store = new SidebarStore();
     store.setMode("join");
     store.setJoined(true);
+    store.setConnectionStatus("connected");
     store.updateUsers(SAMPLE_USERS);
     store.setSelfUserId("1");
     store.setActiveTab("users");
@@ -144,6 +158,7 @@ export const ControlTab: Story = {
     const store = new SidebarStore();
     store.setMode("join");
     store.setJoined(true);
+    store.setConnectionStatus("connected");
     store.updateUsers(SAMPLE_USERS);
     store.setSelfUserId("2");
     store.setActiveTab("control");
@@ -157,6 +172,7 @@ export const OwnerControlTab: Story = {
     const store = new SidebarStore();
     store.setMode("join");
     store.setJoined(true);
+    store.setConnectionStatus("connected");
     store.updateUsers(SAMPLE_USERS);
     store.setSelfUserId("1");
     store.setActiveTab("control");
@@ -170,7 +186,48 @@ export const Collapsed: Story = {
     const store = new SidebarStore();
     store.setMode("join");
     store.setJoined(true);
+    store.setConnectionStatus("connected");
     store.setCollapsed(true);
     return frame(store);
+  },
+};
+
+/** 配信中のアナウンスはヘッダーの下に出す（ルーム作成前）。 */
+export const CreateModeWithAnnouncement: Story = {
+  render: () => {
+    installChromeMock();
+    const store = new SidebarStore();
+    store.setMode("create");
+    return frame(store, loadOf(SAMPLE_WARNING));
+  },
+};
+
+/** 入室後もヘッダーの下に出す。ポップアップで閉じたものはここでも出ない。 */
+export const ShareTabWithAnnouncement: Story = {
+  render: () => {
+    installChromeMock();
+    const store = new SidebarStore();
+    store.setMode("join");
+    store.setJoined(true);
+    store.setShareLink(SAMPLE_URL);
+    store.setShareTitle(SAMPLE_TITLE);
+    store.updateUsers(SAMPLE_USERS);
+    store.setActiveTab("share");
+    return frame(store, loadOf(SAMPLE_WARNING));
+  },
+};
+
+/** 重要とお知らせが同時に配信されているとき（入室後）。 */
+export const ShareTabWithAnnouncements: Story = {
+  render: () => {
+    installChromeMock();
+    const store = new SidebarStore();
+    store.setMode("join");
+    store.setJoined(true);
+    store.setShareLink(SAMPLE_URL);
+    store.setShareTitle(SAMPLE_TITLE);
+    store.updateUsers(SAMPLE_USERS);
+    store.setActiveTab("share");
+    return frame(store, loadOf(SAMPLE_WARNING, SAMPLE_INFO));
   },
 };

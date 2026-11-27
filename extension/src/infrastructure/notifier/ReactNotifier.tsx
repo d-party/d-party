@@ -7,6 +7,7 @@ import {
   type SidebarStore,
   sidebarWidth,
 } from "@/presentation/content/party/react/sidebarStore";
+import { applyTheme } from "@/styles/theme";
 import {
   Toast,
   ToastBody,
@@ -123,6 +124,7 @@ export class ReactNotifier implements Notifier {
     attachShadowStyles(shadow);
 
     const mountPoint = document.createElement("div");
+    applyTheme(mountPoint);
     shadow.appendChild(mountPoint);
     createRoot(mountPoint).render(
       <Toaster store={this.store} sidebarStore={sidebarStore} />,

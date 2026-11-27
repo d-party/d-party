@@ -6,7 +6,7 @@ main = "src/index.js"
 compatibility_date = "2025-01-01"
 workers_dev = false
 
-# ページ本体は helm chart・本番 compose と同じファイルを文字列として取り込む。
+# ページ本体は helm chart と同じファイルを文字列として取り込む。
 [[rules]]
 type = "Text"
 globs = ["**/*.html"]

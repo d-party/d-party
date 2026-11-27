@@ -30,13 +30,15 @@ argocd/         Argo CD Application の雛形（実体は運用リポジトリ�
 
 ## メンテナンスページ
 
-- ページは `helm/d-party/files/maintenance.html` の 1 本だけ。chart の nginx・本番 compose の
-  nginx・`cloudflare/maintenance-worker` が同じファイルを使う。外部の CSS や画像を読ませない
-  （オリジンが落ちているときに出すページなので）。
+- ページは `helm/d-party/files/maintenance.html` の 1 本だけ。chart の nginx（ConfigMap に
+  取り込んでマウントする）と `cloudflare/maintenance-worker` が同じファイルを使う。
+  外部の CSS や画像を読ませない（オリジンが落ちているときに出すページなので）。
 - nginx は upstream に届かないとき（502 / 504）と計画メンテナンス（`nginx.maintenance.enabled`）の
   ときにこのページを 503 で返す。`proxy_intercept_errors` は入れない。django が返す
   `/api/v1/health` の 503 をそのまま通すため。
 - `/healthz` はメンテナンス中も 200 のままにする（nginx の probe が使う）。
+- `/api/v1/announcements` はメンテナンス中も django へ通す（メンテナンスの告知に使うため）。
+  `/api/v1/health` は通さない（静的ページの 503 で拡張機能の「ルームを作成」を止める）。
 - Worker は 503 を差し替えない（nginx のページと `/api/v1/health` を通すため）。手順は README の 7 章。
 
 ```bash

@@ -62,9 +62,16 @@ data:
             }
 
 {{- if .Values.nginx.maintenance.enabled }}
-            # 計画メンテナンス中。/healthz 以外はすべて静的ページ（503）を返す。
+            # 計画メンテナンス中。/healthz とアナウンス以外はすべて静的ページ（503）を返す。
             location / {
                 return 503;
+            }
+            # アナウンス（運営からのお知らせ）はメンテナンスの告知に使うので django へ通す。
+            # django ごと止めているときは 502 になり、上の error_page で静的ページへ替わる
+            # （拡張機能は取得の失敗を「お知らせなし」として扱う）。
+            location = /api/v1/announcements {
+                add_header Access-Control-Allow-Origin "*" always;
+                proxy_pass http://app_server;
             }
 {{- else }}
             location /static/ {

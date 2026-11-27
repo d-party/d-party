@@ -10,6 +10,8 @@ frontend と拡張機能の orval がそのスキーマから TypeScript の型�
 
 from rest_framework import serializers
 
+from announcements.models import Announcement
+
 
 class ApiMessageSerializer(serializers.Serializer):
     message = serializers.CharField()
@@ -47,6 +49,21 @@ class PerDayResultSerializer(serializers.Serializer):
     data = PerDayCountSerializer(many=True)  # type: ignore[assignment]
 
 
+class HourlyAverageSerializer(serializers.Serializer):
+    hour = serializers.IntegerField(
+        min_value=0,
+        max_value=23,
+        help_text="時間帯（0〜23 時。サーバのタイムゾーン）。",
+    )
+    average = serializers.FloatField(
+        help_text="その時間帯に入室したユーザー数の 1 日あたりの平均。"
+    )
+
+
+class HourlyAverageResultSerializer(serializers.Serializer):
+    data = HourlyAverageSerializer(many=True)  # type: ignore[assignment]
+
+
 class ReactionTypeCountSerializer(serializers.Serializer):
     count = serializers.IntegerField()
     reaction_type = serializers.CharField()
@@ -64,3 +81,15 @@ class ShieldsBadgeSerializer(serializers.Serializer):
     message = serializers.CharField()
     color = serializers.CharField(required=False)
     cacheSeconds = serializers.IntegerField(required=False)  # noqa: N815
+
+
+class AnnouncementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Announcement
+        fields = ("id", "message", "level", "starts_at", "ends_at")
+        # 応答専用。read_only にするとスキーマで全項目が必須になる。
+        read_only_fields = fields
+
+
+class AnnouncementListResultSerializer(serializers.Serializer):
+    data = AnnouncementSerializer(many=True)  # type: ignore[assignment]

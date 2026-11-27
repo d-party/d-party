@@ -170,6 +170,52 @@
                 }
             }
         },
+        "/api/v1/announcements": {
+            "get": {
+                "operationId": "announcementsActive",
+                "description": "Announcements being delivered now (``starts_at`` <= now < ``ends_at``).\n\nRead-only and public: the extension's popup and sidebar fetch it. Ordered by\nimportance (warning first), then by the newest start. ``extension_version``\nnarrows the collection to the announcements targeting that extension version.",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "extension_version",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^(0|[1-9][0-9]{0,4})\\.(0|[1-9][0-9]{0,4})\\.(0|[1-9][0-9]{0,4})$",
+                            "maxLength": 17
+                        },
+                        "description": "拡張機能のバージョン（x.y.z。各部は 0〜65535 の整数。例: 2.15.0）。指定すると、このバージョンが配信対象（下限 ≤ バージョン ≤ 上限。下限・上限が空の側は制限なし）のものだけを返す。省略すると、バージョンでは絞り込まない（対象バージョンに関係なく、配信中のものをすべて返す）。形式が不正なら 400。"
+                    }
+                ],
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AnnouncementListResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1/chrome-extension/version-check": {
             "get": {
                 "operationId": "versionCheck",
@@ -574,10 +620,124 @@
                     }
                 }
             }
+        },
+        "/api/v1/statistics/anime-store/hourly-average-user": {
+            "get": {
+                "operationId": "statsHourlyAverageUser",
+                "description": "Average users entering a room in each hour of the day (by entry time).",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "days",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 365,
+                            "default": 365
+                        },
+                        "description": "集計する日数。"
+                    }
+                ],
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HourlyAverageResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
         }
     },
     "components": {
         "schemas": {
+            "Announcement": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "本文",
+                        "description": "拡張機能に出す一言（60 文字まで）。"
+                    },
+                    "level": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/AnnouncementLevelEnum"
+                            }
+                        ],
+                        "readOnly": true,
+                        "title": "種別",
+                        "description": "「重要」は拡張機能で目立つ色で出す（メンテナンスなど）。\n\n* `info` - お知らせ\n* `warning` - 重要"
+                    },
+                    "starts_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "配信開始"
+                    },
+                    "ends_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "配信期限",
+                        "description": "この時刻になると配信を止める（この時刻は含まない）。"
+                    }
+                },
+                "required": [
+                    "ends_at",
+                    "id",
+                    "level",
+                    "message",
+                    "starts_at"
+                ]
+            },
+            "AnnouncementLevelEnum": {
+                "enum": [
+                    "info",
+                    "warning"
+                ],
+                "type": "string",
+                "description": "* `info` - お知らせ\n* `warning` - 重要"
+            },
+            "AnnouncementListResult": {
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Announcement"
+                        }
+                    }
+                },
+                "required": [
+                    "data"
+                ]
+            },
             "ApiMessage": {
                 "type": "object",
                 "properties": {
@@ -605,6 +765,40 @@
                 "properties": {
                     "data": {
                         "$ref": "#/components/schemas/Count"
+                    }
+                },
+                "required": [
+                    "data"
+                ]
+            },
+            "HourlyAverage": {
+                "type": "object",
+                "properties": {
+                    "hour": {
+                        "type": "integer",
+                        "maximum": 23,
+                        "minimum": 0,
+                        "description": "時間帯（0〜23 時。サーバのタイムゾーン）。"
+                    },
+                    "average": {
+                        "type": "number",
+                        "format": "double",
+                        "description": "その時間帯に入室したユーザー数の 1 日あたりの平均。"
+                    }
+                },
+                "required": [
+                    "average",
+                    "hour"
+                ]
+            },
+            "HourlyAverageResult": {
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/HourlyAverage"
+                        }
                     }
                 },
                 "required": [

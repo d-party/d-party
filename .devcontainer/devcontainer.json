@@ -1,6 +1,7 @@
 {
   "name": "d-party Dev Container",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  // ハイフン付きのタグ（ubuntu-24.04 など）は 2025-10 で更新が止まっている。ubuntuXX.XX の形を使う。
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu26.04",
   "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config graphviz && sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*",
   "postCreateCommand": "(cd backend && uv sync) && pre-commit install --install-hooks && pnpm install --frozen-lockfile && pnpm exec playwright install --with-deps --only-shell chromium",
   "features": {
@@ -20,6 +21,9 @@
     "ghcr.io/devcontainers-extra/features/yamllint:2": {},
     "ghcr.io/devcontainers/features/github-cli:1.1.0": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      // feature 2.17.0 は Ubuntu 26.04 (resolute) だと Moby の導入を拒んで止まるので、Docker CE を入れる。
+      // feature が resolute の Moby に対応したら外してよい。
+      "moby": false,
       "installDockerBuildx": true,
       "installDockerComposeSwitch": true,
       "version": "latest",
@@ -129,7 +133,6 @@
   },
   "forwardPorts": [
     80,
-    443,
     3000,
     5432,
     6379,
@@ -138,10 +141,6 @@
   "portsAttributes": {
     "80": {
       "label": "Nginx (App)",
-      "onAutoForward": "silent"
-    },
-    "443": {
-      "label": "Nginx (HTTPS)",
       "onAutoForward": "silent"
     },
     "3000": {

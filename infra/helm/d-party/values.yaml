@@ -136,6 +136,8 @@ nginx:
   # RPi クラスタで他サービスと相乗りする前提のため既定 1。可用性が要るなら上げる。
   replicaCount: 1
   service:
+    # Cloudflare（cloudflared）を通らずに外から届く type にしない。管理画面のログイン試行の
+    # ロックは Cloudflare が付ける CF-Connecting-IP で数えるので、直接届くと偽れる。
     type: ClusterIP
     port: 80
   strategy:
@@ -144,7 +146,8 @@ nginx:
   # nginx -s quit による graceful 終了の猶予。
   terminationGracePeriodSeconds: 60
   preStopSleepSeconds: 5
-  # 計画メンテナンス。true にすると /healthz 以外の全リクエストへ静的ページ（503）を返す。
+  # 計画メンテナンス。true にすると /healthz と /api/v1/announcements 以外の全リクエストへ
+  # 静的ページ（503）を返す。アナウンスは告知に使えるよう django へ通す。
   # django / frontend が落ちているときは、この値に関係なく同じページが出る。
   maintenance:
     enabled: false
@@ -159,8 +162,13 @@ nginx:
 postgres:
   image:
     repository: postgres
-    tag: "16"
+    tag: "18"
     pullPolicy: IfNotPresent
+  # PGDATA に使う、ボリューム（/var/lib/postgresql/data）の中のディレクトリ名。
+  # メジャー版は互換の無いデータ形式を持つので、版ごとに分ける。上げるときは
+  # 新しい名前の空ディレクトリで initdb し、dump を restore する。旧版のディレクトリは
+  # 残るので、image.tag と dataSubdir を戻せば切り戻せる（手順は infra/README.md §3.6）。
+  dataSubdir: pgdata18
   auth:
     database: d_party
     username: d_party
@@ -198,6 +206,7 @@ redis:
       memory: 192Mi
 
 # ── Ingress（既定 OFF。ドメイン/複数ドメインは運用リポジトリ側で扱う）────────
+# 有効にするなら Cloudflare の後ろに置く（nginx.service.type の注意と同じ理由）。
 ingress:
   enabled: false
   className: ""

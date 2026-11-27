@@ -1,11 +1,15 @@
 /**
  * Opens the usage page once on first install (onInstalled also fires on reload
- * and update, hence the stored flag), and runs the sidebar's health check,
- * which content scripts cannot fetch under Local Network Access.
+ * and update, hence the stored flag), and runs the sidebar's health check and
+ * announcement fetch, which content scripts cannot fetch under Local Network
+ * Access.
  */
+import { fetchActiveAnnouncements } from "@/infrastructure/api/announcements";
 import { health } from "@/infrastructure/api/generated/d-party";
 import { USAGE_URL } from "@/infrastructure/env";
 import type {
+  AnnouncementsRequest,
+  AnnouncementsResponse,
   HealthCheckRequest,
   HealthCheckResponse,
 } from "@/infrastructure/messages";
@@ -35,5 +39,20 @@ chrome.runtime.onMessage.addListener(
       .then((response) => sendResponse({ ok: response.status === 200 }))
       .catch(() => sendResponse({ ok: false }));
     return true; // 非同期に sendResponse するためチャネルを開いたままにする。
+  },
+);
+
+chrome.runtime.onMessage.addListener(
+  (
+    message: AnnouncementsRequest,
+    _sender,
+    sendResponse: (response: AnnouncementsResponse) => void,
+  ) => {
+    if (message?.type !== "announcements") return undefined;
+    // 失敗しても reject せず空の配列で解決する。
+    void fetchActiveAnnouncements().then((announcements) =>
+      sendResponse({ announcements }),
+    );
+    return true;
   },
 );

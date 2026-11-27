@@ -5,6 +5,7 @@ from pathlib import Path
 
 from django.templatetags.static import static
 from django.urls import reverse_lazy
+from django.utils.csp import CSP
 from django.utils.translation import gettext_lazy as _
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,8 +29,9 @@ if DEBUG:
     # ``["*"]`` にしない。DEBUG=1 のまま本番に出ても Host ヘッダを偽装させないため。
     ALLOWED_HOSTS += ["localhost", "127.0.0.1", "[::1]", "testserver"]
 # TLS は nginx / Cloudflare が終端し Django からは http に見えるので、https の Origin を
-# 明示的に信頼する。
-CSRF_TRUSTED_ORIGINS = [f"https://*.{MY_DOMAIN}"]
+# 明示的に信頼する。``*.`` で全サブドメインを信頼しない（別のサービスを載せたサブドメイン
+# から管理画面へ CSRF できてしまう）。
+CSRF_TRUSTED_ORIGINS = [f"https://{MY_DOMAIN}", f"https://www.{MY_DOMAIN}"]
 
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
@@ -50,7 +52,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django_extensions",
     "channels",
     "rest_framework",
     "drf_spectacular",
@@ -58,8 +59,12 @@ INSTALLED_APPS = [
     "django_otp",
     "django_otp_webauthn",
     "streamer",
+    "announcements",
     "api",
 ]
+if DEBUG:
+    # shell_plus などの開発用コマンド。本番では読み込まない。
+    INSTALLED_APPS += ["django_extensions"]
 
 # OpenAPI スキーマは `manage.py spectacular` でファイル（backend/openapi.json）に書き出す。
 # スキーマを配信する URL は持たない。
@@ -67,6 +72,10 @@ REST_FRAMEWORK = {
     # REST API はすべて公開（認証・権限なし）。スキーマにも認証を載せない。
     "DEFAULT_AUTHENTICATION_CLASSES": [],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    # JSON だけを返す。既定に入っている Browsable API（HTML の画面とフォーム）は出さない。
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    # 受け取るのも JSON だけ（フォームやファイルのアップロードは受けない）。
+    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
@@ -74,6 +83,10 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "d-party backend API",
     # パス（/api/v1/）の版。リリースの版とは連動させない。
     "VERSION": "1.0.0",
+    # 選択肢の型名（TypeScript の型名になる）。既定の ``LevelEnum`` では何の種別か分からない。
+    "ENUM_NAME_OVERRIDES": {
+        "AnnouncementLevelEnum": "announcements.models.AnnouncementLevel",
+    },
 }
 
 AUTHENTICATION_BACKENDS = [
@@ -85,6 +98,7 @@ AUTHENTICATION_BACKENDS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "django.middleware.csp.ContentSecurityPolicyMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -95,6 +109,25 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "axes.middleware.AxesMiddleware",
 ]
+
+# Content-Security-Policy。Django が HTML を返すのは管理画面だけ。
+# まず Report-Only で出す（ブロックはせず、違反はブラウザのコンソールに出る）。違反が
+# 出ないことを本番で確かめたら、同じ内容を SECURE_CSP へ移して強制する。
+SECURE_CSP_REPORT_ONLY = {
+    "default-src": [CSP.SELF],
+    # 'unsafe-eval' は Unfold の Alpine.js が式を評価するのに要る。インラインの <script> は
+    # 許さず、テンプレートで {% csp_nonce_attr %} を付けたものだけを通す。
+    "script-src": [CSP.SELF, CSP.UNSAFE_EVAL, CSP.NONCE],
+    # Unfold / htmx / Alpine.js が <style> と style 属性を使う。
+    "style-src": [CSP.SELF, CSP.UNSAFE_INLINE],
+    "img-src": [CSP.SELF, "data:"],
+    "font-src": [CSP.SELF],
+    "connect-src": [CSP.SELF],
+    "object-src": [CSP.NONE],
+    "base-uri": [CSP.SELF],
+    "form-action": [CSP.SELF],
+    "frame-ancestors": [CSP.NONE],
+}
 
 ROOT_URLCONF = "d_party.urls"
 
@@ -108,6 +141,8 @@ TEMPLATES = [
             "context_processors": [
                 "django.template.context_processors.debug",
                 "django.template.context_processors.request",
+                # テンプレートの {% csp_nonce_attr %} に nonce を渡す。
+                "django.template.context_processors.csp",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
@@ -171,6 +206,27 @@ UNFOLD = {
         "light": lambda request: static("branding/dp-mini.png"),
         "dark": lambda request: static("branding/dp-mini.png"),
     },
+    # 公開サイト（frontend/public/favicon/）と同じ画像を置いている
+    "SITE_FAVICONS": [
+        {
+            "rel": "icon",
+            "sizes": "32x32",
+            "type": "image/png",
+            "href": lambda request: static("branding/favicon-32x32.png"),
+        },
+        {
+            "rel": "icon",
+            "sizes": "16x16",
+            "type": "image/png",
+            "href": lambda request: static("branding/favicon-16x16.png"),
+        },
+        {
+            "rel": "apple-touch-icon",
+            "sizes": "180x180",
+            "type": "image/png",
+            "href": lambda request: static("branding/apple-touch-icon.png"),
+        },
+    ],
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "SHOW_BACK_BUTTON": False,
@@ -234,6 +290,20 @@ UNFOLD = {
                 ],
             },
             {
+                "title": _("お知らせ"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("アナウンス"),
+                        "icon": "campaign",
+                        "link": reverse_lazy(
+                            "admin:announcements_announcement_changelist"
+                        ),
+                    },
+                ],
+            },
+            {
                 "title": _("アカウント"),
                 "separator": True,
                 "collapsible": True,
@@ -286,8 +356,11 @@ ASGI_APPLICATION = "d_party.asgi.application"
 # 管理画面のログイン試行制限（django-axes）。
 AXES_FAILURE_LIMIT = 10
 AXES_COOLOFF_TIME = 6
-# ユーザー名だけでロックする。
-AXES_LOCKOUT_PARAMETERS = ["username"]
+# ユーザー名と IP の組でロックする。ユーザー名だけだと、誰でもスタッフの名前で 10 回
+# 間違えるだけで、そのスタッフを AXES_COOLOFF_TIME 時間締め出せる。
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
+# IP は Cloudflare の CF-Connecting-IP から取る（d_party/client_ip.py）。
+AXES_CLIENT_IP_CALLABLE = "d_party.client_ip.client_ip"
 AXES_RESET_ON_SUCCESS = True
 
 if DEBUG:

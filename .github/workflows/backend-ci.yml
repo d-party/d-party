@@ -63,7 +63,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.3
+        uses: astral-sh/setup-uv@v10.4.0
         with:
           working-directory: backend
           enable-cache: true
@@ -80,14 +80,14 @@ jobs:
     name: Pytest (PostgreSQL)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # 依存とテストのコードを動かすジョブには書き込み権限を渡さない。
+    # カバレッジの投稿は coverage ジョブがする。
     permissions:
-      # カバレッジのコメントとデータブランチへの書き込み。
-      contents: write
-      pull-requests: write
+      contents: read
     # Redis は不要（conftest.py がインメモリに差し替える）。
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18
         env:
           POSTGRES_DB: d_party
           POSTGRES_USER: d_party
@@ -104,7 +104,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.3
+        uses: astral-sh/setup-uv@v10.4.0
         with:
           working-directory: backend
           enable-cache: true
@@ -115,11 +115,54 @@ jobs:
         run: uv run python manage.py makemigrations --check --dry-run
       - name: run pytest
         run: uv run pytest --cov --cov-report=xml
+      - name: Store coverage data
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-data
+          path: backend/.coverage
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  coverage:
+    name: Coverage comment
+    needs: pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # カバレッジのコメントとデータブランチへの書き込み。依存を入れず、テストも動かさない。
+    permissions:
+      contents: write
+      pull-requests: write
+    cache-mode: none
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # artifact は依存のコードを動かした pytest ジョブが作ったもの。checkout の上に直接
+      # 展開すると設定ファイル（pyproject.toml · .coveragerc）を差し替えられるので、
+      # 別の場所に受けて .coverage だけを持ってくる。
+      - uses: actions/download-artifact@v8
+        with:
+          name: coverage-data
+          path: ${{ runner.temp }}/coverage-data
+      - name: Take only the coverage database
+        working-directory: .
+        env:
+          DATA_DIR: ${{ runner.temp }}/coverage-data
+        run: |
+          set -euo pipefail
+          data="$DATA_DIR/.coverage"
+          count=$(find "$DATA_DIR" -mindepth 1 | wc -l)
+          if [ "$count" -ne 1 ] || [ ! -f "$data" ] || [ -L "$data" ]; then
+            echo "::error::coverage-data must hold exactly one regular file named .coverage"
+            exit 1
+          fi
+          cp "$data" backend/.coverage
       # fork の PR では投稿できないので continue-on-error（本文は artifact に残る）。
       - name: Coverage comment
         id: coverage_comment
         continue-on-error: true
-        uses: py-cov-action/python-coverage-comment-action@v4.6
+        uses: py-cov-action/python-coverage-comment-action@v4.7
         with:
           GITHUB_TOKEN: ${{ github.token }}
           # .coverage はリポジトリのルートではなく backend/ に出る。
@@ -144,7 +187,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.3
+        uses: astral-sh/setup-uv@v10.4.0
         with:
           working-directory: backend
           enable-cache: true
@@ -167,7 +210,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.3
+        uses: astral-sh/setup-uv@v10.4.0
         with:
           working-directory: backend
           enable-cache: true
@@ -191,7 +234,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.3
+        uses: astral-sh/setup-uv@v10.4.0
         with:
           working-directory: backend
           enable-cache: true

@@ -16,11 +16,17 @@
 | `repo-badge.yml` | `Repo/Badge` | PR が触ったパスからラベル `Backend` `Frontend` `Extension` `Infra` を付け外しする（対応表は `labeler.yml`） | PR 全体 |
 | `storybook-deploy.yml` | `Storybook/Deploy` | 両 Storybook を GitHub Pages の `/extension/` `/frontend/` へ | main のみ |
 | `release.yml` | `Release` | 統一リリース | 手動 |
-| `maintenance.yml` | `Repo/Maintenance` | Claude Code が `dependabot-review-and-merge` → `release` を無人実行 | 毎週火曜 10:00 JST・手動 |
+| `maintenance.yml` | `Repo/Maintenance` | Claude Code が `dependabot-review-and-merge` で判定（読み取り専用）→ `scripts/dependabot-merge.sh` がマージ → `scripts/weekly-release.sh` がリリース | 毎週火曜 10:00 JST・手動 |
 
 - `name` は `<Scope>/<Kind>`。`CI` は lint・型・テスト、`Build` は出荷物が組み上がって動くか。
 - actionlint は reviewdog の `fail_level: any` で、指摘があれば失敗させる（既定の `none` は成功扱いになる）。
 - CI と Dependabot の対象ブランチは `main`。
+- 依存のコード（`pnpm install` · `uv sync` の後の build · test · start）を動かすジョブには書き込み権限を
+  渡さない（`permissions: contents: read`、checkout は `persist-credentials: false`）。投稿やマージが要るなら、
+  依存を動かさない別ジョブに分けて結果を artifact で渡す（例: `backend-ci.yml` の `coverage`、
+  `maintenance.yml` の `merge`、`release.yml` の `extension-publish`）。
+- 書き込み権限を持つジョブに、PR や issue の本文のような誰でも書けるテキストを読む LLM を置かない。
+- ワークフローから呼ぶシェルスクリプトは `scripts/` に置く。
 
 ## キャッシュ
 
@@ -35,6 +41,11 @@
 
 Actions のキャッシュは同じキーへ上書きできない。turbo のキーにワークフロー名とジョブ名を
 入れているのは、ジョブ同士で取り合わないようにするため。
+
+main のキャッシュは release.yml のビルドも復元する。main の権限で走り、未レビューの依存の
+コードを動かすジョブ（`maintenance.yml` の `review`）は `cache-mode: read` にして、キャッシュを
+書き換えられないようにする。キャッシュを使わない書き込み権限のジョブは `cache-mode: none`。
+`cache-mode` をこの版の actionlint はまだ知らないので、`actionlint.yaml` でその指摘だけ外している。
 
 ## リリース（`release.yml`）
 

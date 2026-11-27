@@ -34,11 +34,21 @@ def test_production_hardening(load_settings):
         "www.d-party.example",
         "django",
     ]
+    # サブドメインをワイルドカードで信頼しない。
+    assert loaded["CSRF_TRUSTED_ORIGINS"] == [
+        "https://d-party.example",
+        "https://www.d-party.example",
+    ]
     assert loaded["SESSION_COOKIE_SECURE"] is True
     assert loaded["CSRF_COOKIE_SECURE"] is True
     assert loaded["SECURE_PROXY_SSL_HEADER"] == ("HTTP_X_FORWARDED_PROTO", "https")
-    # axes（ログイン試行のロック）は既定で有効。
+    # 開発用のコマンドは本番に載せない。
+    assert "django_extensions" not in loaded["INSTALLED_APPS"]
+    # axes（ログイン試行のロック）は既定で有効。ユーザー名だけでロックすると、誰でも
+    # スタッフを締め出せるので、IP との組で数える。
     assert "AXES_ENABLED" not in loaded
+    assert loaded["AXES_LOCKOUT_PARAMETERS"] == [["username", "ip_address"]]
+    assert loaded["AXES_CLIENT_IP_CALLABLE"] == "d_party.client_ip.client_ip"
     assert loaded["OTP_WEBAUTHN_RP_ID"] == "d-party.example"
     assert loaded["OTP_WEBAUTHN_ALLOWED_ORIGINS"] == [
         "https://d-party.example",
@@ -56,7 +66,33 @@ def test_debug_relaxations(load_settings):
     assert "SESSION_COOKIE_SECURE" not in loaded
     assert "SECURE_PROXY_SSL_HEADER" not in loaded
     assert loaded["AXES_ENABLED"] is False
+    assert "django_extensions" in loaded["INSTALLED_APPS"]
     assert "http://localhost:8000" in loaded["OTP_WEBAUTHN_ALLOWED_ORIGINS"]
+
+
+def test_csp_is_report_only_and_keeps_inline_scripts_out(load_settings):
+    loaded = load_settings(debug=False)
+
+    assert (
+        "django.middleware.csp.ContentSecurityPolicyMiddleware" in loaded["MIDDLEWARE"]
+    )
+    # まだ強制しない（SECURE_CSP は既定の空のまま）。
+    assert "SECURE_CSP" not in loaded
+    policy = loaded["SECURE_CSP_REPORT_ONLY"]
+    assert policy["default-src"] == ["'self'"]
+    assert "'unsafe-inline'" not in policy["script-src"]
+    assert policy["object-src"] == ["'none'"]
+    assert policy["frame-ancestors"] == ["'none'"]
+
+
+@pytest.mark.django_db
+def test_admin_pages_carry_the_report_only_header(client):
+    response = client.get("/admin/login/")
+
+    assert "Content-Security-Policy" not in response
+    header = response["Content-Security-Policy-Report-Only"]
+    assert "default-src 'self'" in header
+    assert "script-src 'self' 'unsafe-eval'" in header
 
 
 @pytest.fixture

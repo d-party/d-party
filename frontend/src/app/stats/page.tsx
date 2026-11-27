@@ -7,7 +7,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/stats",
   title: "統計",
   description:
-    "d-party の利用統計。直近 1 年間のユーザー数・ルーム数・リアクション数の推移を公開しています。",
+    "d-party の利用統計。直近 1 年間のユーザー数・ルーム数・リアクション数の推移と、時間帯ごとの平均利用者数を公開しています。",
 });
 
 const DEFAULT_DAYS = 365;
