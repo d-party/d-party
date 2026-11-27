@@ -63,9 +63,8 @@ const STEPS: Step[] = [
     title: "dアニメストア・DMM TV を契約",
     description: (
       <>
-        d-party は dアニメストアと DMM TV で使えます。もしもまだであれば、
-        一緒に観たいサービスのアカウントを作成してください。「dアニメストア for Prime
-        Video」や「dアニメストア ニコニコ支店」では使えません。本家本元の
+        d-party は dアニメストアと DMM TV で使えます。もしもまだであれば、一緒に観たいサービスのアカウントを作成してください。「dアニメストア
+        for Prime Video」や「dアニメストア ニコニコ支店」では使えません。本家本元の
         <a
           href={D_ANIME_STORE_URL}
           target="_blank"
@@ -138,8 +137,8 @@ const STEPS: Step[] = [
         <Play className="mx-1 inline size-4 align-text-bottom" />
         が各話ごとに表示されているはずです。
         <PartyPopper className="mx-1 inline size-4 align-text-bottom" />
-        をクリックしてプレイヤーを別タブで表示しましょう。すると普段のプレイヤーの右横にd-partyのサイドバーが表示されます。
-        DMM TV では、作品ページのお気に入り・シェアの並びに表示される
+        をクリックしてプレイヤーを別タブで表示しましょう。すると普段のプレイヤーの右横にd-partyのサイドバーが表示されます。DMM
+        TV では、作品ページのお気に入り・シェアの並びに表示される
         <PartyPopper className="mx-1 inline size-4 align-text-bottom" />
         をクリックすると、同じタブで再生ページが開き、d-partyのサイドバーが表示されます。
       </>
