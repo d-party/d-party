@@ -2,11 +2,16 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { OG_FONT_FAMILY } from "@/lib/og/card";
-import { type Coverage, fontCoverage, keepCovered } from "@/lib/og/glyphs";
+import {
+  type Coverage,
+  fontCoverage,
+  intersect,
+  ogSafeTitle,
+} from "@/lib/og/glyphs";
 
 // Noto Sans JP weights are bundled in the repo (`public/fonts/`) and read from
 // disk. The JP glyph set covers anime titles; characters outside it are dropped
-// by `ogSafeText`, so the OG images never make a request-time fetch to Google
+// by `ogSafeTitle`, so the OG images never make a request-time fetch to Google
 // Fonts. `public/` is copied into the standalone runtime image, so
 // `process.cwd()` resolves correctly in dev, `next start`, and the Docker
 // container alike.
@@ -19,56 +24,95 @@ interface OgFont {
   style: "normal";
 }
 
-async function readOgFonts(): Promise<OgFont[]> {
+interface FontBytes {
+  regular: Buffer;
+  bold: Buffer;
+  /** Code points both weights can draw. */
+  coverage: Coverage;
+}
+
+async function readFontBytes(): Promise<FontBytes | null> {
   try {
     const [regular, bold] = await Promise.all([
       readFile(join(FONT_DIR, "NotoSansJP-Regular.ttf")),
       readFile(join(FONT_DIR, "NotoSansJP-Bold.ttf")),
     ]);
-    return [
-      { name: OG_FONT_FAMILY, data: regular, weight: 400, style: "normal" },
-      { name: OG_FONT_FAMILY, data: bold, weight: 700, style: "normal" },
-    ];
-  } catch {
-    return [];
+    const coverage = intersect(fontCoverage(regular), fontCoverage(bold));
+    if (coverage.length === 0) {
+      console.error("OG fonts: no readable cmap; using the default font");
+      return null;
+    }
+    return { regular, bold, coverage };
+  } catch (error) {
+    console.error("OG fonts: failed to read; using the default font", error);
+    return null;
   }
 }
 
-// The same array (and Buffers) on every call. Satori caches parsed fonts in
-// WeakMaps keyed by them, so fresh objects per request would re-read and
-// re-parse ~11 MB of CJK fonts each time, which the OG routes cannot afford
-// (they are public and the frontend pod is small).
-let fontsPromise: Promise<OgFont[]> | null = null;
+// The files are read (and their cmap parsed) once. A failure is retried on the
+// next call.
+let bytesPromise: Promise<FontBytes | null> | null = null;
 
-/**
- * Load the bundled Noto Sans JP weights for `next/og`. Returns `[]` on failure
- * so the image still renders (Latin text via the default font) instead of
- * 500-ing the route; a failure is retried on the next call.
- */
-export function loadOgFonts(): Promise<OgFont[]> {
-  fontsPromise ??= readOgFonts().then((fonts) => {
-    if (fonts.length === 0) fontsPromise = null;
-    return fonts;
+function loadFontBytes(): Promise<FontBytes | null> {
+  bytesPromise ??= readFontBytes().then((bytes) => {
+    if (!bytes) bytesPromise = null;
+    return bytes;
   });
-  return fontsPromise;
+  return bytesPromise;
 }
 
-const coverages = new WeakMap<Buffer, Coverage>();
+// Satori caches each parsed font in a WeakMap keyed by its `data` Buffer, and
+// the parsed font caches every glyph it has drawn, for good. Reusing one Buffer
+// saves re-parsing ~11 MB of CJK fonts per request, but lets the glyph cache
+// grow with every distinct character any room title has used. So the same
+// bytes are handed out under a new Buffer (a new cache key) once this many
+// distinct characters have been drawn; the old parse is then garbage.
+// About 40 KB per character over both weights, so roughly 60 MB at most.
+const GLYPH_BUDGET = 1500;
 
-// Without the bundled fonts, `next/og` draws only printable ASCII by itself.
+let generation: [Buffer, Buffer] | null = null;
+let drawn = new Set<number>();
+
+function buffersFor(bytes: FontBytes, text: string): [Buffer, Buffer] {
+  const next = new Set(drawn);
+  for (const char of text) next.add(char.codePointAt(0)!);
+  if (!generation || next.size > GLYPH_BUDGET) {
+    const view = (b: Buffer) =>
+      Buffer.from(b.buffer, b.byteOffset, b.byteLength);
+    generation = [view(bytes.regular), view(bytes.bold)];
+    drawn = new Set([...text].map((char) => char.codePointAt(0)!));
+  } else {
+    drawn = next;
+  }
+  return generation;
+}
+
+export interface OgCardFonts {
+  /** For `ImageResponse`; `undefined` falls back to next/og's own font. */
+  fonts: OgFont[] | undefined;
+  /** The room title, cut down to what `fonts` can draw (see `ogSafeTitle`). */
+  title: string;
+}
+
+// Without the bundled fonts, next/og's default font draws printable ASCII.
 const ASCII: Coverage = [[0x20, 0x7e]];
 
 /**
- * `text` without the characters the OG fonts cannot draw, so `next/og` has
- * nothing to fetch for it. Use it on anything a user can set (room titles).
+ * Fonts for one card, and `title` made safe to draw with them. Anything a user
+ * can set must go through here, or next/og fetches fonts for it and keeps them.
  */
-export function ogSafeText(text: string, fonts: readonly OgFont[]): string {
-  const data = fonts[0]?.data;
-  if (!data) return keepCovered(text, ASCII);
-  let coverage = coverages.get(data);
-  if (!coverage) {
-    coverage = fontCoverage(data);
-    coverages.set(data, coverage);
-  }
-  return keepCovered(text, coverage);
+export async function loadOgCardFonts(title = ""): Promise<OgCardFonts> {
+  const bytes = await loadFontBytes();
+  if (!bytes) return { fonts: undefined, title: ogSafeTitle(title, ASCII) };
+  const safe = ogSafeTitle(title, bytes.coverage);
+  const [regular, bold] = buffersFor(bytes, safe);
+  return {
+    // A new array every time: satori keys its font loader by the array and
+    // appends fallback fonts to it, so one long-lived array would only grow.
+    fonts: [
+      { name: OG_FONT_FAMILY, data: regular, weight: 400, style: "normal" },
+      { name: OG_FONT_FAMILY, data: bold, weight: 700, style: "normal" },
+    ],
+    title: safe,
+  };
 }

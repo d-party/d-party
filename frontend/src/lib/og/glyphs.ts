@@ -4,7 +4,7 @@
  * `next/og` fetches a font from Google Fonts for every character the given
  * fonts lack, and keeps each result in a module-level cache that is never
  * evicted, keyed by the missing characters. Room titles are set by anyone who
- * opens a room, so the cards drop such characters instead (see `ogSafeText`).
+ * opens a room, so the cards drop such characters instead (see `ogSafeTitle`).
  *
  * No imports, so the module also runs under plain Node for a quick check.
  */
@@ -32,13 +32,16 @@ function merge(ranges: [number, number][]): Coverage {
   return merged;
 }
 
-// Format 12: segmented coverage (all of Unicode). Every group maps to glyphs.
+// Format 12: segmented coverage (all of Unicode). A group whose first glyph is
+// 0 maps its first code point to .notdef, which counts as missing.
 function readFormat12(view: DataView, at: number): Coverage {
   const groups = view.getUint32(at + 12);
   const ranges: [number, number][] = [];
   for (let i = 0; i < groups; i++) {
     const g = at + 16 + i * 12;
-    ranges.push([view.getUint32(g), view.getUint32(g + 4)]);
+    const first = view.getUint32(g) + (view.getUint32(g + 8) === 0 ? 1 : 0);
+    const last = view.getUint32(g + 4);
+    if (first <= last) ranges.push([first, last]);
   }
   return merge(ranges);
 }
@@ -71,6 +74,14 @@ function readFormat4(view: DataView, at: number): Coverage {
   return merge(ranges);
 }
 
+// The subtable opentype.js (inside satori) uses: the last Unicode record.
+function isUnicode(platform: number, encoding: number): boolean {
+  return (
+    (platform === 3 && (encoding === 0 || encoding === 1 || encoding === 10)) ||
+    (platform === 0 && encoding <= 4)
+  );
+}
+
 /** Code points `data` (a TTF / OTF file) maps to a glyph. Empty if unreadable. */
 export function fontCoverage(data: Uint8Array): Coverage {
   try {
@@ -83,24 +94,37 @@ export function fontCoverage(data: Uint8Array): Coverage {
     }
     if (cmap < 0) return [];
 
-    // Prefer a full-Unicode subtable (format 12) over a BMP-only one (format 4).
-    let format4 = -1;
     const subtables = view.getUint16(cmap + 2);
-    for (let i = 0; i < subtables; i++) {
+    for (let i = subtables - 1; i >= 0; i--) {
       const record = cmap + 4 + i * 8;
-      const platform = view.getUint16(record);
-      const encoding = view.getUint16(record + 2);
+      if (!isUnicode(view.getUint16(record), view.getUint16(record + 2))) {
+        continue;
+      }
       const at = cmap + view.getUint32(record + 4);
-      const unicode = platform === 0 || (platform === 3 && (encoding === 1 || encoding === 10));
-      if (!unicode) continue;
       const format = view.getUint16(at);
       if (format === 12) return readFormat12(view, at);
-      if (format === 4 && format4 < 0) format4 = at;
+      if (format === 4) return readFormat4(view, at);
+      return [];
     }
-    return format4 < 0 ? [] : readFormat4(view, format4);
+    return [];
   } catch {
     return [];
   }
+}
+
+/** Code points both coverages contain. */
+export function intersect(a: Coverage, b: Coverage): Coverage {
+  const out: [number, number][] = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length && j < b.length) {
+    const first = Math.max(a[i]![0], b[j]![0]);
+    const last = Math.min(a[i]![1], b[j]![1]);
+    if (first <= last) out.push([first, last]);
+    if (a[i]![1] < b[j]![1]) i++;
+    else j++;
+  }
+  return out;
 }
 
 export function covers(coverage: Coverage, codePoint: number): boolean {
@@ -116,11 +140,36 @@ export function covers(coverage: Coverage, codePoint: number): boolean {
   return false;
 }
 
-/** `text` without the code points `coverage` lacks. */
+/** `text` (NFC) without the code points `coverage` lacks. */
 export function keepCovered(text: string, coverage: Coverage): string {
   let kept = "";
-  for (const char of text) {
+  for (const char of text.normalize("NFC")) {
     if (covers(coverage, char.codePointAt(0)!)) kept += char;
   }
   return kept;
+}
+
+// A room card shows at most ~40 characters of the work and ~55 of the rest.
+// Every character is still laid out (and its glyph loaded) even when clipped.
+const PART_MAX_CHARS = 60;
+const MAX_PARTS = 4;
+
+/**
+ * A room title (`"作品名 - 第1話 - サブタイトル"`) the card can draw: each part
+ * cut to what the card shows, without what `coverage` lacks. `""` (the generic
+ * card) when the work part has nothing left, so an episode never becomes the
+ * headline.
+ */
+export function ogSafeTitle(title: string, coverage: Coverage): string {
+  const parts = title
+    .split(" - ")
+    .slice(0, MAX_PARTS)
+    .map((part) =>
+      keepCovered(
+        [...part.trim()].slice(0, PART_MAX_CHARS).join(""),
+        coverage,
+      ).trim(),
+    );
+  if (!parts[0]) return "";
+  return parts.filter(Boolean).join(" - ");
 }
