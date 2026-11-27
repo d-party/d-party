@@ -571,6 +571,53 @@
                     }
                 }
             }
+        },
+        "/api/v1/statistics/anime-store/hourly-average-user": {
+            "get": {
+                "operationId": "statsHourlyAverageUser",
+                "description": "Average users entering a room in each hour of the day (by entry time).",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "days",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 365,
+                            "default": 365
+                        },
+                        "description": "集計する日数。"
+                    }
+                ],
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HourlyAverageResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiMessage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -602,6 +649,40 @@
                 "properties": {
                     "data": {
                         "$ref": "#/components/schemas/Count"
+                    }
+                },
+                "required": [
+                    "data"
+                ]
+            },
+            "HourlyAverage": {
+                "type": "object",
+                "properties": {
+                    "hour": {
+                        "type": "integer",
+                        "maximum": 23,
+                        "minimum": 0,
+                        "description": "時間帯（0〜23 時。サーバのタイムゾーン）。"
+                    },
+                    "average": {
+                        "type": "number",
+                        "format": "double",
+                        "description": "その時間帯に入室したユーザー数の 1 日あたりの平均。"
+                    }
+                },
+                "required": [
+                    "average",
+                    "hour"
+                ]
+            },
+            "HourlyAverageResult": {
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/HourlyAverage"
+                        }
                     }
                 },
                 "required": [

@@ -4,8 +4,8 @@ import urllib.parse
 
 from django.conf import settings
 from django.core.cache import cache
-from django.db.models import Count
-from django.db.models.functions import TruncDate
+from django.db.models import Count, Min
+from django.db.models.functions import ExtractHour, TruncDate
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
@@ -18,6 +18,7 @@ from streamer.reactions import reaction_counts_by_type
 from .serializers import (
     ApiMessageSerializer,
     CountResultSerializer,
+    HourlyAverageResultSerializer,
     LobbyRedirectSerializer,
     PerDayResultSerializer,
     ReactionTypeCountResultSerializer,
@@ -123,6 +124,33 @@ def _mean_per_day(rows: list[dict]) -> float:
     return sum(row["count"] for row in rows) / len(rows) if rows else 0.0
 
 
+def _hourly_average_entries(since: datetime.date) -> list[dict]:
+    """``[{"hour": 0..23, "average": x}, ...]``。時間帯ごとの 1 日あたり平均入室数。
+
+    入室時刻（``AnimeUser.created_at``）だけで数え、退室時刻は見ない。時刻は settings の
+    TIME_ZONE で切る。分母はその時間帯が来た日数で、期間は ``since`` と最初の入室日の
+    遅い方から今日まで。今日のまだ来ていない時間帯は分母に入れない。
+    """
+    rows = AnimeUser.objects.filter(created_at__date__gte=since)
+    first = rows.aggregate(first=Min("created_at"))["first"]
+    if first is None:
+        return [{"hour": hour, "average": 0.0} for hour in range(24)]
+    counts = dict(
+        rows.annotate(hour=ExtractHour("created_at"))
+        .values("hour")
+        .annotate(count=Count("pk"))
+        .values_list("hour", "count")
+    )
+    now = timezone.localtime()
+    days = (now.date() - max(since, timezone.localdate(first))).days + 1
+
+    def average(hour: int) -> float:
+        occurrences = days - (hour > now.hour)
+        return round(counts.get(hour, 0) / occurrences, 2) if occurrences else 0.0
+
+    return [{"hour": hour, "average": average(hour)} for hour in range(24)]
+
+
 def _mean_created_per_day(model) -> float:
     """全期間の 1 日あたりの平均作成数。"""
     return _mean_per_day(_resample_per_day(_per_day_counts(model)))
@@ -223,6 +251,19 @@ class AnimeActiveRoomPerDayAPI(_StatsView):
         return _resample_per_day(_per_day_counts(AnimeRoom, since), since)
 
     @_stats_schema("statsActiveRoomPerDay", PerDayResultSerializer)
+    def get(self, request, format=None) -> Response:
+        return self.respond(request)
+
+
+class AnimeHourlyAverageUserAPI(_StatsView):
+    """Average users entering a room in each hour of the day (by entry time)."""
+
+    cache_key = "hourly-average-user"
+
+    def produce(self, since):
+        return _hourly_average_entries(since)
+
+    @_stats_schema("statsHourlyAverageUser", HourlyAverageResultSerializer)
     def get(self, request, format=None) -> Response:
         return self.respond(request)
 
