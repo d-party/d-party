@@ -12,7 +12,13 @@ as the ``ResponseBaseFormat`` base class.
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, BeforeValidator, SerializeAsAny, field_validator
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    FiniteFloat,
+    SerializeAsAny,
+    field_validator,
+)
 
 from .models import (
     DEFAULT_USER_ICON,
@@ -44,7 +50,9 @@ OPTION_SRC_MAX_LENGTH = 2048
 class Option(BaseModel):
     """再生状態。"""
 
-    time: float
+    # NaN / Infinity は json.dumps で JSON に無いトークンになり、受け手の JSON.parse が
+    # フレームごと捨てる。
+    time: FiniteFloat
     src: str | None
     paused: str
     rate: str
@@ -54,11 +62,11 @@ class Option(BaseModel):
     @classmethod
     def _coerce_to_str(cls, value):
         # The extension compares the Python repr (`option.paused === "False"`),
-        # so bools and numbers are stringified with str().
-        if value is None:
-            return value
-        text = value if isinstance(value, str) else str(value)
-        return text[:OPTION_VALUE_MAX_LENGTH]
+        # so bools and numbers are stringified with str(). Anything else (None,
+        # lists, objects) is left for validation to reject.
+        if isinstance(value, bool | int | float):
+            value = str(value)
+        return value[:OPTION_VALUE_MAX_LENGTH] if isinstance(value, str) else value
 
     @field_validator("src", mode="before")
     @classmethod

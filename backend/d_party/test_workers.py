@@ -3,13 +3,17 @@
 import importlib.util
 from pathlib import Path
 
+import uvicorn
 from uvicorn_worker import UvicornWorker
 
 from .workers import WS_MAX_SIZE, PartyUvicornWorker
 
 
 def test_worker_caps_websocket_messages():
-    assert PartyUvicornWorker.CONFIG_KWARGS["ws_max_size"] == WS_MAX_SIZE == 64 * 1024
+    """uvicorn が実際に受け取る設定として効くこと（キーの綴りを含めて）。"""
+    config = uvicorn.Config(app=None, **PartyUvicornWorker.CONFIG_KWARGS)
+
+    assert config.ws_max_size == WS_MAX_SIZE == 64 * 1024
 
 
 def test_worker_keeps_the_base_config():

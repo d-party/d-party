@@ -2,6 +2,7 @@
 
 import asyncio
 import functools
+import json
 import logging
 
 from django.http import Http404
@@ -49,9 +50,33 @@ logger = logging.getLogger(__name__)
 CLOSE_POLICY_VIOLATION = 1008
 CLOSE_INTERNAL_ERROR = 1011
 
-# 1 フレームの文字数の上限。本番は uvicorn の ws_max_size（d_party/workers.py）が先に
-# 切るが、dev の runserver や設定漏れでも json.loads に巨大な入力を渡さない。
+# 1 フレームの文字数の上限。本番は uvicorn の ws_max_size（d_party/workers.py の
+# WS_MAX_SIZE。こちらはバイト数）が先に切るが、dev の runserver や設定漏れでも
+# json.loads に巨大な入力を渡さない。
 MAX_FRAME_LENGTH = 64 * 1024
+
+
+def _frame_content(text_data: str | None) -> dict | None:
+    """フレームを action のメッセージとして読む。読めなければ ``None``。
+
+    ``self`` キーは DCRF が ``handle_action(**content)`` に展開したときに引数の束縛で
+    TypeError になり、``action`` が文字列でないと ``available_actions`` の検索で落ちる。
+    どちらも ``handle_action`` の try より前なので、ここで弾く。
+    """
+    if not text_data or len(text_data) > MAX_FRAME_LENGTH:
+        return None
+    try:
+        content = json.loads(text_data)
+    # JSONDecodeError と整数の桁数の上限は ValueError。RecursionError は念のため
+    # （上の文字数では json の C 実装は再帰の上限に届かない）。
+    except ValueError, RecursionError:
+        return None
+    if not isinstance(content, dict) or "self" in content:
+        return None
+    if not isinstance(content.get("action", ""), str):
+        return None
+    return content
+
 
 # 最後の 1 人が抜けてもこの秒数はルームを残す。ホストのリロードや瞬断で
 # ゲストの共有リンクが failed_join にならないようにするため。予約はプロセスごとに
@@ -126,6 +151,8 @@ class AnimePartyConsumer(AsyncAPIConsumer):
         self._user: AnimeUser | None = None
         # Setting のキャッシュ。メッセージごとに DB を引かないため。setting_send で更新する。
         self._setting = RoomSetting()
+        # 閉じた後も、同じ読み込みで届いていたフレームは処理されうる。二重に閉じない。
+        self._closing = False
 
     async def connect(self):
         await self.accept()
@@ -140,14 +167,10 @@ class AnimePartyConsumer(AsyncAPIConsumer):
         ``handle_action`` より前に例外を投げる。それだと ``handle_exception`` を通らず、
         ``disconnect`` も呼ばれないので、在室者の行が alive のまま残る。
         """
-        content = None
-        if text_data and len(text_data) <= MAX_FRAME_LENGTH:
-            try:
-                content = await self.decode_json(text_data)
-            # JSONDecodeError · 整数の桁数の上限は ValueError、深すぎる入れ子は RecursionError。
-            except ValueError, RecursionError:
-                content = None
-        if not isinstance(content, dict):
+        if self._closing:
+            return
+        content = _frame_content(text_data)
+        if content is None:
             # フレームの中身はログへ出さない。
             logger.warning(
                 "malformed websocket frame (%s, %d chars)",
@@ -156,7 +179,11 @@ class AnimePartyConsumer(AsyncAPIConsumer):
             )
             await self._abort(CLOSE_POLICY_VIOLATION)
             return
-        await self.receive_json(content, **kwargs)
+        try:
+            await self.receive_json(content, **kwargs)
+        # 上で弾けなかったものの受け皿。ここを抜けると disconnect が呼ばれない。
+        except Exception as exc:  # noqa: BLE001
+            await self.handle_exception(exc, action=None, request_id=None)
 
     async def handle_exception(self, exc, action, request_id):
         """想定外の例外では、後始末をしてから接続を閉じる。
@@ -181,7 +208,8 @@ class AnimePartyConsumer(AsyncAPIConsumer):
         await self._abort(code)
 
     async def _abort(self, code: int) -> None:
-        """退室の後始末をしてから、``code`` で接続を閉じる。"""
+        """退室の後始末をしてから、``code`` で接続を閉じる。以後のフレームは ``receive`` が捨てる。"""
+        self._closing = True
         try:
             await self._leave()
         finally:

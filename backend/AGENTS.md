@@ -16,6 +16,7 @@ Django へ振り分ける。
 
 ```
 d_party/        settings.py · asgi.py（ProtocolTypeRouter / OriginValidator）· urls.py
+                · workers.py（gunicorn の worker。WebSocket の 1 メッセージの上限）
 streamer/       同時視聴のコア
   consumers.py    AnimePartyConsumer（create / join / leave / video_operation / reaction …）
   format.py       pydantic のメッセージ定義（公開プロトコル。受信の検証と送信の形）
@@ -44,9 +45,14 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
   `extension/src/domain/protocol.ts` と一致させる。基底型のフィールド（`response`）は
   `SerializeAsAny` を付けないとサブクラスのフィールドが直列化で落ちる。
 - **受信の検証**: クライアントの入力は `format.py` の `*Request` で検証する。長すぎる文字列は
-  弾かずに切り詰める（上限は `models.py` の定数）。検証エラーや想定外の例外では、
-  `handle_exception` が退室の後始末をしてから接続を閉じる。例外を素通しすると `disconnect` が
-  呼ばれず、在室者の行が alive のまま残る。
+  弾かずに切り詰める（保存する値の上限は `models.py`、配信するだけの値の上限は `format.py` の
+  定数）。配信するだけの値にも上限を付ける（ルームの全接続へ渡るので）。検証エラーや想定外の
+  例外では、`handle_exception` が退室の後始末をしてから接続を閉じる。例外を素通しすると
+  `disconnect` が呼ばれず、在室者の行が alive のまま残る。
+  - JSON として読めない・オブジェクトでない・バイナリ・大きすぎるフレームは、DCRF の
+    `handle_action` より前で落ちるので、`AnimePartyConsumer.receive` で同じ後始末をする。
+  - 1 メッセージの上限は uvicorn の `ws_max_size`（既定 16 MiB）を `d_party/workers.py` で
+    64 KiB にしている。`gunicorn.conf.py` の `worker_class` を `uvicorn_worker.UvicornWorker` に戻さない。
 - **論理削除**: `objects.alive()` / `delete()`（論理）/ `delete(hard=True)`（物理）の意味を変えない。
 - **暗号化**: `AnimeUser.user_name` の鍵は `SECRET_KEY` から作る。`SECRET_KEY` を変えると既存行は復号できない。
 - **REST API**: `api/urls.py` のパスとレスポンスの形は外部から参照される（shields は `{"schemaVersion": 1, ...}`）。

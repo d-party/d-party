@@ -104,3 +104,17 @@ def test_option_clips_relayed_strings():
 
 def test_option_keeps_a_missing_src():
     assert Option(**OPTION).src is None
+
+
+@pytest.mark.parametrize("field", ["paused", "rate", "part_id"])
+@pytest.mark.parametrize("value", [[1], {"a": 1}, None])
+def test_option_rejects_non_scalar_values(field, value):
+    """真偽値と数値だけを文字列にする。入れ物は文字列にせず検証で落とす。"""
+    with pytest.raises(ValidationError):
+        Option(**{**OPTION, field: value})
+
+
+@pytest.mark.parametrize("time", [float("nan"), float("inf"), float("-inf")])
+def test_option_rejects_non_finite_time(time):
+    with pytest.raises(ValidationError):
+        Option(**{**OPTION, "time": time})
