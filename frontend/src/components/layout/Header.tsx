@@ -10,6 +10,7 @@ import {
   HelpCircle,
   Home,
   Menu,
+  ScrollText,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -19,6 +20,7 @@ import { Logo } from "@/components/Logo";
 import {
   CHROME_WEBSTORE_URL,
   GITHUB_ORG_URL,
+  GITHUB_RELEASES_URL,
   GITHUB_SPONSORS_URL,
 } from "@/lib/links";
 import { cn } from "@d-party/ui";
@@ -42,6 +44,12 @@ const NAV_LINKS: NavLink[] = [
     external: true,
   },
   { label: "開発", href: GITHUB_ORG_URL, icon: Code2, external: true },
+  {
+    label: "リリースノート",
+    href: GITHUB_RELEASES_URL,
+    icon: ScrollText,
+    external: true,
+  },
   {
     label: "寄付",
     href: GITHUB_SPONSORS_URL,
