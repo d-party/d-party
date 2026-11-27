@@ -43,7 +43,7 @@
 
     {% render_otp_webauthn_register_scripts %}
 
-    <script>
+    <script {% csp_nonce_attr %}>
         document.addEventListener("otp_webauthn.register_complete", () => {
             window.location.reload();
         });

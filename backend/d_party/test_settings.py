@@ -59,6 +59,31 @@ def test_debug_relaxations(load_settings):
     assert "http://localhost:8000" in loaded["OTP_WEBAUTHN_ALLOWED_ORIGINS"]
 
 
+def test_csp_is_report_only_and_keeps_inline_scripts_out(load_settings):
+    loaded = load_settings(debug=False)
+
+    assert (
+        "django.middleware.csp.ContentSecurityPolicyMiddleware" in loaded["MIDDLEWARE"]
+    )
+    # まだ強制しない（SECURE_CSP は既定の空のまま）。
+    assert "SECURE_CSP" not in loaded
+    policy = loaded["SECURE_CSP_REPORT_ONLY"]
+    assert policy["default-src"] == ["'self'"]
+    assert "'unsafe-inline'" not in policy["script-src"]
+    assert policy["object-src"] == ["'none'"]
+    assert policy["frame-ancestors"] == ["'none'"]
+
+
+@pytest.mark.django_db
+def test_admin_pages_carry_the_report_only_header(client):
+    response = client.get("/admin/login/")
+
+    assert "Content-Security-Policy" not in response
+    header = response["Content-Security-Policy-Report-Only"]
+    assert "default-src 'self'" in header
+    assert "script-src 'self' 'unsafe-eval'" in header
+
+
 @pytest.fixture
 def load_urlpatterns(settings):
     def load(*, debug: bool):

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from django.templatetags.static import static
 from django.urls import reverse_lazy
+from django.utils.csp import CSP
 from django.utils.translation import gettext_lazy as _
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -85,6 +86,7 @@ AUTHENTICATION_BACKENDS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "django.middleware.csp.ContentSecurityPolicyMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -95,6 +97,25 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "axes.middleware.AxesMiddleware",
 ]
+
+# Content-Security-Policy。Django が HTML を返すのは管理画面だけ。
+# まず Report-Only で出す（ブロックはせず、違反はブラウザのコンソールに出る）。違反が
+# 出ないことを本番で確かめたら、同じ内容を SECURE_CSP へ移して強制する。
+SECURE_CSP_REPORT_ONLY = {
+    "default-src": [CSP.SELF],
+    # 'unsafe-eval' は Unfold の Alpine.js が式を評価するのに要る。インラインの <script> は
+    # 許さず、テンプレートで {% csp_nonce_attr %} を付けたものだけを通す。
+    "script-src": [CSP.SELF, CSP.UNSAFE_EVAL, CSP.NONCE],
+    # Unfold / htmx / Alpine.js が <style> と style 属性を使う。
+    "style-src": [CSP.SELF, CSP.UNSAFE_INLINE],
+    "img-src": [CSP.SELF, "data:"],
+    "font-src": [CSP.SELF],
+    "connect-src": [CSP.SELF],
+    "object-src": [CSP.NONE],
+    "base-uri": [CSP.SELF],
+    "form-action": [CSP.SELF],
+    "frame-ancestors": [CSP.NONE],
+}
 
 ROOT_URLCONF = "d_party.urls"
 
@@ -108,6 +129,8 @@ TEMPLATES = [
             "context_processors": [
                 "django.template.context_processors.debug",
                 "django.template.context_processors.request",
+                # テンプレートの {% csp_nonce_attr %} に nonce を渡す。
+                "django.template.context_processors.csp",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
