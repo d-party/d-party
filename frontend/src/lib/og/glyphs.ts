@@ -166,15 +166,16 @@ export function ogSafeTitle(title: string, coverage: Coverage): string {
     .slice(0, MAX_PARTS)
     .map((part) => {
       // Line breaks and tabs become spaces instead of being dropped (words
-      // would run together), and the cut is made before filtering.
-      const cut = [...part.replace(/\s+/g, " ").trim()]
+      // would run together), and the cut is made before filtering. The
+      // full-width space U+3000 is kept: titles use it and the font has it.
+      const cut = [...part.replace(/[^\S\u3000]+/g, " ").trim()]
         .slice(0, PART_MAX_CHARS)
         .join("");
       // Dropping a character can join "A ❤- B" into a new " - ", which
       // `RoomOgImage` would split on.
       return keepCovered(cut, coverage)
         .replace(/ +/g, " ")
-        .replaceAll(" - ", " ")
+        .replace(/ (?:- )+/g, " ")
         .trim();
     });
   if (!parts[0]) return "";
