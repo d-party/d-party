@@ -33,6 +33,12 @@ const LINKS: InfoLink[] = [
     icon: Tv,
   },
   {
+    href: "https://tv.dmm.com/vod/",
+    label: "DMM TV",
+    description: "同時視聴の対象サービス（公式トップ）",
+    icon: Tv,
+  },
+  {
     href: "https://chromewebstore.google.com/detail/d-party/ibmlcfpijglpfbfgaleaeooebgdgcbpc?hl=ja",
     label: "Chrome ウェブストア",
     description: "拡張機能ページ・レビュー投稿",

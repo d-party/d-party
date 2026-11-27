@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "d-party",
-  "description": "dアニメストアでは行う事ができない、オンラインでの『同時に視聴機能』を提供するための拡張機能",
+  "description": "dアニメストア・DMM TV の動画を、離れた友だちとオンラインで『同時視聴』するための拡張機能",
   "version": "2.14.1",
   "icons": {
     "16": "icon/icon16.png",

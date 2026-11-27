@@ -66,7 +66,7 @@ export function PopupApp(): React.JSX.Element {
               d-party
             </h1>
             <p className="text-xs text-white/70">
-              dアニメストア 同時視聴の設定
+              dアニメストア・DMM TV 同時視聴の設定
             </p>
           </div>
         </div>
