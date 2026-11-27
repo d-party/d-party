@@ -33,7 +33,7 @@ const SITE_OG_IMAGE = {
 const SITE_TWITTER_IMAGE = { ...SITE_OG_IMAGE, url: SITE_TWITTER_IMAGE_PATH };
 
 export interface PageMetadataInput {
-  /** e.g. `"/usage"`. Used for `og:url` and the canonical URL. */
+  /** e.g. `"/qa"`. Used for `og:url` and the canonical URL. */
   path: string;
   /** Without the `| d-party` suffix. */
   title: string;

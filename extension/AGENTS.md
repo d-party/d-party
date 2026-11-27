@@ -24,6 +24,8 @@ src/
     content/party/   プレイヤーページ（サイドバー・プレイヤー・リアクション）
     content/version/ ロビーでのバージョン確認
     popup/           設定 UI
+  manual/          frontend の利用マニュアル（/docs）を撮るための Storybook の場面（Manual/*）。架空のデータだけを使い、
+                   ダークモード（prefers-color-scheme: dark）で撮る
 ```
 
 rspack のエントリは `background` · `content-store` · `content-party` · `content-version` ·
@@ -45,6 +47,9 @@ rspack のエントリは `background` · `content-store` · `content-party` · 
   `connectionStatus` を `maintenance` にし、「ルームを作成」ボタンを無効化して「メンテナンス中です」
   のツールチップを出す。メンテナンス中は 30 秒ごとに確かめ直し、通れば `idle` に戻す。
 - 共有パネルの「タイマーのみの URL」はロビー URL に `?timer=true` を付けたもの。
+- 初回インストール時に開くページとポップアップ「情報」タブの「使い方」は、公開サイトの利用マニュアル
+  （`DOCS_URL` = `/docs`）。開いたかどうかの記録は `chrome.storage.local` の `usagePageOpened`
+  （旧 `/usage` の頃の名前）。キーを変えると既存の利用者にもう一度開くので変えない。
 - アナウンス（`components/Announcements.tsx`）はポップアップではタブの上、サイドバーでは
   ヘッダーの下に出す。ポップアップは backend を直接、content script は background 経由
   （`{ type: "announcements" }`）で取る。どちらも orval のクライアントの引数で

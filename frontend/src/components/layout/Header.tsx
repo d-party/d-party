@@ -35,7 +35,7 @@ type NavLink = {
 
 const NAV_LINKS: NavLink[] = [
   { label: "ホーム", href: "/", icon: Home },
-  { label: "使い方", href: "/usage", icon: BookOpen },
+  { label: "使い方", href: "/docs", icon: BookOpen },
   { label: "Q&A", href: "/qa", icon: HelpCircle },
   {
     label: "ダウンロード",

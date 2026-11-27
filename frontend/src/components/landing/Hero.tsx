@@ -110,7 +110,7 @@ export function Hero(): React.JSX.Element {
             variant="outline"
             className="h-12 px-8 text-base"
           >
-            <Link href="/usage">
+            <Link href="/docs">
               使い方を見る
               <ArrowRight />
             </Link>

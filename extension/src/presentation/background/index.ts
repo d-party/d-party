@@ -1,12 +1,12 @@
 /**
- * Opens the usage page once on first install (onInstalled also fires on reload
+ * Opens the user manual (/docs) once on first install (onInstalled also fires on reload
  * and update, hence the stored flag), and runs the sidebar's health check and
  * announcement fetch, which content scripts cannot fetch under Local Network
  * Access.
  */
 import { fetchActiveAnnouncements } from "@/infrastructure/api/announcements";
 import { health } from "@/infrastructure/api/generated/d-party";
-import { USAGE_URL } from "@/infrastructure/env";
+import { DOCS_URL } from "@/infrastructure/env";
 import type {
   AnnouncementsRequest,
   AnnouncementsResponse,
@@ -14,18 +14,20 @@ import type {
   HealthCheckResponse,
 } from "@/infrastructure/messages";
 
-const USAGE_OPENED_KEY = "usagePageOpened";
+// 旧「使い方」ページの頃からのキー。変えると既存の利用者にもう一度ページが開くので、
+// 名前は usage のまま据え置く。
+const DOCS_OPENED_KEY = "usagePageOpened";
 
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason !== chrome.runtime.OnInstalledReason.INSTALL) return;
-  void openUsageOnce();
+  void openDocsOnce();
 });
 
-async function openUsageOnce(): Promise<void> {
-  const stored = await chrome.storage.local.get(USAGE_OPENED_KEY);
-  if (stored[USAGE_OPENED_KEY]) return;
-  await chrome.storage.local.set({ [USAGE_OPENED_KEY]: true });
-  await chrome.tabs.create({ url: USAGE_URL });
+async function openDocsOnce(): Promise<void> {
+  const stored = await chrome.storage.local.get(DOCS_OPENED_KEY);
+  if (stored[DOCS_OPENED_KEY]) return;
+  await chrome.storage.local.set({ [DOCS_OPENED_KEY]: true });
+  await chrome.tabs.create({ url: DOCS_URL });
 }
 
 chrome.runtime.onMessage.addListener(

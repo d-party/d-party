@@ -203,7 +203,7 @@ smoke_frontend() {
     return 1
   fi
 
-  for path in / /usage /qa /privacy /stats /anime-store/lobby/test-room-123; do
+  for path in / /docs /qa /privacy /stats /anime-store/lobby/test-room-123; do
     expect_status "$path" 200 || rc=1
   done
   expect_status /nope 404 || rc=1
