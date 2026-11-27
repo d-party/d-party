@@ -4,6 +4,9 @@
 ``disconnect`` が呼ばれず、在室者の行が alive のまま残る（幽霊の参加者）。
 """
 
+import uuid
+from types import SimpleNamespace
+
 import pytest
 from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
@@ -251,21 +254,34 @@ async def test_an_error_while_cleaning_up_is_logged_once(monkeypatch, caplog):
     "handler", ["room_send", "setting_send", "group_send", "host_send", "user_send"]
 )
 async def test_channel_messages_after_the_close_are_not_sent(handler, monkeypatch):
-    """close の後に届いた配信は送らない（ASGI サーバは close の後の send を例外にする）。"""
+    """close の後に届いた配信は送らない（ASGI サーバは close の後の send を例外にする）。
+
+    ほかの条件では送る状態（送り主は別・宛先はこの接続のホスト）にしておき、
+    止めているのが ``_closing`` だけであることを確かめる。
+    """
+    user_id = uuid.uuid4()
     consumer = AnimePartyConsumer()
-    consumer._closing = True
+    consumer.channel_name = "self"
+    consumer._user = SimpleNamespace(user_id=user_id, is_host=True)
     sent = []
 
     async def record(self, content, close=False):
         sent.append(content)
 
-    monkeypatch.setattr(AnimePartyConsumer, "send_json", record)
-    await getattr(consumer, handler)(
-        {
-            "response": {"action": "room_setting"},
-            "sender_channel_name": "other",
-            "to_user": {"user_id": "x"},
-        }
-    )
+    async def refresh(*args, **kwargs):
+        return None
 
-    assert sent == []
+    monkeypatch.setattr(AnimePartyConsumer, "send_json", record)
+    monkeypatch.setattr(consumers.repository, "refresh", refresh)
+    message = {
+        "response": {"action": "room_setting"},
+        "sender_channel_name": "other",
+        "to_user": {"user_id": str(user_id)},
+    }
+
+    await getattr(consumer, handler)(message)
+    assert len(sent) == 1, "閉じる前は送る（前提の確認）"
+
+    consumer._closing = True
+    await getattr(consumer, handler)(message)
+    assert len(sent) == 1

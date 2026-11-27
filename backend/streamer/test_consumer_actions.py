@@ -166,11 +166,6 @@ async def test_leave_closes_the_connection_and_removes_the_user():
     assert (await guest.receive_output()) == {"type": "websocket.close", "code": 1000}
     # 退室は close より先に済んでいる（close の後の配信で落ちても行が残らない）。
     assert not await _is_alive(AnimeUser, guest_user["user_id"])
-    # 閉じた後に届いた配信は送らない。
-    await host.send_json_to(
-        {"action": "operation_notification", "operation": "paused", "request_id": 3}
-    )
-    assert await guest.receive_nothing()
     await guest.disconnect()
 
     left = await _recv_until(host, "leave")
