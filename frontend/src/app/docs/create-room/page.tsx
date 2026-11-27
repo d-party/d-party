@@ -92,7 +92,7 @@ export default function CreateRoomPage(): React.JSX.Element {
         <DocFigure
           name="sidebar-create-settings"
           alt="詳細設定を開いたサイドバー。一方通行モード、オーナー退室時にルーム自動削除、リアクションを禁止する の 3 つのスイッチが並ぶ"
-          caption="作成前の詳細設定（一方通行モードをオンにした例）"
+          caption="作成前の詳細設定（すべてオフ）"
           maxWidth={320}
         />
         <DefinitionList
@@ -109,7 +109,7 @@ export default function CreateRoomPage(): React.JSX.Element {
               term: "オーナー退室時にルーム自動削除",
               description: (
                 <>
-                  オーナーが退室すると、その時点でルームを削除し、全員が退室になります。オフのときは、オーナーが抜けるとほかの参加者にホスト権限が引き継がれ、ルームは続きます（
+                  オーナーが退室すると、その時点でルームを削除し、全員が退室になります。プレイヤーのタブを閉じたり再読み込みしたりするのも退室に含まれます。オフのときは、オーナーが抜けると残っている参加者のうちいちばん早く入室した人にホスト権限が引き継がれ、ルームは続きます（
                   <DocLink href={docPath("leave")}>退室とルームの終了</DocLink>）。
                 </>
               ),

@@ -29,7 +29,7 @@ export default function ReactionsPage(): React.JSX.Element {
         </p>
         <DocFigure
           name="reaction-normal"
-          alt="動画の上にいいね・拍手・笑顔・ハート・流れ星の絵文字が浮かび上がっている"
+          alt="動画の上にいいね・拍手・笑顔・お気に入り（ハート）・すいせい（流れ星）の絵文字が浮かび上がっている"
           caption="リアクションが表示されたところ（通常表示）"
         />
         <DefinitionList
@@ -74,7 +74,7 @@ export default function ReactionsPage(): React.JSX.Element {
         </p>
         <DocFigure
           name="reaction-badge"
-          alt="動画の右下に「たけし : 笑顔」「ゆうき : ハート」「さくら : コーヒー」の小さなバッジが縦に並んでいる"
+          alt="動画の右下に、送った人の名前とリアクションのアイコン（たけしは笑顔、ゆうきはハート、さくらはコーヒー）の小さなバッジが縦に並んでいる"
           caption="バッジ表示（サイドバーは縮小しています）"
         />
         <DocSubheading>左寄り表示</DocSubheading>
@@ -107,7 +107,7 @@ export default function ReactionsPage(): React.JSX.Element {
         </Steps>
         <DocFigure
           name="popup-reactions"
-          alt="ポップアップのリアクションタブ。変更できないデフォルトの 5 つ、追加したリアクション（流れ星・拍手・コーヒー）、検索欄とエクストラリアクションの一覧"
+          alt="ポップアップのリアクションタブ。変更できないデフォルトの 5 つ、追加したリアクション（すいせい・拍手・コーヒー）、検索欄とエクストラリアクションの一覧"
           caption="リアクションタブ（「追加」を開いた状態）"
           maxWidth={360}
         />
@@ -140,7 +140,7 @@ export default function ReactionsPage(): React.JSX.Element {
         <p>
           標準の 5 つのリアクションは、送った数がポップアップの{" "}
           <DocLink href={`${docPath("settings")}#stats`}>統計</DocLink>{" "}
-          に記録されます。エクストラリアクションは数えません。
+          に記録されます。エクストラリアクションと、リアクション禁止のルームで押したものは数えません。
         </p>
       </DocSection>
     </DocArticle>

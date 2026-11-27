@@ -27,15 +27,15 @@ export default function SettingsPage(): React.JSX.Element {
         </p>
         <DefinitionList
           items={[
-            { term: "⚙ 設定", description: "表示名・アイコン、同時視聴の設定、便利機能の設定。" },
-            { term: "☺ リアクション", description: "エクストラリアクションの追加と削除。" },
-            { term: "📊 統計", description: "これまでに作成・参加したルームの数などの記録。" },
-            { term: "ⓘ 情報", description: "公式サイトや Chrome ウェブストアなどへのリンク。" },
+            { term: "設定（歯車）", description: "表示名・アイコン、同時視聴の設定、便利機能の設定。" },
+            { term: "リアクション（笑顔）", description: "エクストラリアクションの追加と削除。" },
+            { term: "統計（グラフ）", description: "これまでに作成・参加したルームの数などの記録。" },
+            { term: "情報（i）", description: "公式サイトや Chrome ウェブストアなどへのリンク。" },
           ]}
         />
         <Callout variant="note" title="設定の保存先">
           <p>
-            設定はブラウザ（Chrome の拡張機能用ストレージ）に保存され、d-party のサーバーには送られません。Chrome の同期をオンにしていると、同じ Google アカウントのほかの PC にも同期されることがあります。表示名とアイコンだけは、ルームに入ったときに参加者へ送られます。
+            設定はブラウザ（Chrome の拡張機能用ストレージ）に保存され、d-party のサーバーには送られません。Chrome の同期をオンにしていると、同じ Google アカウントのほかの PC にも同期されることがあります。表示名とアイコンだけは、ルームを作成・参加したときに d-party のサーバーへ送られ、参加者に表示されます（サーバーにも保存されます）。
           </p>
         </Callout>
       </DocSection>
@@ -90,7 +90,7 @@ export default function SettingsPage(): React.JSX.Element {
               term: "リアクションの表示方法",
               description: (
                 <>
-                  通常表示・バッジ表示・左寄り表示から選びます（
+                  通常表示（既定）・バッジ表示・左寄り表示から選びます（
                   <DocLink href={`${docPath("reactions")}#display`}>表示方法を選ぶ</DocLink>）。
                 </>
               ),
@@ -113,7 +113,7 @@ export default function SettingsPage(): React.JSX.Element {
               term: "動画は全て別タブで開く",
               description: (
                 <>
-                  既定はオン。作品ページの詳細画面の「視聴する」や、一覧の再生リンク・「続きから視聴する」を押したとき、プレイヤーを新しいタブで開きます。オフにすると dアニメストア本来の動きに戻り、詳細画面の「視聴する」の右に <Ui>別タブで視聴する</Ui> ボタンが出ます。
+                  既定はオン。作品ページの詳細画面の「視聴する」や、一覧の再生リンク・「続きから視聴する」を押したとき、プレイヤーを新しいタブで開きます。オフにすると dアニメストア本来の動きに戻り、詳細画面の「視聴する」ボタンの右端に、別タブで開くための小さなアイコン（マウスを乗せると「別タブで視聴する」と表示）が出ます。
                 </>
               ),
             },
@@ -136,22 +136,14 @@ export default function SettingsPage(): React.JSX.Element {
 
       <DocSection id="stats" title="統計タブ">
         <p>
-          自分がこれまでに d-party をどれくらい使ったかの記録です。記録はこのブラウザの中だけに保存され、サーバーには送られません。
+          自分がこれまでに d-party をどれくらい使ったかの記録です。記録は設定と同じくブラウザ（Chrome の拡張機能用ストレージ）に保存され、d-party のサーバーには送られません。
         </p>
-        <DocFigureRow>
-          <DocFigure
-            name="popup-stats"
-            alt="統計タブ。作成したルーム 8、参加したルーム 15、送ったリアクション 144、接続時間 26時間、リアクション内訳の棒グラフ"
-            caption="統計タブ"
-            maxWidth={360}
-          />
-          <DocFigure
-            name="popup-info"
-            alt="情報タブ。ホームページ、使い方、dアニメストア、Chrome ウェブストア、寄付（GitHub Sponsors）へのリンク"
-            caption="情報タブ"
-            maxWidth={360}
-          />
-        </DocFigureRow>
+        <DocFigure
+          name="popup-stats"
+          alt="統計タブ。作成したルーム 8、参加したルーム 15、送ったリアクション 144、接続時間 26時間、リアクション内訳の棒グラフ"
+          caption="統計タブ"
+          maxWidth={360}
+        />
         <DefinitionList
           items={[
             { term: "作成したルーム", description: "ルームを作成した回数。" },
@@ -159,7 +151,7 @@ export default function SettingsPage(): React.JSX.Element {
             {
               term: "送ったリアクション",
               description:
-                "標準の 5 つのリアクションを送った回数と、その内訳。エクストラリアクションは数えません。",
+                "標準の 5 つのリアクションを送った回数と、その内訳。エクストラリアクションと、リアクション禁止のルームで押したものは数えません。",
             },
             {
               term: "接続時間",
@@ -168,7 +160,7 @@ export default function SettingsPage(): React.JSX.Element {
           ]}
         />
         <p>
-          左下にいつから計測しているかが表示されます。<Ui>リセット</Ui> →{" "}
+          左下に計測を始めた日（「2026/4/3 から計測」など）が表示されます。<Ui>リセット</Ui> →{" "}
           <Ui>リセットする</Ui> で記録を 0 に戻せます。
         </p>
       </DocSection>
@@ -177,6 +169,12 @@ export default function SettingsPage(): React.JSX.Element {
         <p>
           d-party のホームページ、使い方ページ、dアニメストアのトップ、Chrome ウェブストア（レビューの投稿もここから）、開発を支援する GitHub Sponsors へのリンクがあります。
         </p>
+        <DocFigure
+          name="popup-info"
+          alt="情報タブ。ホームページ、使い方、dアニメストア、Chrome ウェブストア、寄付（GitHub Sponsors）へのリンク"
+          caption="情報タブ"
+          maxWidth={360}
+        />
       </DocSection>
     </DocArticle>
   );

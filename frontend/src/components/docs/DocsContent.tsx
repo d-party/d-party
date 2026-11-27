@@ -13,6 +13,7 @@ import { cn } from "@d-party/ui";
 
 import {
   DOC_CHAPTERS,
+  DOCS_PATH,
   type DocSlug,
   docPath,
   findChapter,
@@ -67,7 +68,7 @@ function DocPager({ index }: { index: number }): React.JSX.Element {
           </span>
         </Link>
       ) : (
-        <Link href="/docs" className={card}>
+        <Link href={DOCS_PATH} className={card}>
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <ChevronLeft className="size-3.5" aria-hidden /> 目次
           </span>
@@ -86,7 +87,7 @@ function DocPager({ index }: { index: number }): React.JSX.Element {
           </span>
         </Link>
       ) : (
-        <Link href="/docs" className={cn(card, "sm:items-end")}>
+        <Link href={DOCS_PATH} className={cn(card, "sm:items-end")}>
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             目次へ戻る <ChevronRight className="size-3.5" aria-hidden />
           </span>
@@ -135,7 +136,7 @@ export function DocSubheading({
 
 /**
  * スクリーンショット。`maxWidth`（CSS px）を指定すると、ポップアップやサイドバーのような
- * 縦長の画像を拡大しすぎない。
+ * 縦長の画像を拡大しすぎない。押すと原寸の画像を新しいタブで開く。
  */
 export function DocFigure({
   name,
@@ -157,15 +158,24 @@ export function DocFigure({
         className="mx-auto overflow-hidden rounded-lg border border-border bg-muted/30 shadow-sm"
         style={maxWidth ? { maxWidth } : undefined}
       >
-        <Image
-          src={image.src}
-          width={image.width}
-          height={image.height}
-          alt={alt}
-          priority={priority}
-          sizes={maxWidth ? `${maxWidth}px` : "(min-width: 1024px) 768px, 100vw"}
-          className="h-auto w-full"
-        />
+        {/* 狭い画面では文字が読みにくいので、押すと原寸の画像を開けるようにする。 */}
+        <a
+          href={image.src}
+          target="_blank"
+          rel="noreferrer noopener"
+          title="画像を原寸で開く"
+          className="block"
+        >
+          <Image
+            src={image.src}
+            width={image.width}
+            height={image.height}
+            alt={alt}
+            priority={priority}
+            sizes={maxWidth ? `${maxWidth}px` : "(min-width: 1024px) 768px, 100vw"}
+            className="h-auto w-full"
+          />
+        </a>
       </div>
       {caption ? (
         <figcaption className="mt-2 text-center text-xs text-muted-foreground">

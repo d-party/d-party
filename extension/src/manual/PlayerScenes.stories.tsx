@@ -269,8 +269,51 @@ function addHostHistory(store: SidebarStore): void {
       userIcon: YUUKI.user_icon,
     }),
   );
-  atClock(T("21:12:31"), () =>
-    store.addHistory({ direction: "sent", icon: "rate", label: "×1 倍速" }),
+}
+
+/** ゲスト（たけし）の履歴。参加した 21:01:40 より後の出来事だけが残る。 */
+function addGuestHistory(store: SidebarStore): void {
+  atClock(T("21:02:15"), () =>
+    store.addHistory({
+      direction: "system",
+      icon: "join",
+      label: "『ゆうき』さんが入室",
+      user: YUUKI.user_name,
+      userIcon: YUUKI.user_icon,
+    }),
+  );
+  atClock(T("21:03:02"), () =>
+    store.addHistory({
+      direction: "received",
+      icon: "play",
+      label: "再生",
+      user: SAKURA.user_name,
+      userIcon: SAKURA.user_icon,
+    }),
+  );
+  atClock(T("21:08:30"), () =>
+    store.addHistory({ direction: "sent", icon: "pause", label: "停止" }),
+  );
+  atClock(T("21:09:05"), () =>
+    store.addHistory({ direction: "sent", icon: "play", label: "再生" }),
+  );
+  atClock(T("21:11:47"), () =>
+    store.addHistory({
+      direction: "received",
+      icon: "skip",
+      label: "スキップ",
+      user: YUUKI.user_name,
+      userIcon: YUUKI.user_icon,
+    }),
+  );
+  atClock(T("21:12:20"), () =>
+    store.addHistory({
+      direction: "received",
+      icon: "rate",
+      label: "×1.25 倍速",
+      user: YUUKI.user_name,
+      userIcon: YUUKI.user_icon,
+    }),
   );
 }
 
@@ -291,12 +334,14 @@ export const Create: Story = {
   },
 };
 
-/** 作成画面の詳細設定（撮影時に詳細設定を開く）。 */
+/**
+ * 作成画面の詳細設定（撮影時に詳細設定を開く）。すべてオフで作る
+ * （一方通行モードは 21:13 ごろにオーナーがオンにする筋書き）。
+ */
 export const CreateSettings: Story = {
   render: () => {
     const store = new SidebarStore();
     store.setMode("create");
-    store.setDraftRoomSettings({ oneWay: true, ownerLeaveDelete: false, disableReaction: false });
     return <PlayerScene store={store} time="00:00" extControls={false} />;
   },
 };
@@ -334,10 +379,7 @@ export const Joined: Story = {
       <PlayerScene
         store={store}
         time="00:00"
-        toasts={[
-          { variant: "info", message: "『たけし』さんが参加 🎉" },
-          { variant: "info", message: "『ゆうき』さんが参加 🎉" },
-        ]}
+        toasts={[{ variant: "info", message: "『ゆうき』さんが参加 🎉" }]}
       />
     );
   },
@@ -463,7 +505,9 @@ export const Synced: Story = {
     store.setShareTitle(SHARE_TITLE);
     store.setSelfUserId(TAKESHI.user_id);
     store.updateUsers(USERS);
-    atClock(T("21:13:58"), () =>
+    addGuestHistory(store);
+    // 08:42（21:12:21 ごろ）から 1.25 倍速で 30 秒ほどたったところ。
+    atClock(T("21:12:51"), () =>
       store.addHistory({
         direction: "system",
         icon: "sync",
@@ -495,10 +539,11 @@ export const OneWayGuest: Story = {
     store.updateUsers(USERS);
     store.setRoomSettings({ oneWay: true, ownerLeaveDelete: false, disableReaction: false });
     store.setActiveTab("control");
+    // シンクの 30 秒ほどあと、オーナーが一方通行モードをオンにした直後。
     return (
       <PlayerScene
         store={store}
-        time="09:20"
+        time="09:57"
         playing
         toasts={[
           { variant: "info", message: "『一方通行モード』を有効化しました" },
@@ -513,6 +558,8 @@ export const OneWayGuest: Story = {
 export const OwnerControl: Story = {
   render: () => {
     const store = hostRoom();
+    // 21:13 ごろにオンにした一方通行モードのまま、最後まで見終わったところ。
+    store.setRoomSettings({ oneWay: true, ownerLeaveDelete: false, disableReaction: false });
     store.setActiveTab("control");
     return <PlayerScene store={store} time="23:40" />;
   },
@@ -547,12 +594,23 @@ export const Failed: Story = {
         label: "ルームに参加できませんでした",
       }),
     );
+    // サーバーは failed_join の直後に接続を閉じるので、続けて接続失敗も出る（RoomSession）。
+    atClock(T("21:30:12"), () =>
+      store.addHistory({
+        direction: "system",
+        icon: "error",
+        label: "サーバーへの接続に失敗しました",
+      }),
+    );
     store.setActiveTab("history");
     return (
       <PlayerScene
         store={store}
         time="00:00"
-        toasts={[{ variant: "alert", message: "ルームに参加できませんでした" }]}
+        toasts={[
+          { variant: "alert", message: "ルームに参加できませんでした" },
+          { variant: "alert", message: "サーバーへの接続に失敗しました" },
+        ]}
       />
     );
   },
