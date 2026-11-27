@@ -49,6 +49,10 @@ logger = logging.getLogger(__name__)
 CLOSE_POLICY_VIOLATION = 1008
 CLOSE_INTERNAL_ERROR = 1011
 
+# 1 フレームの文字数の上限。本番は uvicorn の ws_max_size（d_party/workers.py）が先に
+# 切るが、dev の runserver や設定漏れでも json.loads に巨大な入力を渡さない。
+MAX_FRAME_LENGTH = 64 * 1024
+
 # 最後の 1 人が抜けてもこの秒数はルームを残す。ホストのリロードや瞬断で
 # ゲストの共有リンクが failed_join にならないようにするため。予約はプロセスごとに
 # 持つので、別ワーカーへの再参加は cancel できないが、削除直前の生存確認で守られる。
@@ -129,6 +133,31 @@ class AnimePartyConsumer(AsyncAPIConsumer):
     async def disconnect(self, close_code):
         await self._leave()
 
+    async def receive(self, text_data=None, bytes_data=None, **kwargs):
+        """壊れたフレームでも、後始末をしてから接続を閉じる。
+
+        基底クラスは、JSON として読めない・オブジェクトでない・バイナリのフレームで
+        ``handle_action`` より前に例外を投げる。それだと ``handle_exception`` を通らず、
+        ``disconnect`` も呼ばれないので、在室者の行が alive のまま残る。
+        """
+        content = None
+        if text_data and len(text_data) <= MAX_FRAME_LENGTH:
+            try:
+                content = await self.decode_json(text_data)
+            # JSONDecodeError · 整数の桁数の上限は ValueError、深すぎる入れ子は RecursionError。
+            except ValueError, RecursionError:
+                content = None
+        if not isinstance(content, dict):
+            # フレームの中身はログへ出さない。
+            logger.warning(
+                "malformed websocket frame (%s, %d chars)",
+                "binary" if text_data is None else "text",
+                len(text_data or bytes_data or ""),
+            )
+            await self._abort(CLOSE_POLICY_VIOLATION)
+            return
+        await self.receive_json(content, **kwargs)
+
     async def handle_exception(self, exc, action, request_id):
         """想定外の例外では、後始末をしてから接続を閉じる。
 
@@ -149,6 +178,10 @@ class AnimePartyConsumer(AsyncAPIConsumer):
         else:
             logger.error("unhandled error in action %s", action, exc_info=exc)
             code = CLOSE_INTERNAL_ERROR
+        await self._abort(code)
+
+    async def _abort(self, code: int) -> None:
+        """退室の後始末をしてから、``code`` で接続を閉じる。"""
         try:
             await self._leave()
         finally:

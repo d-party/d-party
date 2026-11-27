@@ -5,7 +5,16 @@ import uuid
 import pytest
 from pydantic import ValidationError
 
-from .format import GroupSend, Option, User, UserAdd, UserSend, VideoOperation
+from .format import (
+    OPTION_SRC_MAX_LENGTH,
+    OPTION_VALUE_MAX_LENGTH,
+    GroupSend,
+    Option,
+    User,
+    UserAdd,
+    UserSend,
+    VideoOperation,
+)
 
 USER = {"user_id": uuid.uuid4(), "user_name": "a"}
 OPTION = {"time": 1.5, "src": None, "paused": "False", "rate": "1", "part_id": "1"}
@@ -74,3 +83,24 @@ def test_video_operation_title_is_optional():
     assert dumped["action"] == "video_operation"
     assert dumped["title"] is None
     assert dumped["option"]["src"] is None
+
+
+def test_option_clips_relayed_strings():
+    option = Option(
+        **{
+            **OPTION,
+            "src": "s" * 5000,
+            "paused": "p" * 100,
+            "rate": 1.5,
+            "part_id": 12345,
+        }
+    )
+
+    assert option.src == "s" * OPTION_SRC_MAX_LENGTH
+    assert option.paused == "p" * OPTION_VALUE_MAX_LENGTH
+    assert option.rate == "1.5"
+    assert option.part_id == "12345"
+
+
+def test_option_keeps_a_missing_src():
+    assert Option(**OPTION).src is None
