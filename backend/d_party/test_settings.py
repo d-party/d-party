@@ -44,8 +44,11 @@ def test_production_hardening(load_settings):
     assert loaded["SECURE_PROXY_SSL_HEADER"] == ("HTTP_X_FORWARDED_PROTO", "https")
     # 開発用のコマンドは本番に載せない。
     assert "django_extensions" not in loaded["INSTALLED_APPS"]
-    # axes（ログイン試行のロック）は既定で有効。
+    # axes（ログイン試行のロック）は既定で有効。ユーザー名だけでロックすると、誰でも
+    # スタッフを締め出せるので、IP との組で数える。
     assert "AXES_ENABLED" not in loaded
+    assert loaded["AXES_LOCKOUT_PARAMETERS"] == [["username", "ip_address"]]
+    assert loaded["AXES_CLIENT_IP_CALLABLE"] == "d_party.client_ip.client_ip"
     assert loaded["OTP_WEBAUTHN_RP_ID"] == "d-party.example"
     assert loaded["OTP_WEBAUTHN_ALLOWED_ORIGINS"] == [
         "https://d-party.example",
