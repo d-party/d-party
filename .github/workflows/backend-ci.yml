@@ -63,7 +63,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.3
+        uses: astral-sh/setup-uv@v10.4.0
         with:
           working-directory: backend
           enable-cache: true
@@ -104,7 +104,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.3
+        uses: astral-sh/setup-uv@v10.4.0
         with:
           working-directory: backend
           enable-cache: true
@@ -119,7 +119,7 @@ jobs:
       - name: Coverage comment
         id: coverage_comment
         continue-on-error: true
-        uses: py-cov-action/python-coverage-comment-action@v4.6
+        uses: py-cov-action/python-coverage-comment-action@v4.7
         with:
           GITHUB_TOKEN: ${{ github.token }}
           # .coverage はリポジトリのルートではなく backend/ に出る。
@@ -144,7 +144,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.3
+        uses: astral-sh/setup-uv@v10.4.0
         with:
           working-directory: backend
           enable-cache: true
@@ -167,7 +167,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.3
+        uses: astral-sh/setup-uv@v10.4.0
         with:
           working-directory: backend
           enable-cache: true
@@ -191,7 +191,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.3
+        uses: astral-sh/setup-uv@v10.4.0
         with:
           working-directory: backend
           enable-cache: true
