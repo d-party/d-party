@@ -14,10 +14,12 @@ from django.conf import settings
 
 import streamer.routing
 
-# 拡張機能は dアニメストアのページから、タイマー画面は公開サイトからつなぐ。
+# 拡張機能は動画配信サービス（dアニメストア・DMM TV）のページに注入した content script から、
+# タイマー画面は公開サイトからつなぐ。content script の WebSocket の Origin は注入先のページになる。
 # OriginValidator は scheme を省いた値をホスト名として照合し、既定ポートも同一視する。
 allowed_origins = [
     settings.D_ANIME_STORE_DOMAIN,
+    settings.DMM_TV_DOMAIN,
     settings.MY_DOMAIN,
     f"www.{settings.MY_DOMAIN}",
 ]

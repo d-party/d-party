@@ -13,6 +13,7 @@ def load_application(settings):
     """``asgi.py`` は import 時に settings を読むので、値を決めてから読み直す。"""
     settings.MY_DOMAIN = "d-party.example"
     settings.D_ANIME_STORE_DOMAIN = "animestore.example"
+    settings.DMM_TV_DOMAIN = "tv.dmm.example"
 
     def load(*, debug: bool):
         settings.DEBUG = debug
@@ -21,7 +22,11 @@ def load_application(settings):
     return load
 
 
-async def _connects(application, origin: str | None, path="/anime-store/party/"):
+ANIME_STORE_PATH = "/anime-store/party/"
+DMM_TV_PATH = "/dmm-tv/party/"
+
+
+async def _connects(application, origin: str | None, path=ANIME_STORE_PATH):
     headers = [] if origin is None else [(b"origin", origin.encode())]
     communicator = WebsocketCommunicator(application, path, headers=headers)
     connected, _ = await communicator.connect()
@@ -31,30 +36,45 @@ async def _connects(application, origin: str | None, path="/anime-store/party/")
 
 
 @pytest.mark.parametrize(
-    "origin",
+    ("origin", "path"),
     [
         # 拡張機能（dアニメストアのページに注入される content script）。
-        "https://animestore.example",
+        ("https://animestore.example", ANIME_STORE_PATH),
+        # 拡張機能（DMM TV の再生ページに注入される content script）。
+        ("https://tv.dmm.example", DMM_TV_PATH),
         # タイマー画面（フロントのオリジン）。
-        "https://d-party.example",
-        "https://www.d-party.example",
+        ("https://d-party.example", ANIME_STORE_PATH),
+        ("https://www.d-party.example", ANIME_STORE_PATH),
     ],
 )
-async def test_production_accepts_known_origins(load_application, origin):
-    assert await _connects(load_application(debug=False), origin)
+async def test_production_accepts_known_origins(load_application, origin, path):
+    assert await _connects(load_application(debug=False), origin, path)
 
 
+@pytest.mark.parametrize("path", [ANIME_STORE_PATH, DMM_TV_PATH])
 @pytest.mark.parametrize(
     "origin",
     [
         "https://evil.example",
         "https://sub.animestore.example",
         "https://animestore.example.evil.example",
+        "https://sub.tv.dmm.example",
+        "https://tv.dmm.example.evil.example",
+        # 実在のドメインでも、設定していないものは通さない。
+        "https://www.dmm.example",
         None,
     ],
 )
-async def test_production_rejects_other_origins(load_application, origin):
-    assert not await _connects(load_application(debug=False), origin)
+async def test_production_rejects_other_origins(load_application, origin, path):
+    assert not await _connects(load_application(debug=False), origin, path)
+
+
+def test_default_dmm_tv_domain_is_allowed(settings):
+    """既定（env 未設定）の ``DMM_TV_DOMAIN`` は本番の DMM TV のホストを指す。"""
+    settings.DEBUG = False
+    importlib.reload(d_party.asgi)
+
+    assert "tv.dmm.com" in d_party.asgi.allowed_origins
 
 
 async def test_debug_accepts_any_origin(load_application):

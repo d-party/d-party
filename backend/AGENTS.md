@@ -39,7 +39,7 @@ compose・nginx・env はルートが持ち、`backend/` は build context と�
 ホストの解決先は env（`DATABASE_HOST` · `REDIS_HOST` など）で差し替える。
 env を読むのは `settings.py` だけにし、ほかは `django.conf.settings` から参照する。
 任意の env は `STATS_CACHE_SECONDS`（統計 API と shields バッジのキャッシュ秒数。既定 300）と
-`DMM_TV_DOMAIN`（DMM TV のロビー解決が返す再生ページのドメイン。既定 `tv.dmm.com`）。
+`DMM_TV_DOMAIN`（DMM TV のロビー解決が返す再生ページのドメインで、WebSocket の Origin の許可にも使う。既定 `tv.dmm.com`）。
 
 ## 壊してはいけないもの
 
@@ -55,6 +55,11 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
 - **REST API**: `api/urls.py` のパスとレスポンスの形は外部から参照される（shields は `{"schemaVersion": 1, ...}`）。
   レスポンスの形は `api/serializers.py` に宣言し、`@extend_schema` の `operation_id` が
   TypeScript の関数名になる。変えたら `openapi.json` を再生成する（手順はルートの `AGENTS.md`）。
+- **WebSocket の Origin**: `asgi.py` の `OriginValidator` は、拡張機能が注入される
+  `D_ANIME_STORE_DOMAIN` · `DMM_TV_DOMAIN` と、タイマー画面の `MY_DOMAIN`（`www.` 付きも）だけを許可する
+  （`DEBUG=1` は `*`）。content script の WebSocket の Origin は注入先のページになるので、
+  対応サービスを増やしたらそのドメインも足す。`anime.dmkt-sp.jp` は `animestore.docomo.ne.jp` へ
+  301 で転送されてページが開かないので許可していない。
 - **観覧専用（`spectate`）**: `AnimeUser` を作らずにグループへ読み取り参加する（人数・一覧・
   ホスト委譲・自動削除に影響しない）。フロントのタイマー画面が使う。`host_send` / `user_send` は
   `anime_user is None` を必ずガードする。フロントのオリジンから張るので `asgi.py` で `MY_DOMAIN` を許可している。
