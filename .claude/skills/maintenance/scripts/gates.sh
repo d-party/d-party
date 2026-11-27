@@ -206,6 +206,9 @@ smoke_frontend() {
   for path in / /docs /qa /privacy /stats /anime-store/lobby/test-room-123; do
     expect_status "$path" 200 || rc=1
   done
+  # 【暫定】旧「使い方」は /docs へ 307 で転送する（古い版の拡張機能が開く）。
+  # 外すときは frontend/AGENTS.md の「利用マニュアル /docs」を参照。
+  expect_status /usage 307 || rc=1
   expect_status /nope 404 || rc=1
 
   # 拡張機能との DOM 契約。壊れるとロビーからルームへ遷移できなくなる。

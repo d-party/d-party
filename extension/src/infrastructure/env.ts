@@ -11,7 +11,10 @@ const HOST = IS_PRODUCTION ? "d-party.net" : "localhost";
 export const API_BASE_URL = `${IS_PRODUCTION ? "https" : "http"}://${HOST}`;
 
 export const SITE_URL = `${API_BASE_URL}/`;
-/** 公開サイトの利用マニュアル。 */
+/**
+ * 公開サイトの利用マニュアル。古い版は旧 `/usage` を開くので、サイト側が暫定で
+ * `/usage` → `/docs` に転送している（`frontend/next.config.ts`）。
+ */
 export const DOCS_URL = `${SITE_URL}docs`;
 
 export const WEBSOCKET_ENDPOINT = `${IS_PRODUCTION ? "wss" : "ws"}://${HOST}/anime-store/party/`;

@@ -56,8 +56,20 @@ pnpm storybook
 
 ## 利用マニュアル `/docs`
 
-- 「使い方」はこのマニュアルに一本化している。旧 `/usage` は廃止した（転送はせず 404）。
-  サイト内のリンクは `/docs` を直接指す。
+- 「使い方」はこのマニュアルに一本化している。旧 `/usage` のページは廃止した。サイト内のリンクは
+  `/docs` を直接指す。
+- **暫定の転送**: `/usage` は `next.config.ts` の `redirects` で `/docs` へ **307** で転送している
+  （クエリは引き継ぐ）。インストール済みの古い版（v2.14.1 以前）の拡張機能が、ポップアップの
+  「情報」タブの「使い方」と初回インストール時に開くページで `/usage` を開くため。
+  将来外すので、ブラウザに恒久的にキャッシュされる 308 にはしない。
+  - 外す条件: `/docs` を指す版の拡張機能が行き渡ったら。目安は、その版（v2.14.1 の次のリリース）を
+    Chrome ウェブストアに出してから 3 か月。
+  - 外すときは次も一緒に直す（`/usage` の 307 を確かめている所）。外したあと `/usage` は 404 になる。
+    - `next.config.ts` の `redirects`
+    - `.github/workflows/frontend-build.yml` の「Check the pages render」
+    - `.claude/skills/maintenance/scripts/gates.sh` の `expect_status /usage 307`
+    - `.claude/skills/dependabot-review-and-merge/SKILL.md` のスモークテスト
+    - この節と、`extension/src/infrastructure/env.ts` の `DOCS_URL` のコメント
 - 章の並び・タイトル・説明は `components/docs/chapters.ts` の 1 か所。目次・前後リンク・メタデータ・
   sitemap はここから作る。章を足すときは `app/docs/<slug>/page.tsx` と一緒にここへ足す。
 - 画像は `public/img/docs/*.webp`（WebP・2 倍解像度）で、寸法は `components/docs/images.ts` に持つ。
