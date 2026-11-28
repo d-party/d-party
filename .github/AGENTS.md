@@ -4,21 +4,21 @@
 
 | ワークフロー | name | 内容 | paths |
 | --- | --- | --- | --- |
-| `backend-ci.yml` | `Backend/CI` | ruff · pytest · mypy · openapi（`openapi.json` の drift）· license-check | `backend/**` + 契約テストが読む TypeScript（`protocol.ts` · `reactions.ts` · `StatsDashboard.tsx`） |
-| `backend-build.yml` | `Backend/Build` | hadolint · build → dockle → migrate → 起動 → API 応答 | `backend/**` |
-| `frontend-ci.yml` | `Frontend/CI` | 生成物の drift · typecheck · lint · license-check | `frontend/**` `packages/**` `backend/openapi.json` + workspace 設定 |
-| `frontend-build.yml` | `Frontend/Build` | next build · storybook · イメージ build → 起動 → ページ疎通 | 同上 |
-| `extension-ci.yml` | `Extension/CI` | 生成物の drift · typecheck · lint · license-check | `extension/**` `packages/**` `backend/openapi.json` + workspace 設定 |
-| `extension-build.yml` | `Extension/Build` | build:prod（manifest の参照先の実在確認）· zip · storybook | 同上 |
-| `infra-ci.yml` | `Infra/CI` | helm lint · helm template | `infra/**` |
-| `nginx-ci.yml` | `Nginx/CI` | nginx テンプレートの構文チェック | `nginx/**` |
-| `repo-ci.yml` | `Repo/CI` | actionlint · shellcheck · yamllint · CodeQL | 全体 |
-| `repo-badge.yml` | `Repo/Badge` | PR が触ったパスからラベル `Backend` `Frontend` `Extension` `Infra` を付け外しする（対応表は `labeler.yml`） | PR 全体 |
-| `storybook-deploy.yml` | `Storybook/Deploy` | 両 Storybook を GitHub Pages の `/extension/` `/frontend/` へ | main のみ |
+| `backend-ci.yml` | `Backend / CI` | ruff · pytest · mypy · openapi（`openapi.json` の drift）· license-check | `backend/**` + 契約テストが読む TypeScript（`protocol.ts` · `reactions.ts` · `StatsDashboard.tsx`） |
+| `backend-build.yml` | `Backend / Build` | hadolint · build → dockle → migrate → 起動 → API 応答 | `backend/**` |
+| `frontend-ci.yml` | `Frontend / CI` | 生成物の drift · typecheck · lint · license-check | `frontend/**` `packages/**` `backend/openapi.json` + workspace 設定 |
+| `frontend-build.yml` | `Frontend / Build` | next build · storybook · イメージ build → 起動 → ページ疎通 | 同上 |
+| `extension-ci.yml` | `Extension / CI` | 生成物の drift · typecheck · lint · license-check | `extension/**` `packages/**` `backend/openapi.json` + workspace 設定 |
+| `extension-build.yml` | `Extension / Build` | build:prod（manifest の参照先の実在確認）· zip · storybook | 同上 |
+| `infra-ci.yml` | `Infra / CI` | helm lint · helm template | `infra/**` |
+| `nginx-ci.yml` | `Nginx / CI` | nginx テンプレートの構文チェック | `nginx/**` |
+| `repo-ci.yml` | `Repo / CI` | actionlint · shellcheck · yamllint · CodeQL | 全体 |
+| `repo-badge.yml` | `Repo / Badge` | PR が触ったパスからラベル `Backend` `Frontend` `Extension` `Infra` を付け外しする（対応表は `labeler.yml`） | PR 全体 |
+| `storybook-deploy.yml` | `Storybook / Deploy` | 両 Storybook を GitHub Pages の `/extension/` `/frontend/` へ | main のみ |
 | `release.yml` | `Release` | 統一リリース | 手動 |
-| `maintenance.yml` | `Repo/Maintenance` | Claude Code が `dependabot-review-and-merge` で判定（読み取り専用）→ `scripts/dependabot-merge.sh` がマージ → `scripts/weekly-release.sh` がリリース | 毎週火曜 10:00 JST・手動 |
+| `maintenance.yml` | `Repo / Maintenance` | Claude Code が `dependabot-review-and-merge` で判定（読み取り専用）→ `scripts/dependabot-merge.sh` がマージ → `scripts/weekly-release.sh` がリリース | 毎週火曜 10:00 JST・手動 |
 
-- `name` は `<Scope>/<Kind>`。`CI` は lint・型・テスト、`Build` は出荷物が組み上がって動くか。
+- `name` は `<Scope> / <Kind>`。`CI` は lint・型・テスト、`Build` は出荷物が組み上がって動くか。
 - actionlint は reviewdog の `fail_level: any` で、指摘があれば失敗させる（既定の `none` は成功扱いになる）。
 - CI と Dependabot の対象ブランチは `main`。
 - 依存のコード（`pnpm install` · `uv sync` の後の build · test · start）を動かすジョブには書き込み権限を
@@ -64,7 +64,7 @@ main のキャッシュは release.yml のビルドも復元する。main の権
 
 | 何 | どこ | 未設定だと |
 | --- | --- | --- |
-| Pages のソースを GitHub Actions にする | Settings → Pages（`gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`） | `Storybook/Deploy` の deploy が 404 で落ちる |
+| Pages のソースを GitHub Actions にする | Settings → Pages（`gh api -X POST repos/<owner>/<repo>/pages -f build_type=workflow`） | `Storybook / Deploy` の deploy が 404 で落ちる |
 | GHCR パッケージへの Write を許可する | `ghcr.io/d-party/{backend,frontend}` の Package settings → Manage Actions access | `Release` の images ジョブが denied で落ちる |
-| secret `CLAUDE_CODE_OAUTH_TOKEN` | `claude setup-token` の出力を Actions secrets へ | `Repo/Maintenance` が認証エラーで落ちる |
+| secret `CLAUDE_CODE_OAUTH_TOKEN` | `claude setup-token` の出力を Actions secrets へ | `Repo / Maintenance` が認証エラーで落ちる |
 | Private vulnerability reporting | Settings → Security（`gh api -X PUT repos/<owner>/<repo>/private-vulnerability-reporting`） | `SECURITY.md` の報告先が使えない |

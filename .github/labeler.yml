@@ -1,4 +1,4 @@
-# Repo/Badge（repo-badge.yml）の設定。PR が触ったパスから、対象のラベルを付ける。
+# Repo / Badge（repo-badge.yml）の設定。PR が触ったパスから、対象のラベルを付ける。
 # パスは各 CI の paths フィルタに合わせる（packages/ は frontend と extension の両方が使う）。
 Backend:
   - changed-files:

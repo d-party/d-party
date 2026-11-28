@@ -80,7 +80,7 @@ grep -rnE "^\s*(from|import) <import 名>" backend --include='*.py' | grep -v '/
 
 # Python: 文字列での参照（INSTALLED_APPS · MIDDLEWARE · バックエンド指定）、設定、起動コマンド
 grep -rn "<import 名>" backend/d_party/settings.py backend/pyproject.toml backend/Dockerfile \
-  backend/*.sh docker-compose*.yml infra/helm/d-party
+  backend/*.sh compose*.yml infra/helm/d-party
 ```
 
 洗い出したら、**呼んでいる API を列挙する**（関数 · クラス · 引数 · 設定キー · CLI のフラグ ·
@@ -167,7 +167,7 @@ git diff --no-index <旧の展開先>/<path> <新の展開先>/<path>
 
 | 見る点 | 判断 |
 | --- | --- |
-| 公開日時 | 1 日以内なら待つ。`minimumReleaseAge` を外さない |
+| 公開日時 | 1 日以内なら待つ（Dependabot の `cooldown` と pnpm の `minimumReleaseAge` が 1 日なので、定期更新では来ないはず。来るのはセキュリティ更新）。`minimumReleaseAge` を外さない |
 | 公開者 | 前の版と違えば、リポジトリの履歴でメンテナの交代を確かめる。説明が付かなければ止める |
 | provenance | 「あり → なし」になったら止める（CI から出ていた版が手元から出された） |
 | install スクリプト | 増えた・変わったら中身を読む。実行の可否は `pnpm-workspace.yaml` の `allowBuilds`。勝手に足さない |
@@ -189,10 +189,10 @@ git diff --no-index <旧の展開先>/<path> <新の展開先>/<path>
 ecosystem ごとの注意:
 
 - **docker**（ベースイメージ）: OS の世代（bookworm → trixie など）と Python / Node の minor が
-  変わっていないか。`gates.sh docker` でビルドし、起動後の疎通は PR の Backend/Build ·
-  Frontend/Build で見る。本番は arm64 なので、タグに arm64 のイメージがあることも確かめる
+  変わっていないか。`gates.sh docker` でビルドし、起動後の疎通は PR の Backend / Build ·
+  Frontend / Build で見る。本番は arm64 なので、タグに arm64 のイメージがあることも確かめる
   （`docker buildx imagetools inspect <image>`）。
-- **docker-compose**: `Nginx/CI` はイメージを固定で持っていて、compose の nginx を上げても
+- **docker-compose**: `Nginx / CI` はイメージを固定で持っていて、compose の nginx を上げても
   追従しない。`gates.sh nginx` が compose の実際のイメージで構文を検査する。postgres の major は
   データディレクトリの移行が要るので、bump だけでは取り込めない（見送って報告する）。
 - **github-actions**: action の major は入力名と既定値、要求するランナーの Node を見る。
@@ -210,8 +210,8 @@ ecosystem ごとの注意:
 
   ```bash
   docker compose up -d --build
-  docker compose -f docker-compose.yml -f docker-compose.override.yml \
-    -f docker-compose.loadtest.yml --profile loadtest run --rm k6
+  docker compose -f compose.yml -f compose.override.yml \
+    -f compose.loadtest.yml --profile loadtest run --rm k6
   docker compose logs django | grep -iE "error|traceback" | head
   ```
 

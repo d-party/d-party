@@ -23,7 +23,7 @@ export function currentExtensionVersion(): string | undefined {
 }
 
 /**
- * backend を直接叩く。host_permissions を持つポップアップと background から使う。
+ * backend を直接叩く。host_permissions を持つポップアップ・設定タブと background から使う。
  * `extension_version` を付けて、このバージョンが配信対象のものだけを受け取る。
  * バージョンが取れないときは付けない（backend はバージョンで絞り込まずに返す）。
  */

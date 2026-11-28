@@ -27,10 +27,6 @@ server {
         alias /static/;
     }
 
-    location /.well-known/ {
-        alias /.well-known/;
-    }
-
     # ── Django (ASGI): REST API・管理画面・WebSocket ──
     location /api/ {
         # 公開 API だけなので、pnpm dev（:3000）や拡張機能から叩けるよう CORS を許す。

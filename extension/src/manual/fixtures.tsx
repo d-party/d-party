@@ -3,7 +3,9 @@
  * 実在の作品・人物・サービスの画像は使わない。
  */
 import type { Announcement } from "@/domain/announcement";
+import { PERSONAL_STATS_STORAGE_KEY } from "@/domain/personalStats";
 import type { User } from "@/domain/protocol";
+import { STORAGE_KEYS } from "@/domain/settings";
 
 export const ROOM_ID = "7c3e9a52-4b1d-4f86-9a2e-5d0c81f3b6a4";
 export const SHARE_URL = `https://d-party.net/anime-store/lobby/${ROOM_ID}`;
@@ -30,6 +32,20 @@ export const YUUKI: User = {
   user_icon: "FaGamepad",
 };
 export const USERS: User[] = [SAKURA, TAKESHI, YUUKI];
+
+/** ポップアップと設定タブの場面で使う、さくらの設定と実績（chrome.storage）。 */
+export const SAKURA_STORAGE = {
+  [STORAGE_KEYS.userName]: "さくら",
+  [STORAGE_KEYS.userIcon]: "FaCat",
+  [STORAGE_KEYS.extraReactions]: ["2604", "1f44f", "2615"],
+  [PERSONAL_STATS_STORAGE_KEY]: {
+    roomsCreated: 8,
+    roomsJoined: 15,
+    reactionsByType: { fav: 42, thumbs_up: 31, smile: 57, cry: 12, middle_finger: 2 },
+    connectionMs: 26 * 60 * 60 * 1000 + 15 * 60 * 1000,
+    since: new Date("2026-04-03T20:00:00+09:00").getTime(),
+  },
+};
 
 /**
  * 運営からのアナウンス（架空）。撮影日 2026-11-27（金）の翌週のメンテナンス予告と、

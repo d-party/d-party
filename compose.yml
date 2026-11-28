@@ -4,13 +4,12 @@ services:
   nginx:
     container_name: nginx
     # CVE-2026-123007（nginx2shell）の修正版以上に固定する。マイナー版のタグは古いキャッシュのまま動きうる。
-    image: nginx:1.31.9
+    image: nginx:1.31.10
     ports:
       - "80:80"
     volumes:
       - "./nginx/:/etc/nginx/"
       - "./backend/static:/static"
-      - "./nginx/.well-known:/.well-known"
     depends_on:
       django:
         condition: service_healthy
@@ -57,13 +56,13 @@ services:
       retries: 12
       start_period: 30s
   postgres:
-    image: postgres:18
+    image: postgres:19
     container_name: postgres
     volumes:
-      # postgres:18 からはデータを /var/lib/postgresql/<版>/docker に置き、/var/lib/postgresql を
+      # postgres:18 以降はデータを /var/lib/postgresql/<版>/docker に置き、/var/lib/postgresql を
       # マウントする形になった（/var/lib/postgresql/data にマウントすると起動しない）。
-      # 16 のときの ./postgres/data は使わなくなる。中身を移す手順は infra/README.md §3.6。
-      - "./postgres/data18:/var/lib/postgresql"
+      # 版ごとにディレクトリを分ける（18 のときの ./postgres/data18 は使わなくなる）。中身を移す手順は infra/README.md §3.6。
+      - "./postgres/data19:/var/lib/postgresql"
     env_file: *env_file
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
@@ -71,7 +70,7 @@ services:
       timeout: 5s
       retries: 10
   redis:
-    image: redis:8.10
+    image: redis:8.12
     container_name: redis
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]

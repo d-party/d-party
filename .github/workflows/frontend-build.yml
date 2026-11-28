@@ -1,5 +1,5 @@
 # 配信する frontend を作って動かす。
-name: Frontend/Build
+name: Frontend / Build
 
 on:
   push:

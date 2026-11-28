@@ -1,5 +1,5 @@
-# backend の lint・型・テスト。イメージは Backend/Build が見る。
-name: Backend/CI
+# backend の lint・型・テスト。イメージは Backend / Build が見る。
+name: Backend / CI
 
 on:
   push:
@@ -87,7 +87,7 @@ jobs:
     # Redis は不要（conftest.py がインメモリに差し替える）。
     services:
       postgres:
-        image: postgres:18
+        image: postgres:19
         env:
           POSTGRES_DB: d_party
           POSTGRES_USER: d_party

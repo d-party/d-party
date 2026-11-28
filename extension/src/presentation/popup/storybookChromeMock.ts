@@ -12,7 +12,10 @@ export function installChromeMock(
       sync: storageArea(initial),
       local: storageArea(initialLocal),
     },
-    runtime: { getManifest: () => ({ version: "1.0.0" }) },
+    runtime: {
+      getManifest: () => ({ version: "1.0.0" }),
+      openOptionsPage: () => Promise.resolve(),
+    },
   };
 }
 

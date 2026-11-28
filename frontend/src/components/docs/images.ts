@@ -4,6 +4,7 @@ export const DOC_IMAGES = {
   "lobby-checking": { src: "/img/docs/lobby-checking.webp", width: 2048, height: 1152 },
   "lobby-no-extension": { src: "/img/docs/lobby-no-extension.webp", width: 2048, height: 1152 },
   "lobby-not-found": { src: "/img/docs/lobby-not-found.webp", width: 2048, height: 1152 },
+  "options-settings": { src: "/img/docs/options-settings.webp", width: 2048, height: 1800 },
   "player-collapsed": { src: "/img/docs/player-collapsed.webp", width: 2560, height: 1440 },
   "player-controls": { src: "/img/docs/player-controls.webp", width: 1920, height: 220 },
   "player-create": { src: "/img/docs/player-create.webp", width: 2560, height: 1440 },

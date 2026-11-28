@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "d-party",
   "description": "dアニメストア・DMM TV の動画を、離れた友だちとオンラインで『同時視聴』するための拡張機能",
-  "version": "2.15.0",
+  "version": "2.16.2",
   "icons": {
     "16": "icon/icon16.png",
     "48": "icon/icon48.png",
@@ -14,6 +14,10 @@
   "action": {
     "default_title": "d-party 設定",
     "default_popup": "popup.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
   },
   "permissions": [
     "storage"

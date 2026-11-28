@@ -5,7 +5,7 @@ dアニメストア・DMM TV での「同時視聴」サービスの monorepo。
 
 | パス | 中身 | スタック |
 | --- | --- | --- |
-| `backend/` | Django バックエンド | Python 3.15 · Django 6 · Channels · DRF · PostgreSQL 18 · Redis 8 |
+| `backend/` | Django バックエンド | Python 3.15 · Django 6 · Channels · DRF · PostgreSQL 19 · Redis 8 |
 | `extension/` | ブラウザ拡張機能 | Manifest V3 · TypeScript · React 19 · rspack · Tailwind CSS v4 |
 | `frontend/` | 公開サイト | Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 |
 | `packages/ui/` | 共有 shadcn/ui プリミティブ | TypeScript · Radix · Tailwind CSS v4 |
@@ -59,12 +59,12 @@ pnpm run api:generate
 ## docker compose（ルート）
 
 ```
-docker-compose.yml            nginx · django · frontend · postgres · redis
-docker-compose.override.yml   dev（既定。frontend は pnpm dev）
-docker-compose.loadtest.yml   k6（loadtest profile）
-.env.global                   全サービス共通の env
-.env.dev                      開発環境の env（DEBUG / MY_DOMAIN / NEXT_PUBLIC_*）
-nginx/                        nginx の設定（postgres/ は dev のデータ置き場）
+compose.yml            nginx · django · frontend · postgres · redis
+compose.override.yml   dev（既定。frontend は pnpm dev）
+compose.loadtest.yml   k6（loadtest profile）
+.env.global            全サービス共通の env
+.env.dev               開発環境の env（DEBUG / MY_DOMAIN / NEXT_PUBLIC_*）
+nginx/                 nginx の設定（postgres/ は dev のデータ置き場）
 ```
 
 - frontend のビルドコンテキストはルート（`dockerfile: frontend/Dockerfile`）。
@@ -97,7 +97,10 @@ DB は VS Code の SQLTools（接続は定義済み）、Redis は Redis for VS 
   `pnpm --filter <pkg> add <dep>`。ロックファイルはルートの `pnpm-lock.yaml` 1 本。
 - pnpm は `packageManager` で 12 系にピン留め。ビルドスクリプトの許可は
   `pnpm-workspace.yaml` の `allowBuilds`（廃止されたキーを書くと pnpm がエラーにする）。
-- `minimumReleaseAge`（公開から 1 日待つ）は既定のまま使う。
+- `minimumReleaseAge` は 1 日（`pnpm-workspace.yaml` に明示。pnpm の既定と同じ）。Dependabot の
+  `cooldown`（`.github/dependabot.yml`。全 ecosystem で 1 日）と揃えている。外さない。
+  1 日より新しい版を入れるのはセキュリティ修正のときだけで、`minimumReleaseAgeExclude` に
+  `name@version` でその版だけを足す。
 - corepack は使わない。Dev Container の node feature が pnpm を入れ、pnpm 自身が
   ピンの版に差し替える。
 - `turbo.json` の `agentGuidance: false` を外さない。外すと turbo がこのファイルへ

@@ -6,6 +6,7 @@ import {
   D_ANIME_STORE_URL,
   DMM_TV_URL,
   FEEDBACK_FORM_URL,
+  GITHUB_ISSUES_URL,
   GITHUB_ORG_URL,
   GITHUB_SPONSORS_URL,
 } from "@/lib/links";
@@ -28,6 +29,11 @@ const ENTRIES: FaqEntry[] = [
     question: "どの動画配信サービスで使えますか？",
     answer:
       "dアニメストアと DMM TV で使えます。どちらも作品の再生ページで、再生の同期・リアクション・サイドバーが使えます。拡張機能なしで再生状況を見られるタイマー画面と、「別タブで動画を開く」やピクチャーインピクチャーのボタンなどの便利機能は、いまのところ dアニメストアだけです。",
+  },
+  {
+    question: "なぜ無料なの？",
+    answer:
+      "レンタルサーバーを利用せず持て余した Raspberry Pi の余剰リソースで運営しています。そのため、サーバーの安定性には一定の不安定さが発生しています。",
   },
   {
     question: "対応しているブラウザは？",
@@ -105,7 +111,7 @@ const ENTRIES: FaqEntry[] = [
   {
     question: "アップデートはどうなりますか？",
     answer:
-      "インストールはすぐ完了し、再起動は不要です。アップデートも自動的に行われるため、常に最新の状態で利用できます。",
+      "インストールはすぐ完了し、再起動は不要です。拡張機能のアップデートはブラウザが自動的に実行するため、常に最新の状態で利用できます。",
   },
   {
     question: "不具合の報告や要望はどこへ送ればいい？",
@@ -121,7 +127,7 @@ const ENTRIES: FaqEntry[] = [
         </a>{" "}
         または{" "}
         <a
-          href={GITHUB_ORG_URL}
+          href={GITHUB_ISSUES_URL}
           target="_blank"
           rel="noreferrer noopener"
           className="text-primary underline-offset-4 hover:underline"
@@ -166,8 +172,16 @@ const ENTRIES: FaqEntry[] = [
   },
   {
     question: "なんでチャット機能がないの？",
-    answer:
-      "チャット機能を実装するためには、電気通信事業法に基づく届け出が必要なためです。申し訳ありませんがリアクション機能や外部のチャットサービスをご活用ください。",
+    answer: (
+      <>
+        <p>
+          チャット機能を実装するためには、電気通信事業法に基づく届け出が必要なためです。また、保有する情報の機密性が格段に上がるため、昨今の情勢を鑑みて実装の予定はありません。
+        </p>
+        <p className="mt-3">
+          申し訳ありませんがリアクション機能や外部のチャットサービスをご活用ください。
+        </p>
+      </>
+    ),
   },
   {
     question: "寄付を受け付けている？",

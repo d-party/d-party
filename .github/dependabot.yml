@@ -1,6 +1,11 @@
 version: 2
 
 # directory でパッケージを指し分ける。
+#
+# cooldown: 公開から 1 日たつまで、その版を更新の候補にしない（公開直後に差し替えられた
+# 悪意ある版が PR になるのを遅らせる）。セキュリティ更新には効かない。npm は
+# pnpm-workspace.yaml の minimumReleaseAge（同じ 1 日）とも揃えている。
+# docker / docker-compose / github-actions は semver ではないので default-days だけ使える。
 updates:
   # ── backend（Django / uv）───────────────────────────────────────────────
   # pip エコシステムでは uv.lock を更新できない。
@@ -11,6 +16,8 @@ updates:
       timezone: "Asia/Tokyo"
       time: "12:00"
     target-branch: main
+    cooldown:
+      default-days: 1
     open-pull-requests-limit: 10
     commit-message:
       prefix: "chore(deps)"
@@ -32,6 +39,8 @@ updates:
       timezone: "Asia/Tokyo"
       time: "12:00"
     target-branch: main
+    cooldown:
+      default-days: 1
     open-pull-requests-limit: 10
     commit-message:
       prefix: "chore(deps)"
@@ -53,6 +62,8 @@ updates:
       timezone: "Asia/Tokyo"
       time: "12:00"
     target-branch: main
+    cooldown:
+      default-days: 1
     commit-message:
       prefix: "chore(deps)"
 
@@ -64,6 +75,8 @@ updates:
       timezone: "Asia/Tokyo"
       time: "12:00"
     target-branch: main
+    cooldown:
+      default-days: 1
     commit-message:
       prefix: "chore(deps)"
 
@@ -75,6 +88,8 @@ updates:
       timezone: "Asia/Tokyo"
       time: "12:00"
     target-branch: main
+    cooldown:
+      default-days: 1
     commit-message:
       prefix: "ci(deps)"
     groups:

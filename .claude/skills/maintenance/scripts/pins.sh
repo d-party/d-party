@@ -89,8 +89,8 @@ collect() {
   # ── Node ──
   v=$(grep -oE '^FROM node:[^ ]+' frontend/Dockerfile | sed 's/^FROM //' | sort -u | paste -sd ' ')
   pin node "frontend/Dockerfile" "$v" "$(major "${v#node:}")"
-  v=$(grep -oE 'image: node:[^ ]+' docker-compose.override.yml | sed 's/^image: //' | first)
-  pin node "docker-compose.override.yml" "$v" "$(major "${v#node:}")"
+  v=$(grep -oE 'image: node:[^ ]+' compose.override.yml | sed 's/^image: //' | first)
+  pin node "compose.override.yml" "$v" "$(major "${v#node:}")"
   v=$(workflow_values node-version)
   pin node ".github/workflows node-version" "$v" "$(major "$v")"
   v=$(devcontainer_feature "features/node:")
@@ -112,8 +112,8 @@ collect() {
   # ── PostgreSQL / Redis / nginx ──
   local name
   for name in postgres redis nginx; do
-    v=$(grep -oE "image: $name:[^ ]+" docker-compose.yml | sed 's/^image: //' | first)
-    pin "$name" "docker-compose.yml" "$v" "$(minor "${v#*:}" | grep . || major "${v#*:}")"
+    v=$(grep -oE "image: $name:[^ ]+" compose.yml | sed 's/^image: //' | first)
+    pin "$name" "compose.yml" "$v" "$(minor "${v#*:}" | grep . || major "${v#*:}")"
     v=$(helm_tag "$name")
     pin "$name" "infra/helm/d-party/values.yaml" "$v" "$(minor "$v" | grep . || major "$v")"
     while IFS= read -r line; do
@@ -124,15 +124,15 @@ collect() {
   done
 
   # ── k6 ──
-  v=$(grep -oE 'image: grafana/k6:[^ ]+' docker-compose.loadtest.yml | sed 's/^image: //' | first)
-  pin k6 "docker-compose.loadtest.yml" "$v" "$(major "${v#*:}")"
+  v=$(grep -oE 'image: grafana/k6:[^ ]+' compose.loadtest.yml | sed 's/^image: //' | first)
+  pin k6 "compose.loadtest.yml" "$v" "$(major "${v#*:}")"
   v=$(devcontainer_feature "features/k6:")
   pin k6 ".devcontainer/devcontainer.json" "$v" "$(major "$v")"
 
   # ── 浮いている指定（タグが動くので、更新が PR を経ずに入る）──
   while IFS= read -r line; do
     pin floating "${line%%:*}" "$(grep -oE '[^ "]+[:@]latest|"[A-Za-z]+": *"latest"' <<<"$line" | tr -d '"' | paste -sd ' ')" ""
-  done < <(grep -rnE ':latest|@latest|"latest"' docker-compose*.yml backend/Dockerfile frontend/Dockerfile \
+  done < <(grep -rnE ':latest|@latest|"latest"' compose*.yml backend/Dockerfile frontend/Dockerfile \
     .devcontainer/devcontainer.json .github/workflows infra/helm/d-party/values.yaml 2>/dev/null)
 
   # ── infra に直接書いたイメージ（Dependabot は見ていない）──

@@ -1,6 +1,6 @@
 [project]
 name = "d-party-backend"
-version = "2.15.0"
+version = "2.16.2"
 description = "d-party backend — Django Channels powered watch-together service for dアニメストア and DMM TV"
 authors = [{ name = "U-Not", email = "euno.eng@gmail.com" }]
 requires-python = ">=3.15"
@@ -38,7 +38,6 @@ dev = [
     "django-stubs[compatible-mypy]>=5.1",
     "djangorestframework-stubs>=3.15",
     "pip-licenses>=5.0",
-    "pipdeptree>=2.23",
 ]
 
 [tool.uv]
@@ -108,7 +107,7 @@ omit = [
     "*/test_*.py",
     "conftest.py",
     "*/factories.py",
-    # gunicorn が読む設定値だけのファイル。起動は Backend/Build が確かめる。
+    # gunicorn が読む設定値だけのファイル。起動は Backend / Build が確かめる。
     "gunicorn.conf.py",
 ]
 

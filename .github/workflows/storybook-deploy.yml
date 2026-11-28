@@ -1,6 +1,6 @@
 # Pages は 1 リポジトリ 1 サイトなので、両 Storybook を 1 回のデプロイで
 # /extension/ と /frontend/ に置く。Pages のソースを GitHub Actions にしておくこと。
-name: Storybook/Deploy
+name: Storybook / Deploy
 
 on:
   push:

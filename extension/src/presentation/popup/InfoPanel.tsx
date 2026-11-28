@@ -56,7 +56,7 @@ const LINKS: InfoLink[] = [
 export function InfoPanel(): React.JSX.Element {
   return (
     <section className="rounded-xl border bg-card p-2 shadow-sm">
-      <ul className="space-y-0.5">
+      <ul className="space-y-0.5 @lg:grid @lg:grid-cols-2 @lg:gap-0.5 @lg:space-y-0">
         {LINKS.map(({ href, label, description, icon: Icon, accent }) => (
           <li key={href}>
             <a

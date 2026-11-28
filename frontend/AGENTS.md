@@ -32,6 +32,9 @@ pnpm api:generate && pnpm typecheck && pnpm lint
 pnpm storybook
 ```
 
+`next.config.ts` の `agentRules: false` を外さない。外すと `next dev` がこのファイルへ英語のブロックを
+書き足し続ける。
+
 ## ロビー `/anime-store/lobby/[roomId]` — 契約
 
 拡張機能と backend の両方と結合しているので変えないこと。
@@ -87,7 +90,7 @@ DMM TV も同じ DOM 契約で `/dmm-tv/lobby/[roomId]` を持ち、`GET /api/v1
   マニュアルにはライトの画面を載せず、ライト / ダークの切り替えも説明しない。
   拡張機能の画面は extension の Storybook `Manual/*`（`extension/src/manual/`）を、
   ロビーとタイマーは API と WebSocket を playwright の route でモックして撮る。
-- 拡張機能の画面（サイドバー・ポップアップ）を変えたら、マニュアルの記述と画像も見直す。
+- 拡張機能の画面（サイドバー・ポップアップ・設定タブ）を変えたら、マニュアルの記述と画像も見直す。
 
 ## OGP
 
@@ -114,5 +117,5 @@ runner のレイアウトと `CMD` もそれに合わせてある。
 
 ## CI
 
-`Frontend/CI`（生成物の drift · typecheck · lint · license-check）と
-`Frontend/Build`（next build · storybook · イメージを起動してページ疎通）。
+`Frontend / CI`（生成物の drift · typecheck · lint · license-check）と
+`Frontend / Build`（next build · storybook · イメージを起動してページ疎通）。

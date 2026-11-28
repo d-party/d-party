@@ -16,6 +16,7 @@ import type { Settings } from "@/domain/settings";
 import { Switch, cn } from "@d-party/ui";
 
 import { ReactionDisplaySelect } from "./ReactionDisplaySelect";
+import type { PanelLayout } from "./tabs";
 import { UserProfileSection } from "./UserProfileSection";
 import type { UpdateSetting } from "./useSettings";
 
@@ -77,14 +78,24 @@ type SectionId = "sync" | "utility";
 export function SettingsPanel({
   settings,
   update,
+  layout = "popup",
 }: {
   settings: Settings;
   update: UpdateSetting;
+  /** `page`（設定タブ）ではセクションを畳まない。 */
+  layout?: PanelLayout;
 }): React.JSX.Element {
   // Held here so only one section is open at a time.
   const [openSection, setOpenSection] = useState<SectionId | null>(null);
-  const toggleSection = (id: SectionId): void =>
-    setOpenSection((current) => (current === id ? null : id));
+  const collapsible = layout === "popup";
+  const sectionProps = (id: SectionId) =>
+    collapsible
+      ? {
+          open: openSection === id,
+          onToggle: () =>
+            setOpenSection((current) => (current === id ? null : id)),
+        }
+      : { open: true };
 
   return (
     <div className="space-y-3">
@@ -96,12 +107,12 @@ export function SettingsPanel({
         toggles={SYNC_TOGGLES}
         settings={settings}
         update={update}
-        open={openSection === "sync"}
-        onToggle={() => toggleSection("sync")}
+        {...sectionProps("sync")}
       >
         <ReactionDisplaySelect
           value={settings.reactionDisplay}
           onChange={(mode) => void update("reactionDisplay", mode)}
+          layout={layout}
         />
       </ToggleSection>
 
@@ -111,8 +122,7 @@ export function SettingsPanel({
         toggles={UTILITY_TOGGLES}
         settings={settings}
         update={update}
-        open={openSection === "utility"}
-        onToggle={() => toggleSection("utility")}
+        {...sectionProps("utility")}
       />
     </div>
   );
@@ -134,29 +144,37 @@ function ToggleSection({
   settings: Settings;
   update: UpdateSetting;
   open: boolean;
-  onToggle: () => void;
+  /** 無ければ見出しは開閉のボタンにならない（常に開いておくとき）。 */
+  onToggle?: () => void;
   /** トグルの下に置くもの。 */
   children?: React.ReactNode;
 }): React.JSX.Element {
   const reduce = useReducedMotion();
   return (
     <section className="rounded-xl border bg-card p-2 shadow-sm">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={onToggle}
-        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/70"
-      >
-        <Icon className="size-4 text-red-600" aria-hidden />
-        <h2 className="text-sm font-semibold">{title}</h2>
-        <ChevronDown
-          className={cn(
-            "ml-auto size-4 text-muted-foreground transition-transform",
-            open && "rotate-180",
-          )}
-          aria-hidden
-        />
-      </button>
+      {onToggle ? (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={onToggle}
+          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/70"
+        >
+          <Icon className="size-4 text-red-600" aria-hidden />
+          <h2 className="text-sm font-semibold">{title}</h2>
+          <ChevronDown
+            className={cn(
+              "ml-auto size-4 text-muted-foreground transition-transform",
+              open && "rotate-180",
+            )}
+            aria-hidden
+          />
+        </button>
+      ) : (
+        <div className="flex items-center gap-2 px-2 py-1.5">
+          <Icon className="size-4 text-red-600" aria-hidden />
+          <h2 className="text-sm font-semibold">{title}</h2>
+        </div>
+      )}
       <AnimatePresence initial={false}>
         {open && (
           <motion.div

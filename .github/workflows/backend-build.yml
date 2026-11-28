@@ -1,5 +1,5 @@
 # イメージを組み、PostgreSQL / Redis につないで起動し、API が応答するまでを見る。
-name: Backend/Build
+name: Backend / Build
 
 on:
   push:
@@ -45,7 +45,7 @@ jobs:
     # コンテナは --network host で 127.0.0.1 のサービスを見る。
     services:
       postgres:
-        image: postgres:18
+        image: postgres:19
         env:
           POSTGRES_DB: d_party
           POSTGRES_USER: d_party
@@ -58,7 +58,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
       redis:
-        image: redis:8.10
+        image: redis:8.12
         ports:
           - 6379:6379
         options: >-

@@ -16,7 +16,7 @@
 #   - GITHUB_TOKEN には `workflows` 権限が無いため、.github/workflows/ を書き換える
 #     PR（github-actions ecosystem）はマージできない。検証結果をコメントして人に回す。
 #   - workflow_dispatch は GITHUB_TOKEN からでも起動できるので、release.yml は動く。
-name: Repo/Maintenance
+name: Repo / Maintenance
 
 on:
   schedule:
@@ -55,7 +55,7 @@ jobs:
     # backend の pytest 用。
     services:
       postgres:
-        image: postgres:18
+        image: postgres:19
         env:
           POSTGRES_DB: d_party
           POSTGRES_USER: d_party

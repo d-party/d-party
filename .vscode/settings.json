@@ -1,4 +1,8 @@
 {
+  // フォルダを開いたとき用の設定。マルチルート（d-party.code-workspace）で開くと、ここは
+  // root フォルダにしか効かないので、全フォルダに効かせる分は d-party.code-workspace にも
+  // 書いてある。変えたら両方を直す。
+
   // ── General ───────────────────────────────────────────────────────────────
   "editor.formatOnSave": true,
   "files.eol": "\n",

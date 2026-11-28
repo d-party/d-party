@@ -105,7 +105,7 @@ flowchart LR
     NGINX -. initContainer .-> ST[collectstatic→emptyDir]
 ```
 
-- **postgres / redis は公式イメージ（`postgres:18` / `redis:8.10`）+ 自前 StatefulSet**。
+- **postgres / redis は公式イメージ（`postgres:19` / `redis:8.10`）+ 自前 StatefulSet**。
   > Bitnami の Helm chart は採用しません。Bitnami は 2025-08〜09 で公開カタログ
   > (`docker.io/bitnami`) を Legacy 化／削除し、無償の versioned イメージが
   > 廃止されました（出典: bitnami/charts#35164）。公式イメージなら ARM64 提供・
@@ -294,7 +294,7 @@ kubectl -n d-party port-forward svc/d-party-nginx 8080:80
 ### 3.6 PostgreSQL のメジャー版を上げる
 
 メジャー版のデータ形式には互換が無いので、**新しい版の空のディレクトリで initdb し、dump を
-restore する**。PGDATA はボリュームの中の `postgres.dataSubdir`（例 `pgdata18`）なので、
+restore する**。PGDATA はボリュームの中の `postgres.dataSubdir`（例 `pgdata19`）なので、
 版ごとに名前を変えれば旧版のデータがそのまま残り、切り戻しに使える。
 DB が小さい（数十 MB）うちは、`pg_upgrade` より dump / restore の方が速くて確実。
 
@@ -331,12 +331,17 @@ DB が小さい（数十 MB）うちは、`pg_upgrade` より dump / restore の
 **切り戻し**（7 より前）: StatefulSet の image と PGDATA を旧版に戻し、django を戻す。旧版の
 データには触れていない。7 の後は新しい書き込みがあるので、新版から dump して旧版へ restore する。
 
-**手元（docker compose）**: 16 → 18 で compose のマウント先が `./postgres/data` から
-`./postgres/data18` に変わった。手元のデータが要らなければそのまま `docker compose up -d` で
-空の DB ができる（README の migrate 手順へ）。持ってくるなら、上げる前の compose
-（`postgres:16`）で `docker compose exec postgres pg_dump -U <user> -d <db> -Fc > d_party.dump` を
+**手元（docker compose）**: compose のマウント先は版ごとに分ける（16 → 18 で `./postgres/data` から
+`./postgres/data18`、18 → 19 で `./postgres/data19`）。手元のデータが要らなければそのまま
+`docker compose up -d` で空の DB ができる（README の migrate 手順へ）。持ってくるなら、上げる前の
+compose（旧版のイメージ）で `docker compose exec postgres pg_dump -U <user> -d <db> -Fc > d_party.dump` を
 取り、上げた後に `docker compose exec -T postgres pg_restore -U <user> -d <db> --no-owner --role=<user> < d_party.dump`。
-`./postgres/data` は不要になったら消してよい。
+旧版のディレクトリ（`./postgres/data` · `./postgres/data18`）は不要になったら消してよい。
+
+**19 で気を付けること**（リリースノートの Migration to Version 19 より）: dump は
+`standard_conforming_strings = on`（既定）で取ること（off で取った 19 未満の dump は 19 に入らない）。
+`max_locks_per_transaction` の既定が 64 → 128、JIT が既定で無効になった。d-party は拡張を使わず
+（`plpgsql` のみ）、パスワードは `scram-sha-256` なので、ほかの非互換には当たらない。
 
 ---
 
@@ -350,7 +355,7 @@ DB が小さい（数十 MB）うちは、`pg_upgrade` より dump / restore の
 | 公開／トンネル | **Cloudflare Tunnel (cloudflared)** | Cloudflare 公式、活発 |
 | クラスタ内ビルド | **moby/buildkit（rootless）** | Moby/CNCF 系、活発。daemonless で K8s Job 向き |
 | ローカルレジストリ | **registry:2（CNCF Distribution）** | CNCF プロジェクト、ARM64 提供、業界標準 |
-| DB | **postgres:18（公式）** | Docker 公式、ARM64 提供、長期メンテ |
+| DB | **postgres:19（公式）** | Docker 公式、ARM64 提供、長期メンテ |
 | キャッシュ/レイヤ | **redis:8.10（公式）** | Docker 公式、ARM64 提供 |
 | リバースプロキシ | **nginx:1.31.9（公式）** | Docker 公式 |
 | 永続化 | **local-path-provisioner** | k3s 同梱の既定 StorageClass |

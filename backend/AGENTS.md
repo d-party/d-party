@@ -10,7 +10,7 @@ Django へ振り分ける。
 | 言語 / 依存管理 | Python 3.15 / uv（`pyproject.toml` · `uv.lock`） |
 | フレームワーク | Django 6 · Channels 4 · DRF（スキーマは drf-spectacular）· djangochannelsrestframework |
 | ASGI | 本番 gunicorn + uvicorn-worker / dev（`DEBUG=1`）runserver |
-| DB / レイヤ | PostgreSQL 18 / Redis 8（`channels-redis`） |
+| DB / レイヤ | PostgreSQL 19 / Redis 8（`channels-redis`） |
 | Lint・型 | ruff（format · lint · import 順序 · SAST · 複雑度）/ mypy（django-stubs · drf-stubs） |
 | テスト | pytest（pytest-django · pytest-asyncio · factory-boy · pytest-cov） |
 
@@ -155,15 +155,15 @@ Dev Container からは `DATABASE_HOST=localhost` でつながる。
   0% として数える（`source = ["."]`）。
 - 計測から外すのは、テストとその支援コード（`factories.py` · `conftest.py`）、生成物
   （`migrations/`）、プロセスの起動だけを担うもの（`manage.py` · `gunicorn.conf.py`。起動は
-  `Backend/Build` が確かめる）に限る。テストを書けるコードを `omit` や `# pragma: no cover` で
+  `Backend / Build` が確かめる）に限る。テストを書けるコードを `omit` や `# pragma: no cover` で
   隠さない。
 
 migration はコミット済み。モデルを変えたときだけ `makemigrations` して生成物をコミットする。
 
 ## CI
 
-- `Backend/CI`：ruff · pytest（カバレッジは PR にコメントし、`python-coverage-comment-action-data` ブランチへ保存）· mypy · openapi（`openapi.json` が最新か）· license-check
-- `Backend/Build`：hadolint → build → dockle → 実 PostgreSQL / Redis で migrate → 起動 → `/api/v1/health` が 200
-- linter は ruff に集約する（SAST は `S`、複雑度は `C90`（10）と `PLR09xx`）。taint 解析だけは `Repo/CI` の CodeQL。
+- `Backend / CI`：ruff · pytest（カバレッジは PR にコメントし、`python-coverage-comment-action-data` ブランチへ保存）· mypy · openapi（`openapi.json` が最新か）· license-check
+- `Backend / Build`：hadolint → build → dockle → 実 PostgreSQL / Redis で migrate → 起動 → `/api/v1/health` が 200
+- linter は ruff に集約する（SAST は `S`、複雑度は `C90`（10）と `PLR09xx`）。taint 解析だけは `Repo / CI` の CodeQL。
 - フォーマットは検査のみで、自動コミットはしない。
 - pre-commit の設定はルートの `.pre-commit-config.yaml`（`files: ^backend/`）。

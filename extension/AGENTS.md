@@ -17,20 +17,21 @@ src/
     ports.ts         PartySocket / PlayerController / SidebarView / Notifier などの境界
     ActionGuard.ts   受信した操作を送り返さないためのフラグ
   infrastructure/  ws/ · storage/（chrome.storage.sync / local）· notifier/ · api/ · env.ts
-  styles/          theme.css（popup と Shadow DOM が共有するテーマトークン）· theme.ts（テーマの決定）· sidebar.css
+  styles/          theme.css（popup・options と Shadow DOM が共有するテーマトークン）· theme.ts（テーマの決定）· sidebar.css
   presentation/    注入先ごとのエントリ
     background/      service worker
     content/store/   作品ページ
     content/party/   プレイヤーページ（サイドバー・プレイヤー・リアクション）
     content/dmm/     DMM TV の作品詳細（detail/）と再生ページ（player/。サイドバー・通知・リアクションは party/ を再利用）
     content/version/ ロビーでのバージョン確認
-    popup/           設定 UI
+    popup/           設定 UI（ポップアップ）。パネルは options と共有する
+    options/         別タブの設定ページ（options.html）。popup/ のパネルを広く並べる
   manual/          frontend の利用マニュアル（/docs）を撮るための Storybook の場面（Manual/*）。架空のデータだけを使い、
                    ダークモード（prefers-color-scheme: dark）で撮る
 ```
 
 rspack のエントリは `background` · `content-store` · `content-party` · `content-version` ·
-`content-dmm-detail` · `content-dmm-player` · `popup` · `sidebar-style`。ページへ直接当てる CSS は `manifest.json` の `css`（`public/css/`）で
+`content-dmm-detail` · `content-dmm-player` · `popup` · `options` · `sidebar-style`。ページへ直接当てる CSS は `manifest.json` の `css`（`public/css/`）で
 注入し、Shadow DOM 用の CSS（`sidebar-style`）だけをバンドルして実行時に読み込む。
 
 ## 約束
@@ -49,16 +50,25 @@ rspack のエントリは `background` · `content-store` · `content-party` · 
   のツールチップを出す。メンテナンス中は 30 秒ごとに確かめ直し、通れば `idle` に戻す。
 - 共有パネルの「タイマーのみの URL」はロビー URL に `?timer=true` を付けたもの。タイマー画面は
   dアニメストアのロビーにしか無いので、DMM TV では `mountSidebar` に `showTimerUrl: false` を渡して出さない。
+- 設定 UI はポップアップ（`popup.html`）と設定タブ（`options.html`、manifest の `options_ui`）の 2 つ。
+  設定タブはポップアップのヘッダー右上の歯車のボタン（`chrome.runtime.openOptionsPage()`。開いていれば
+  そのタブへ移る）と、ツールバーのアイコンの右クリック →「オプション」から開く。設定タブは 4 つの
+  項目を上から順に並べた 1 枚のページで、左のメニュー（狭い画面では上に固定）を押すとその項目まで
+  スクロールし、表示している位置に合わせて選択が移る（`options/useScrollSpy.ts`。押した項目は、
+  最下部で上端まで届かなくても次に利用者がスクロールするまで選択したままにする）。表示中の項目は
+  URL の `#` に持つ。キーボードのフォーカスはスクロールでは動かさない。どちらも `popup/` のパネルと `tabs.ts` の `TABS` を使い、`layout`（`popup` /
+  `page`）で変えるのはセクションを畳むかどうかだけ。幅に応じた並べ方は設定タブの `@container` に
+  対するコンテナクエリ（`@lg:` など）で書く。ポップアップにはコンテナが無いので当たらない。
 - 初回インストール時に開くページとポップアップ「情報」タブの「使い方」は、公開サイトの利用マニュアル
   （`DOCS_URL` = `/docs`）。開いたかどうかの記録は `chrome.storage.local` の `usagePageOpened`
   （旧 `/usage` の頃の名前）。キーを変えると既存の利用者にもう一度開くので変えない。
-- アナウンス（`components/Announcements.tsx`）はポップアップではタブの上、サイドバーでは
-  ヘッダーの下に出す。ポップアップは backend を直接、content script は background 経由
+- アナウンス（`components/Announcements.tsx`）はポップアップではタブの上、設定タブとサイドバーでは
+  ヘッダーの下に出す。ポップアップと設定タブは backend を直接、content script は background 経由
   （`{ type: "announcements" }`）で取る。どちらも orval のクライアントの引数で
   `extension_version`（manifest の `version`）を送り、配信対象のものだけを受け取る（取れない
   環境では付けない）。取得の失敗は空として扱い何も出さない。出すのは閉じていないうちの先頭
   （backend の並びで開始が一番新しいもの）の 1 件だけ。× で閉じた ID は
-  `chrome.storage.local` の `dismissedAnnouncementIds` に残し、両方で二度と出さず、次の 1 件を繰り上げる。
+  `chrome.storage.local` の `dismissedAnnouncementIds` に残し、どこでも二度と出さず、次の 1 件を繰り上げる。
   見た目は控えめなテキスト行で、重要（`warning`）は色だけに頼らず警告アイコンと「重要」の文字で
   お知らせ（`info`）と区別する。
   - 本文の `[テキスト](URL)` は `domain/announcementText.ts` が読み、React の `<a>` とテキストで
@@ -102,7 +112,7 @@ content script の DOM 操作は、dアニメストア・DMM TV の実ページ�
 
 - テーマは `data-theme` 属性で表す。どれにするかは `src/styles/theme.ts` の `resolveTheme()`
   だけが決め（今は常に `"dark"`）、`applyTheme(root)` が属性を付ける。
-- 属性を付ける場所: popup は `<html>`、サイドバーとトーストは shadow root の中のマウント先、
+- 属性を付ける場所: popup と options は `<html>`、サイドバーとトーストは shadow root の中のマウント先、
   Storybook は `.storybook/preview.ts` で `<html>`。shadow tree のセレクタはホストより外を見られない
   ので、Shadow DOM ではホストではなく中の要素に付ける。新しく React のルートを作ったら
   `applyTheme()` を呼ぶ。
@@ -113,7 +123,7 @@ content script の DOM 操作は、dアニメストア・DMM TV の実ページ�
   の下に無ければダーク）。トークンで書けない色（`text-amber-700 dark:text-amber-400` など）は
   ライト用を素のクラス、ダーク用を `dark:` に書く。ライトを使わない今も両方書いておく。
 - 次はテーマの対象外で、色を固定している。
-  - ダーク前提の固定色: トースト・リアクションのバッジ・ポップアップとサイドバーのヘッダー・
+  - ダーク前提の固定色: トースト・リアクションのバッジ・ポップアップ・設定タブ・サイドバーのヘッダー・
     サイドバーを開くタブ。
   - ページへ直接当てる `public/css/`: 作品ページのボタンはページの明るい配色に、プレイヤーの
     ボタンは黒いコントロールバーに合わせる。
@@ -127,5 +137,5 @@ content script の DOM 操作は、dアニメストア・DMM TV の実ページ�
 
 ## CI
 
-`Extension/CI`（生成物の drift · typecheck · lint · license-check）と
-`Extension/Build`（build:prod と manifest の参照先の実在確認 · zip · storybook）。
+`Extension / CI`（生成物の drift · typecheck · lint · license-check）と
+`Extension / Build`（build:prod と manifest の参照先の実在確認 · zip · storybook）。

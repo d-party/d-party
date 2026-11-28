@@ -21,8 +21,8 @@ results/               k6 のサマリ出力（gitignore）
 
 ```bash
 docker compose up -d
-docker compose -f docker-compose.yml -f docker-compose.override.yml \
-  -f docker-compose.loadtest.yml --profile loadtest run --rm k6
+docker compose -f compose.yml -f compose.override.yml \
+  -f compose.loadtest.yml --profile loadtest run --rm k6
 
 LOADTEST_VUS=20 LOADTEST_ROOM_SIZE=5 LOADTEST_DURATION=2m docker compose ... run --rm k6
 

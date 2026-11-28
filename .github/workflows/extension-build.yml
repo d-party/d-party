@@ -1,5 +1,5 @@
 # 出荷する拡張機能を作り、中身を確かめる。
-name: Extension/Build
+name: Extension / Build
 
 on:
   push:
@@ -78,6 +78,7 @@ jobs:
               for (const f of [...(cs.js ?? []), ...(cs.css ?? [])]) files.add(f);
             }
             if (m.action?.default_popup) files.add(m.action.default_popup);
+            if (m.options_ui?.page) files.add(m.options_ui.page);
             let bad = 0;
             for (const f of files) {
               const ok = fs.existsSync(f) && fs.statSync(f).size > 0;
