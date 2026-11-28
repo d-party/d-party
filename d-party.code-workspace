@@ -41,9 +41,11 @@
     },
 
     // ── Python (backend) ──────────────────────────────────────────────────────
-    // ${workspaceFolder} は設定を読むフォルダごとに解決されるので、backend フォルダでは
-    // backend/.venv を指す（root フォルダは .vscode/settings.json の値が優先される）。
-    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+    // .venv は backend にしか無い。${workspaceFolder} だと設定を読むフォルダごとに解決され、
+    // packages/ui などで存在しないパスになって「Invalid Python interpreter」が出るので、
+    // ${workspaceFolder:backend} で全フォルダから backend/.venv を指す（root フォルダは
+    // .vscode/settings.json の値が優先されるが、同じ場所を指している）。
+    "python.defaultInterpreterPath": "${workspaceFolder:backend}/.venv/bin/python",
     "[python]": { "editor.defaultFormatter": "charliermarsh.ruff" },
 
     // ── TypeScript (extension · frontend · packages/ui) ───────────────────────
