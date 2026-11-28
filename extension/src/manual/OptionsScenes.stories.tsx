@@ -1,4 +1,4 @@
-/** 利用マニュアル用: 架空のユーザー「さくら」の設定と統計を入れた設定タブ（options.html）。 */
+/** 利用マニュアル用: 架空のユーザー「さくら」の設定と実績を入れた設定タブ（options.html）。 */
 import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
 
 import { OptionsApp } from "@/presentation/options/OptionsApp";

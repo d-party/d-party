@@ -10,7 +10,7 @@ import {
 export const TABS = [
   { value: "settings", label: "設定", icon: Settings },
   { value: "reaction", label: "リアクション", icon: Smile },
-  { value: "stats", label: "統計", icon: BarChart3 },
+  { value: "stats", label: "実績", icon: BarChart3 },
   { value: "info", label: "情報", icon: Info },
 ] as const satisfies readonly { value: string; label: string; icon: LucideIcon }[];
 

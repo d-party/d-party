@@ -139,7 +139,7 @@ export default function ReactionsPage(): React.JSX.Element {
         />
         <p>
           標準の 5 つのリアクションは、送った数がポップアップの{" "}
-          <DocLink href={`${docPath("settings")}#stats`}>統計</DocLink>{" "}
+          <DocLink href={`${docPath("settings")}#stats`}>実績</DocLink>{" "}
           に記録されます。エクストラリアクションと、リアクション禁止のルームで押したものは数えません。
         </p>
       </DocSection>

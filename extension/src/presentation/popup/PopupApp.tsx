@@ -36,7 +36,7 @@ const HIDDEN_WHEN_INACTIVE =
   "data-[state=inactive]:invisible data-[state=inactive]:pointer-events-none data-[state=inactive]:**:transition-none";
 
 /**
- * The 統計 panel sets the popup's height; the others overlay it and scroll
+ * The 実績 panel sets the popup's height; the others overlay it and scroll
  * instead of stretching the window.
  */
 const REFERENCE_PANEL = HIDDEN_WHEN_INACTIVE;
@@ -63,7 +63,7 @@ export function PopupApp({
   const panelsRef = useRef<HTMLDivElement>(null);
 
   const changeTab = (value: string): void => {
-    // 統計で下へスクロールしたまま切り替えると、重ねるパネルがその分ずれるので戻す。
+    // 実績で下へスクロールしたまま切り替えると、重ねるパネルがその分ずれるので戻す。
     panelsRef.current?.scrollTo({ top: 0 });
     setTab(value);
   };
@@ -96,7 +96,7 @@ export function PopupApp({
           </TabsList>
         </TooltipProvider>
 
-        {/* The 統計 panel is in the flow, so it scrolls with this box; the
+        {/* The 実績 panel is in the flow, so it scrolls with this box; the
             overlays fill the box and scroll on their own. */}
         <div
           ref={panelsRef}
