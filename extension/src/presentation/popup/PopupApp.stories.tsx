@@ -3,14 +3,18 @@ import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
 import {
   loadOf,
   SAMPLE_INFO,
+  SAMPLE_LINK,
   SAMPLE_WARNING,
+  SAMPLE_WARNING_LINKS,
 } from "@/components/announcementSamples";
 import { STORAGE_KEYS } from "@/domain/settings";
 
 import { PopupApp } from "./PopupApp";
 import { installChromeMock } from "./storybookChromeMock";
 
-function withChromeMock(initial: Record<string, string | boolean> = {}): Decorator {
+function withChromeMock(
+  initial: Record<string, string | boolean> = {},
+): Decorator {
   return (Story) => {
     installChromeMock(initial);
     // 実際のポップアップの幅（styles.css の #root）。
@@ -61,5 +65,11 @@ export const WithAnnouncement: Story = {
 /** 重要とお知らせが同時に配信されているとき。 */
 export const WithAnnouncements: Story = {
   args: { loadAnnouncements: loadOf(SAMPLE_WARNING, SAMPLE_INFO) },
+  decorators: [withChromeMock()],
+};
+
+/** 本文のリンク（`[テキスト](https://…)`）。新しいタブで開く。 */
+export const WithLinkAnnouncements: Story = {
+  args: { loadAnnouncements: loadOf(SAMPLE_WARNING_LINKS, SAMPLE_LINK) },
   decorators: [withChromeMock()],
 };

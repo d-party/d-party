@@ -67,11 +67,24 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
   （`DEBUG=1` は `*`）。content script の WebSocket の Origin は注入先のページになるので、
   対応サービスを増やしたらそのドメインも足す。`anime.dmkt-sp.jp` は `animestore.docomo.ne.jp` へ
   301 で転送されてページが開かないので許可していない。
+- **ヘルスチェック（`/api/v1/health`）**: PostgreSQL と Redis まで確かめ、どれかが落ちていれば 503
+  （本文は空）。拡張機能は 200 以外で「ルームを作成」ボタンを無効にする。コンテナの
+  liveness / readiness には使わない（DB の障害で django が再起動を繰り返すため。probe は TCP）。
+  pytest は Redis なしで走るので、200 を期待するテストでは `_redis_ok` を差し替える。
 - **アナウンス**: `GET /api/v1/announcements` は配信中（`starts_at` ≤ 現在 < `ends_at`）だけを
-  重要 → 新しい順で返す。認証不要・読み取り専用で、作成・編集・削除は管理画面だけ（REST の書き込み口は
+  開始が新しい順（種別は見ない。同じ開始なら id の大きい順）で返す。認証不要・読み取り専用で、作成・編集・削除は管理画面だけ（REST の書き込み口は
   作らない。作るなら認証と `IsAdminUser` を付ける。既定の `DEFAULT_AUTHENTICATION_CLASSES` は空）。
   `Cache-Control: public, max-age=60` なので、管理画面での変更は最大 60 秒遅れて届く。
-  本文の上限（`MESSAGE_MAX_LENGTH`）は拡張機能の幅に合わせている。開始 < 期限は DB の制約でも守る。
+  開始 < 期限は DB の制約でも守る。
+  - 本文には Markdown のインラインリンク `[テキスト](URL)` だけを書ける（`announcements/links.py`）。
+    URL は `https://` で始まり、ホストがあり、空白・制御文字・バックスラッシュ・ユーザー情報を含まないものだけ。
+    許可しない URL・空のテキスト・崩れた書き方（`](` の名残り）は管理画面のフォームエラーにする。
+    拡張機能の `domain/announcementText.ts` が同じ規則で読むので、片側だけ変えない。
+  - 本文の上限は 2 つ。表示される文字数（リンクはテキストだけを数え、URL は数えない）が
+    `MESSAGE_DISPLAY_MAX_LENGTH`（60。拡張機能の幅に合わせている）、URL を含む生の文字列が
+    `MESSAGE_RAW_MAX_LENGTH`（500。DB の列の長さ）。
+  - API は本文を生の文字列のまま返す（形は変えない）。リンクに対応していない古い拡張機能では
+    `[テキスト](URL)` がそのまま出るので、リンクを使う行は対象バージョンの下限を対応した版以上にする。
   - 配信対象の拡張機能のバージョンは、下限・上限（どちらも任意・両端を含む）で絞れる。
     `?extension_version=x.y.z` を付けると対象のものだけを返し、省略すると絞り込まない。形式が
     不正なら 400（`{"message": ...}`）。拡張機能は manifest の `version` を付けて呼ぶ。

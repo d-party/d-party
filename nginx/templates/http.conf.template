@@ -63,7 +63,7 @@ server {
         try_files $uri @proxy_to_app;
     }
 
-    # ── Next.js フロントエンド: 公開ページ（/ /usage /qa /anime-store/lobby/… と静的アセット）──
+    # ── Next.js フロントエンド: 公開ページ（/ /docs /qa /anime-store/lobby/… と静的アセット）──
     location / {
         try_files $uri @proxy_to_frontend;
     }

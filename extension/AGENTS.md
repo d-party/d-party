@@ -25,6 +25,8 @@ src/
     content/dmm/     DMM TV の作品詳細（detail/）と再生ページ（player/。サイドバー・通知・リアクションは party/ を再利用）
     content/version/ ロビーでのバージョン確認
     popup/           設定 UI
+  manual/          frontend の利用マニュアル（/docs）を撮るための Storybook の場面（Manual/*）。架空のデータだけを使い、
+                   ダークモード（prefers-color-scheme: dark）で撮る
 ```
 
 rspack のエントリは `background` · `content-store` · `content-party` · `content-version` ·
@@ -42,16 +44,27 @@ rspack のエントリは `background` · `content-store` · `content-party` · 
 - ルーム設定は create メッセージに含めず、create の後にオーナーが `update_setting` で送る。
   現在値はサーバの `room_setting` で受け取る。一方通行では非オーナーは `video_operation` を送らず、
   リアクション禁止では送信せず自分にだけ表示する（`RoomSession`）。
+- サイドバーは初回表示時に background 経由で `/api/v1/health` を確かめる。200 以外なら
+  `connectionStatus` を `maintenance` にし、「ルームを作成」ボタンを無効化して「メンテナンス中です」
+  のツールチップを出す。メンテナンス中は 30 秒ごとに確かめ直し、通れば `idle` に戻す。
 - 共有パネルの「タイマーのみの URL」はロビー URL に `?timer=true` を付けたもの。タイマー画面は
   dアニメストアのロビーにしか無いので、DMM TV では `mountSidebar` に `showTimerUrl: false` を渡して出さない。
+- 初回インストール時に開くページとポップアップ「情報」タブの「使い方」は、公開サイトの利用マニュアル
+  （`DOCS_URL` = `/docs`）。開いたかどうかの記録は `chrome.storage.local` の `usagePageOpened`
+  （旧 `/usage` の頃の名前）。キーを変えると既存の利用者にもう一度開くので変えない。
 - アナウンス（`components/Announcements.tsx`）はポップアップではタブの上、サイドバーでは
   ヘッダーの下に出す。ポップアップは backend を直接、content script は background 経由
   （`{ type: "announcements" }`）で取る。どちらも orval のクライアントの引数で
   `extension_version`（manifest の `version`）を送り、配信対象のものだけを受け取る（取れない
-  環境では付けない）。取得の失敗は空として扱い何も出さない。× で閉じた ID は
-  `chrome.storage.local` の `dismissedAnnouncementIds` に残し、両方で二度と出さない。
+  環境では付けない）。取得の失敗は空として扱い何も出さない。出すのは閉じていないうちの先頭
+  （backend の並びで開始が一番新しいもの）の 1 件だけ。× で閉じた ID は
+  `chrome.storage.local` の `dismissedAnnouncementIds` に残し、両方で二度と出さず、次の 1 件を繰り上げる。
   見た目は控えめなテキスト行で、重要（`warning`）は色だけに頼らず警告アイコンと「重要」の文字で
   お知らせ（`info`）と区別する。
+  - 本文の `[テキスト](URL)` は `domain/announcementText.ts` が読み、React の `<a>` とテキストで
+    組む（`dangerouslySetInnerHTML` は使わない）。リンクにするのは `https://` の URL だけで、
+    規則は backend の `announcements/links.py` と同じ。満たさないものは書いたままの文字で出す。
+    `<a>` は `target="_blank"` と `rel="noopener noreferrer"` で新しいタブに開く。
 
 ## ビルドと読み込み
 

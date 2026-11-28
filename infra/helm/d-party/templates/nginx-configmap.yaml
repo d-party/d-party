@@ -51,6 +51,29 @@ data:
                 return 200 "ok\n";
             }
 
+            # upstream に届かない（502/504）ときと計画メンテナンス（503）のときに返す静的ページ。
+            # upstream 自身が返した 5xx（/api/v1/health の 503 など）はそのまま通す。
+            error_page 502 503 504 =503 /maintenance.html;
+            location = /maintenance.html {
+                internal;
+                root /usr/share/nginx/maintenance;
+                add_header Cache-Control "no-store" always;
+                add_header Retry-After "60" always;
+            }
+
+{{- if .Values.nginx.maintenance.enabled }}
+            # 計画メンテナンス中。/healthz とアナウンス以外はすべて静的ページ（503）を返す。
+            location / {
+                return 503;
+            }
+            # アナウンス（運営からのお知らせ）はメンテナンスの告知に使うので django へ通す。
+            # django ごと止めているときは 502 になり、上の error_page で静的ページへ替わる
+            # （拡張機能は取得の失敗を「お知らせなし」として扱う）。
+            location = /api/v1/announcements {
+                add_header Access-Control-Allow-Origin "*" always;
+                proxy_pass http://app_server;
+            }
+{{- else }}
             location /static/ {
                 alias /static/;
             }
@@ -99,5 +122,8 @@ data:
             location @proxy_to_frontend {
                 proxy_pass http://frontend_server;
             }
+{{- end }}
         }
     }
+  maintenance.html: |
+{{ .Files.Get "files/maintenance.html" | indent 4 }}

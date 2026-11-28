@@ -17,7 +17,14 @@ export function Footer(): React.JSX.Element {
             GitHub
           </a>{" "}
           ·{" "}
-          <Link href="/privacy" className="underline-offset-4 hover:underline">
+          <Link href="/docs" className="underline-offset-4 hover:underline">
+            利用マニュアル
+          </Link>{" "}
+          ·{" "}
+          <Link
+            href="/privacy"
+            className="underline-offset-4 hover:underline"
+          >
             プライバシーポリシー
           </Link>
         </p>

@@ -1,6 +1,6 @@
 {
   "name": "d-party-frontend",
-  "version": "2.14.1",
+  "version": "2.15.0",
   "description": "dアニメストア・DMM TV で『同時視聴』を実現する d-party のユーザー向けフロントエンド (Next.js / React 19 / TypeScript)",
   "private": true,
   "type": "module",

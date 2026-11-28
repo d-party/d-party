@@ -1,11 +1,14 @@
 import datetime
+import logging
 import re
 import urllib.parse
 from collections import Counter
 
+import redis
 from django.conf import settings
 from django.core.cache import cache
-from django.db.models import Case, Count, Min, When
+from django.db import connection
+from django.db.models import Count, Min
 from django.db.models.functions import ExtractHour, TruncDate
 from django.utils import timezone
 from django.utils.cache import patch_cache_control
@@ -15,7 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from announcements import versions
-from announcements.models import Announcement, AnnouncementLevel
+from announcements.models import Announcement
 from streamer.models import SERVICES, AnimeRoom, DmmRoom, ReactionType
 from streamer.reactions import reaction_counts_by_type
 
@@ -31,6 +34,11 @@ from .serializers import (
     ShieldsBadgeSerializer,
     VersionCheckResultSerializer,
 )
+
+logger = logging.getLogger(__name__)
+
+# ヘルスチェックが Redis の応答を待つ上限（秒）。
+HEALTH_CHECK_REDIS_TIMEOUT_SECONDS = 2
 
 # 統計はサービス（dアニメストア / DMM TV）を横断した d-party 全体の利用状況を表す。各集計は
 # 全サービスのモデルを合算する（サービスは ``streamer.models.SERVICES`` に足せば反映される）。
@@ -222,12 +230,54 @@ def _mean_created_per_day(models) -> float:
     return _mean_per_day(_resample_per_day(_combined_per_day(models)))
 
 
-class HealthCheckAPI(APIView):
-    """Lightweight liveness probe. Returns 200 when the application is running."""
+def _database_ok() -> bool:
+    """Whether PostgreSQL answers a trivial query."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+    except Exception:
+        logger.warning("health check: database is unavailable", exc_info=True)
+        return False
+    return True
 
-    @extend_schema(operation_id="health", responses={200: None})
+
+def _redis_ok() -> bool:
+    """Whether the Redis behind the channel layer answers PING.
+
+    Pings Redis directly instead of going through the channel layer or the
+    cache, so the short timeouts apply and a hung Redis cannot stall the probe.
+    """
+    client = redis.Redis(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+        socket_connect_timeout=HEALTH_CHECK_REDIS_TIMEOUT_SECONDS,
+        socket_timeout=HEALTH_CHECK_REDIS_TIMEOUT_SECONDS,
+    )
+    try:
+        return bool(client.ping())
+    except Exception:
+        logger.warning("health check: redis is unavailable", exc_info=True)
+        return False
+    finally:
+        client.close()
+
+
+class HealthCheckAPI(APIView):
+    """Readiness of the whole service: Django, PostgreSQL and Redis.
+
+    Returns 200 when rooms can be created, 503 otherwise. The extension disables
+    the "create room" button on anything but 200. The body stays empty; which
+    dependency failed is only logged.
+
+    Not for container liveness probes: those must not depend on the database.
+    """
+
+    @extend_schema(operation_id="health", responses={200: None, 503: None})
     def get(self, request, format=None) -> Response:
-        return Response(status=status.HTTP_200_OK)
+        if _database_ok() and _redis_ok():
+            return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
 class ChromeExtensionVersionCheckAPI(APIView):
@@ -554,7 +604,7 @@ class AnnouncementsActiveAPI(APIView):
     """Announcements being delivered now (``starts_at`` <= now < ``ends_at``).
 
     Read-only and public: the extension's popup and sidebar fetch it. Ordered by
-    importance (warning first), then by the newest start. ``extension_version``
+    the newest start (regardless of the level). ``extension_version``
     narrows the collection to the announcements targeting that extension version.
     """
 
@@ -584,11 +634,7 @@ class AnnouncementsActiveAPI(APIView):
                 )
             rows = rows.for_extension_version(version)
         # 開始が同じものは後から登録したもの（id が大きい方）を先にして、並びを決める。
-        rows = rows.order_by(
-            Case(When(level=AnnouncementLevel.WARNING, then=0), default=1),
-            "-starts_at",
-            "-id",
-        )
+        rows = rows.order_by("-starts_at", "-id")
         response = Response({"data": AnnouncementSerializer(rows, many=True).data})
         patch_cache_control(response, public=True, max_age=ANNOUNCEMENTS_MAX_AGE)
         return response

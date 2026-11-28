@@ -16,7 +16,7 @@ dアニメストア・DMM TV の動画を、離れた友だちと同時視聴す
 [![user-par-day](https://img.shields.io/endpoint?url=https://d-party.net/api/shields/user-par-day)](https://d-party.net/stats)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[d-party.net](https://d-party.net) ・ [使い方](https://d-party.net/usage) ・ [Q&A](https://d-party.net/qa) ・ [統計](https://d-party.net/stats) ・ [Storybook](https://d-party.github.io/d-party/)
+[d-party.net](https://d-party.net) ・ [使い方](https://d-party.net/docs) ・ [Q&A](https://d-party.net/qa) ・ [統計](https://d-party.net/stats) ・ [Storybook](https://d-party.github.io/d-party/)
 
 </div>
 

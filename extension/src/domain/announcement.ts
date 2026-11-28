@@ -17,13 +17,16 @@ export interface Announcement {
  */
 export const MAX_DISMISSED_ANNOUNCEMENTS = 100;
 
-/** 閉じていないものだけを、受け取った順のまま返す。 */
-export function undismissed(
+/**
+ * 画面に出す 1 件。閉じていないもののうち、受け取った順（backend は開始が新しい順）の先頭。
+ * 出ているものを閉じると、次に新しいものが繰り上がる。無ければ `null`。
+ */
+export function currentAnnouncement(
   announcements: readonly Announcement[],
   dismissedIds: readonly number[],
-): Announcement[] {
+): Announcement | null {
   const dismissed = new Set(dismissedIds);
-  return announcements.filter(({ id }) => !dismissed.has(id));
+  return announcements.find(({ id }) => !dismissed.has(id)) ?? null;
 }
 
 /** `id` を末尾に足す（重複は除き、古いものから上限を超えた分を捨てる）。 */

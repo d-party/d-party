@@ -216,7 +216,7 @@ GATES_LOG_DIR=<W>/final .claude/skills/maintenance/scripts/gates.sh
 | --- | --- |
 | `bump_type` | **`patch`** |
 | `publish` | **`true`**（拡張機能を Chrome Web Store で公開する） |
-| `release_note` | 空（GitHub の自動生成） |
+| `release_note` | 空（GitHub の自動生成。完了後に「追加機能」を先頭へ足す。下の「リリースノート」） |
 
 聞かずに決めてよい。次に当たるときだけ、`AskUserQuestion` で選択肢を出して聞く。
 
@@ -264,6 +264,45 @@ run の id は `<W>/release-run` に置き、`gh run watch` ではなく
   for p in / /api/v1/health; do curl -s -o /dev/null -m 20 -w "$p %{http_code}\n" "https://d-party.net$p"; done
   ```
 
+### リリースノート
+
+本文は GitHub の自動生成（`## What's Changed` の PR 一覧と `**Full Changelog**`）をそのまま使い、
+その**先頭に「追加機能」の節を足す**。v2.3.0 以降の Release はすべてこの形
+（例: `gh release view v2.14.0 -R d-party/d-party`）。`release_note` を dispatch で渡さず、
+完了後に編集する（自動生成の PR 一覧を見てから書ける）。
+
+```markdown
+## 追加機能
+- 作成から 48 時間を過ぎたルームは、参加者がいても自動で閉じるようにしました
+- 運営向けの管理画面に、パスキーでログインできるようになりました
+
+---
+
+<自動生成の本文をそのまま>
+```
+
+書き方:
+
+- 前回タグからの `feat` の PR（自動生成の一覧）とその差分から、**利用者か運営から見える具体的な
+  機能**を 1 行ずつ書く。「〜しました」「〜できるようになりました」の文で、PR のタイトルや
+  コードの名前（API のパス・コンポーネント名）ではなく、何ができるようになったかを書く
+- 同じ機能の PR が複数ある（本体 → 追補 → 修正）なら 1 行にまとめる
+- 開発者向け（CI · skill · Dev Container · Storybook）と、見た目の変わらない強化（CSP · 入力検証）は
+  書かない。`fix` と依存更新も書かない
+- 機能の追加が無いときは 1 行だけ: `- 新機能の追加はありません（<何をした版かの要約>）`
+  （例: `（PostgreSQL 18 への更新と依存関係の更新）`）
+
+```bash
+TAG=<タグ>
+gh release view "$TAG" -R d-party/d-party --json body -q .body > <W>/release-body.md
+# <W>/release-note.md に「## 追加機能 … ---」を書き、自動生成の本文を後ろに付ける
+{ cat <W>/release-note.md; echo; cat <W>/release-body.md; } > <W>/release-final.md
+gh release edit "$TAG" -R d-party/d-party --notes-file <W>/release-final.md
+gh release view "$TAG" -R d-party/d-party --json body -q .body | grep -c -e '^## 追加機能' -e "^## What's Changed"   # 2
+```
+
+編集で `--latest` やタグには触れない（`gh release edit` に `--notes-file` 以外を渡さない）。
+
 ## 7. 報告と後片付け
 
 報告（更新ごとの記録は [investigation.md](investigation.md) の「判定と記録」の形）:
@@ -273,7 +312,7 @@ run の id は `<W>/release-run` に置き、`gh run watch` ではなく
   GitHub のアラートと監査の食い違い
 - 版: 上げたもの · 揃えたもの · 期限が近いもの
 - 挙動が変わるが壊れてはいない点（要フォローアップ）
-- リリース: 版 · run の URL · イメージ · 拡張機能の公開状況
+- リリース: 版 · run の URL · イメージ · 拡張機能の公開状況 · リリースノートに足した「追加機能」
 - ゲート: control と最終の表。`SKIP` だった検査
 
 後片付け:

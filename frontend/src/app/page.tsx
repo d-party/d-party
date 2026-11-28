@@ -69,7 +69,7 @@ export default function HomePage(): React.JSX.Element {
 
         <Reveal className="mt-8 text-center">
           <Button asChild variant="outline">
-            <Link href="/usage">
+            <Link href="/docs">
               詳しい使い方を見る
               <ArrowRight />
             </Link>

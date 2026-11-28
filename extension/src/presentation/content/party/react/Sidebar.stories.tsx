@@ -3,7 +3,9 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
   loadOf,
   SAMPLE_INFO,
+  SAMPLE_LINK,
   SAMPLE_WARNING,
+  SAMPLE_WARNING_LINKS,
 } from "@/components/announcementSamples";
 import type { Announcement } from "@/domain/announcement";
 import type { User } from "@/domain/protocol";
@@ -66,6 +68,16 @@ export const CreateMode: Story = {
   render: () => {
     const store = new SidebarStore();
     store.setMode("create");
+    return frame(store);
+  },
+};
+
+/** Health check failed: the create button is disabled with a tooltip. */
+export const CreateModeMaintenance: Story = {
+  render: () => {
+    const store = new SidebarStore();
+    store.setMode("create");
+    store.setConnectionStatus("maintenance");
     return frame(store);
   },
 };
@@ -261,6 +273,23 @@ export const ShareTabDmmWithAnnouncements: Story = {
     return frame(store, {
       showTimerUrl: false,
       loadAnnouncements: loadOf(SAMPLE_WARNING, SAMPLE_INFO),
+    });
+  },
+};
+
+/** 本文のリンク（`[テキスト](https://…)`）。ページの上でも新しいタブで開く。 */
+export const ShareTabWithLinkAnnouncements: Story = {
+  render: () => {
+    installChromeMock();
+    const store = new SidebarStore();
+    store.setMode("join");
+    store.setJoined(true);
+    store.setShareLink(SAMPLE_URL);
+    store.setShareTitle(SAMPLE_TITLE);
+    store.updateUsers(SAMPLE_USERS);
+    store.setActiveTab("share");
+    return frame(store, {
+      loadAnnouncements: loadOf(SAMPLE_WARNING_LINKS, SAMPLE_LINK),
     });
   },
 };

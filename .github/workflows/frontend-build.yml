@@ -124,10 +124,18 @@ jobs:
 
       - name: Check the pages render
         run: |
-          for path in / /usage /qa /privacy /stats; do
+          for path in / /docs /docs/getting-started /qa /privacy /stats; do
             code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:3000$path")
             echo "$path -> $code"
             [ "$code" = "200" ] || exit 1
+          done
+          # 【暫定】旧「使い方」。古い版の拡張機能が開くので /docs へ 307 で転送する（クエリも引き継ぐ）。
+          # 外すときは frontend/AGENTS.md の「利用マニュアル /docs」を参照。
+          # curl の -w の出力は改行で終わらないので、read ではなく $() で受ける。
+          for path in /usage '/usage?x=1'; do
+            redirect=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "http://localhost:3000$path")
+            echo "$path -> $redirect"
+            [ "$redirect" = "307 http://localhost:3000/docs${path#/usage}" ] || exit 1
           done
           code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/__does_not_exist__)
           echo "/__does_not_exist__ -> $code"

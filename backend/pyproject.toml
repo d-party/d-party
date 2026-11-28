@@ -1,6 +1,6 @@
 [project]
 name = "d-party-backend"
-version = "2.14.1"
+version = "2.15.0"
 description = "d-party backend — Django Channels powered watch-together service for dアニメストア and DMM TV"
 authors = [{ name = "U-Not", email = "euno.eng@gmail.com" }]
 requires-python = ">=3.15"
