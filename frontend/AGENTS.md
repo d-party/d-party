@@ -83,7 +83,7 @@ pnpm storybook
   マニュアルにはライトの画面を載せず、ライト / ダークの切り替えも説明しない。
   拡張機能の画面は extension の Storybook `Manual/*`（`extension/src/manual/`）を、
   ロビーとタイマーは API と WebSocket を playwright の route でモックして撮る。
-- 拡張機能の画面（サイドバー・ポップアップ）を変えたら、マニュアルの記述と画像も見直す。
+- 拡張機能の画面（サイドバー・ポップアップ・設定タブ）を変えたら、マニュアルの記述と画像も見直す。
 
 ## OGP
 

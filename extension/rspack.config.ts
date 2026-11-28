@@ -58,6 +58,8 @@ const config: Configuration = {
     "content-party": src("presentation/content/party/index.ts"),
     "content-version": src("presentation/content/version/index.ts"),
     popup: src("presentation/popup/index.tsx"),
+    // 別タブで開く設定ページ（manifest の options_ui）。
+    options: src("presentation/options/index.tsx"),
     // Injected into the sidebar's Shadow DOM at runtime.
     "sidebar-style": src("styles/sidebar.css"),
   },
@@ -107,6 +109,12 @@ const config: Configuration = {
       template: "public/popup.html",
       filename: "popup.html",
       chunks: ["popup"],
+      inject: "body",
+    }),
+    new rspack.HtmlRspackPlugin({
+      template: "public/options.html",
+      filename: "options.html",
+      chunks: ["options"],
       inject: "body",
     }),
     new rspack.CopyRspackPlugin({

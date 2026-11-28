@@ -14,7 +14,7 @@ export function resolveTheme(): Theme {
 /**
  * `theme.css` のトークンと `dark:` バリアントが参照する `data-theme` を付ける。
  *
- * popup では <html>、Shadow DOM では shadow root の中のマウント先に付ける（shadow tree の
+ * popup と options では <html>、Shadow DOM では shadow root の中のマウント先に付ける（shadow tree の
  * セレクタはホストより外の祖先を見られない）。
  */
 export function applyTheme(root: HTMLElement, theme: Theme = resolveTheme()): void {

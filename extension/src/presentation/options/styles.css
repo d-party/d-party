@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@import "../../styles/theme.css";
+
+/* 別パッケージは自動検出されないので、@d-party/ui を明示的に走査する。 */
+@source "../../../../packages/ui/src";
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+html,
+body {
+  margin: 0;
+}

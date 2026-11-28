@@ -1,9 +1,9 @@
 /*
- * テーマトークン。popup（`:root`）とサイドバー・トーストの Shadow DOM（`:host`。shadow tree の
+ * テーマトークン。popup・options（`:root`）とサイドバー・トーストの Shadow DOM（`:host`。shadow tree の
  * 中の `:root` はページの <html> を指すので当たらない）の両方から import する。
  *
  * 今はダーク固定。テーマは OS の prefers-color-scheme ではなく `data-theme` 属性で表し、
- * 属性は `theme.ts` の `applyTheme()` が各ルート（popup の <html>、Shadow DOM の中の
+ * 属性は `theme.ts` の `applyTheme()` が各ルート（popup・options の <html>、Shadow DOM の中の
  * マウント先）に付ける。どのテーマにするかは `resolveTheme()` だけが決める。
  *
  * - ダークが既定。属性が無くても（`data-theme="dark"` でも）ダークのトークンになる。
