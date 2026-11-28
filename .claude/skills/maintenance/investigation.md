@@ -167,7 +167,7 @@ git diff --no-index <旧の展開先>/<path> <新の展開先>/<path>
 
 | 見る点 | 判断 |
 | --- | --- |
-| 公開日時 | 7 日以内なら待つ（Dependabot の `cooldown` と pnpm の `minimumReleaseAge` が 7 日なので、定期更新では来ないはず。来るのはセキュリティ更新）。`minimumReleaseAge` を外さない |
+| 公開日時 | 1 日以内なら待つ（Dependabot の `cooldown` と pnpm の `minimumReleaseAge` が 1 日なので、定期更新では来ないはず。来るのはセキュリティ更新）。`minimumReleaseAge` を外さない |
 | 公開者 | 前の版と違えば、リポジトリの履歴でメンテナの交代を確かめる。説明が付かなければ止める |
 | provenance | 「あり → なし」になったら止める（CI から出ていた版が手元から出された） |
 | install スクリプト | 増えた・変わったら中身を読む。実行の可否は `pnpm-workspace.yaml` の `allowBuilds`。勝手に足さない |

@@ -3,11 +3,12 @@ packages:
   - "frontend"
   - "packages/*"
 
-# 公開から 7 日（分で指定）たつまで、その版を解決の候補にしない。既定は 1 日。
-# .github/dependabot.yml の cooldown と揃えている。pnpm install はロックファイルの版も
-# この条件で検査する。7 日より新しい版をどうしても入れるとき（セキュリティ修正）は、
-# `minimumReleaseAgeExclude` に `name@version` の形で、その版だけを足す。
-minimumReleaseAge: 10080
+# 公開から 1 日（分で指定）たつまで、その版を解決の候補にしない。pnpm の既定と同じ値だが、
+# .github/dependabot.yml の cooldown と揃えていることを示すために明示する。明示すると
+# strict になり、pnpm install はロックファイルの版もこの条件で検査する。1 日より新しい版を
+# どうしても入れるとき（セキュリティ修正）は、`minimumReleaseAgeExclude` に `name@version` の
+# 形で、その版だけを足す。
+minimumReleaseAge: 1440
 
 # ビルドスクリプトを実行してよい依存。宣言の無いものがスクリプトを持つと install が落ちる。
 allowBuilds:

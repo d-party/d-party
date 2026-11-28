@@ -89,9 +89,9 @@ DB は VS Code の SQLTools（接続は定義済み）、Redis は Redis for VS 
   `pnpm --filter <pkg> add <dep>`。ロックファイルはルートの `pnpm-lock.yaml` 1 本。
 - pnpm は `packageManager` で 12 系にピン留め。ビルドスクリプトの許可は
   `pnpm-workspace.yaml` の `allowBuilds`（廃止されたキーを書くと pnpm がエラーにする）。
-- `minimumReleaseAge` は 7 日（`pnpm-workspace.yaml`。pnpm の既定は 1 日）。Dependabot の
-  `cooldown`（`.github/dependabot.yml`。全 ecosystem で 7 日）と揃えている。短くしない。
-  7 日より新しい版を入れるのはセキュリティ修正のときだけで、`minimumReleaseAgeExclude` に
+- `minimumReleaseAge` は 1 日（`pnpm-workspace.yaml` に明示。pnpm の既定と同じ）。Dependabot の
+  `cooldown`（`.github/dependabot.yml`。全 ecosystem で 1 日）と揃えている。外さない。
+  1 日より新しい版を入れるのはセキュリティ修正のときだけで、`minimumReleaseAgeExclude` に
   `name@version` でその版だけを足す。
 - corepack は使わない。Dev Container の node feature が pnpm を入れ、pnpm 自身が
   ピンの版に差し替える。
