@@ -88,6 +88,8 @@ const mode: "create" | "join" | "normal" =
 
 const { store: sidebarStore, controller: sidebarController } = mountSidebar({
   onCreateRoom: () => {
+    // ボタンは無効化しているが、サーバが応答しない間は念のためここでも止める。
+    if (sidebarStore.getSnapshot().connectionStatus === "maintenance") return;
     addControlButtons();
     bindPlayerEvents();
     session.createRoom(
