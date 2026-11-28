@@ -33,7 +33,6 @@
     "@rspack/cli": "^2.3.4",
     "@rspack/core": "^2.3.4",
     "@storybook/addon-docs": "^10.6.8",
-    "@storybook/react": "^10.6.8",
     "@storybook/react-vite": "^10.6.8",
     "@tailwindcss/postcss": "^4.3.5",
     "@types/chrome": "^0.3.7",
