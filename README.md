@@ -79,7 +79,7 @@ docker compose exec django python manage.py migrate
 docker compose exec django python manage.py collectstatic --noinput
 ```
 
-`docker-compose.override.yml` が自動で読み込まれ開発用の環境が立ち上がります。
+`compose.override.yml` が自動で読み込まれ開発用の環境が立ち上がります。
 
 | URL | 内容 |
 | --- | --- |
@@ -222,13 +222,13 @@ GHCR に `vX.Y.Z` タグのイメージが上がると argocd-image-updater が�
 docker compose up -d
 
 # スモーク（1 ルーム×3 人、30 秒）
-docker compose -f docker-compose.yml -f docker-compose.override.yml \
-  -f docker-compose.loadtest.yml --profile loadtest run --rm k6
+docker compose -f compose.yml -f compose.override.yml \
+  -f compose.loadtest.yml --profile loadtest run --rm k6
 
 # スケール例（20 ルーム×5 人 = 100 接続、2 分）
 LOADTEST_VUS=20 LOADTEST_ROOM_SIZE=5 LOADTEST_DURATION=2m \
-  docker compose -f docker-compose.yml -f docker-compose.override.yml \
-  -f docker-compose.loadtest.yml --profile loadtest run --rm k6
+  docker compose -f compose.yml -f compose.override.yml \
+  -f compose.loadtest.yml --profile loadtest run --rm k6
 ```
 
 パラメータと計測している指標は [`loadtest/README.md`](loadtest/README.md) にあります。

@@ -80,7 +80,7 @@ grep -rnE "^\s*(from|import) <import 名>" backend --include='*.py' | grep -v '/
 
 # Python: 文字列での参照（INSTALLED_APPS · MIDDLEWARE · バックエンド指定）、設定、起動コマンド
 grep -rn "<import 名>" backend/d_party/settings.py backend/pyproject.toml backend/Dockerfile \
-  backend/*.sh docker-compose*.yml infra/helm/d-party
+  backend/*.sh compose*.yml infra/helm/d-party
 ```
 
 洗い出したら、**呼んでいる API を列挙する**（関数 · クラス · 引数 · 設定キー · CLI のフラグ ·
@@ -210,8 +210,8 @@ ecosystem ごとの注意:
 
   ```bash
   docker compose up -d --build
-  docker compose -f docker-compose.yml -f docker-compose.override.yml \
-    -f docker-compose.loadtest.yml --profile loadtest run --rm k6
+  docker compose -f compose.yml -f compose.override.yml \
+    -f compose.loadtest.yml --profile loadtest run --rm k6
   docker compose logs django | grep -iE "error|traceback" | head
   ```
 

@@ -51,12 +51,12 @@ pnpm run api:generate
 ## docker compose（ルート）
 
 ```
-docker-compose.yml            nginx · django · frontend · postgres · redis
-docker-compose.override.yml   dev（既定。frontend は pnpm dev）
-docker-compose.loadtest.yml   k6（loadtest profile）
-.env.global                   全サービス共通の env
-.env.dev                      開発環境の env（DEBUG / MY_DOMAIN / NEXT_PUBLIC_*）
-nginx/                        nginx の設定（postgres/ は dev のデータ置き場）
+compose.yml            nginx · django · frontend · postgres · redis
+compose.override.yml   dev（既定。frontend は pnpm dev）
+compose.loadtest.yml   k6（loadtest profile）
+.env.global            全サービス共通の env
+.env.dev               開発環境の env（DEBUG / MY_DOMAIN / NEXT_PUBLIC_*）
+nginx/                 nginx の設定（postgres/ は dev のデータ置き場）
 ```
 
 - frontend のビルドコンテキストはルート（`dockerfile: frontend/Dockerfile`）。
