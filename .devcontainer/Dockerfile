@@ -2,7 +2,7 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu26.04
 
 # Docker Desktop (WSL2) のネットワークが混んでいると、apt が HTTP パイプラインでまとめて
-# 受け取った応答が壊れ、"Hash Sum mismatch" で features や onCreateCommand の apt-get が落ちる。
+# 受け取った応答が壊れ、"Hash Sum mismatch" で features や playwright（--with-deps）の apt-get が落ちる。
 # features より前のこの層で、パイプラインを切り（直列取得になるだけ）、失敗時の再試行を増やす。
 RUN printf '%s\n' \
       'Acquire::http::Pipeline-Depth "0";' \
