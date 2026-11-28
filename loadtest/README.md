@@ -46,23 +46,23 @@ dアニメストア同時視聴サービスの **WebSocket（Channels）同期**
 docker compose up -d
 
 # スモーク（1 ルーム×3 人、30s）
-docker compose -f docker-compose.yml -f docker-compose.override.yml \
-  -f docker-compose.loadtest.yml --profile loadtest run --rm k6
+docker compose -f compose.yml -f compose.override.yml \
+  -f compose.loadtest.yml --profile loadtest run --rm k6
 
 # スケール例（20 ルーム×5 人 = 100 接続、2 分）
 LOADTEST_VUS=20 LOADTEST_ROOM_SIZE=5 LOADTEST_DURATION=2m \
-  docker compose -f docker-compose.yml -f docker-compose.override.yml \
-  -f docker-compose.loadtest.yml --profile loadtest run --rm k6
+  docker compose -f compose.yml -f compose.override.yml \
+  -f compose.loadtest.yml --profile loadtest run --rm k6
 
 # シナリオ切替（一方通行モード: 配信者 1 + 視聴者 3）
 LOADTEST_SCENARIO=ws_oneway.js LOADTEST_ROOM_SIZE=4 \
-  docker compose -f docker-compose.yml -f docker-compose.override.yml \
-  -f docker-compose.loadtest.yml --profile loadtest run --rm k6
+  docker compose -f compose.yml -f compose.override.yml \
+  -f compose.loadtest.yml --profile loadtest run --rm k6
 
 # シナリオ切替（タイマー: 配信者 1 + 観覧者 3）
 LOADTEST_SCENARIO=ws_timer.js LOADTEST_ROOM_SIZE=4 \
-  docker compose -f docker-compose.yml -f docker-compose.override.yml \
-  -f docker-compose.loadtest.yml --profile loadtest run --rm k6
+  docker compose -f compose.yml -f compose.override.yml \
+  -f compose.loadtest.yml --profile loadtest run --rm k6
 ```
 
 サマリは `loadtest/results/summary.json` に出力される（`results/` は gitignore）。

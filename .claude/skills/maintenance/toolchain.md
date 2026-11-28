@@ -12,13 +12,13 @@ SKILL.md §1 の `pins.sh`（どこに何が書いてあるか。食い違いは
 | 対象 | Dependabot が上げる所 | 手で揃える所 |
 | --- | --- | --- |
 | Python | `backend/Dockerfile` | `backend/.python-version` · `pyproject.toml`（`requires-python` · ruff `target-version` · mypy `python_version`）· devcontainer |
-| Node | `frontend/Dockerfile` · `docker-compose.override.yml` · `@types/node` | ワークフローの `node-version` · devcontainer · `engines.node` |
+| Node | `frontend/Dockerfile` · `compose.override.yml` · `@types/node` | ワークフローの `node-version` · devcontainer · `engines.node` |
 | pnpm | なし | `packageManager`（ルート · extension · frontend の 3 か所） |
 | npm | — | 固定していない。Node のイメージに同梱の版で、corepack を入れるためだけに使う |
 | uv | `backend/Dockerfile` | なし（setup-uv と devcontainer は最新を取る） |
 | GitHub Actions | `uses:` | `runs-on` · ジョブの `services` のイメージ · `env` に書いたイメージ |
-| PostgreSQL · Redis · nginx | `docker-compose.yml` | `infra/helm/d-party/values.yaml` · ワークフローの `services` · `nginx-ci.yml` の `NGINX_IMAGE` |
-| k6 | `docker-compose.loadtest.yml` | devcontainer |
+| PostgreSQL · Redis · nginx | `compose.yml` | `infra/helm/d-party/values.yaml` · ワークフローの `services` · `nginx-ci.yml` の `NGINX_IMAGE` |
+| k6 | `compose.loadtest.yml` | devcontainer |
 | pre-commit のフック | なし | `.pre-commit-config.yaml` の `rev`（`pre-commit autoupdate`） |
 
 `pins.sh` の `floating`（`latest` 指定）· `infra`（`registry:2` · `buildkit:rootless` など、

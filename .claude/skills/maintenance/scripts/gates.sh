@@ -12,7 +12,7 @@
 #   bundle    拡張機能の本番バンドル（build:prod と manifest の参照先）
 #   smoke     frontend を起動して実際にページを叩く（web と同じ実行で回す。ビルドが無ければ FAIL）
 #   compose   docker compose config（dev · loadtest）
-#   nginx     docker-compose.yml の nginx イメージでテンプレートを nginx -t にかける
+#   nginx     compose.yml の nginx イメージでテンプレートを nginx -t にかける
 #   infra     helm lint · helm template
 #   repo      actionlint · shellcheck · yamllint
 #   docker    backend / frontend のイメージをビルドする（数分かかる）
@@ -239,8 +239,8 @@ gate_smoke() {
 # ── docker compose ───────────────────────────────────────────────────────────
 gate_compose() {
   step "compose: dev" . docker compose config -q
-  step "compose: loadtest" . docker compose -f docker-compose.yml -f docker-compose.override.yml \
-    -f docker-compose.loadtest.yml --profile loadtest config -q
+  step "compose: loadtest" . docker compose -f compose.yml -f compose.override.yml \
+    -f compose.loadtest.yml --profile loadtest config -q
 }
 
 # ── nginx ────────────────────────────────────────────────────────────────────
