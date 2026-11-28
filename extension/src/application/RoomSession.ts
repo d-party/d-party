@@ -356,7 +356,9 @@ export class RoomSession {
       case "video_operation":
         this.deps.guard.suppress();
         this.lastRemoteApplyAt = now();
-        player.onAction(message.operation, message.option);
+        player.onAction(message.operation, message.option, {
+          fromHost: message.user.is_host === true,
+        });
         break;
       case "create":
         this.enterRoom(message.room_id, message.user);
@@ -443,7 +445,7 @@ export class RoomSession {
         if (expired) break;
         this.deps.guard.suppress();
         this.lastRemoteApplyAt = now();
-        player.onAction("sync", message.option);
+        player.onAction("sync", message.option, { fromHost: true });
         if (manual) {
           this.deps.notifier.info("再生状況をホストにシンク");
           this.deps.sidebar.addHistory({

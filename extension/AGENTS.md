@@ -96,6 +96,30 @@ pnpm storybook      # :6006
   （再生ページのプレイヤー同期）
 - `https://d-party.net/{anime-store,dmm-tv}/lobby/*`（dev は `http://localhost/...`）
 
+### DMM TV の DOM との契約
+
+DMM TV は Next.js の SPA で、要素は Tailwind のユーティリティクラスだけで組まれている（版で変わる）。
+content script は役割の分かる属性だけを頼りにする。セレクタは `content/dmm/player/index.ts` の
+`SELECTORS` と `PlayerControllerDmm.ts` の `VIDEO_SELECTORS` · `TITLE_SELECTORS`、
+`dom/dmmPartyButton.ts` の `findActionRow` に集約してある。実ページの HTML を保存して照らし合わせる。
+
+| 役割 | 目印 |
+| --- | --- |
+| 主プレイヤー | `video[aria-label="OnDemandPlayerV2"]`（`#vodWrapper` の中。MSE の blob） |
+| プレイヤー全体（サイドバーの右寄せ・リアクションの重ね先） | `#vodWrapper` |
+| 操作ボタンの差し込み先 | `button[name="再生・停止を切り替えるボタン"]` のセル `div.group` が並ぶ `div.grid.grid-flow-col` の末尾 |
+| 話数名 | 上部コントローラの `[class~="grid-area-title"]`。無ければ `#detail-header [role="heading"]` |
+| 作品名 | `#detail-header span.mr-xs`（1 つ目）。どちらも無ければ `document.title` の `話数名 | 作品名 (アニメ/2022年)｜…` を読む |
+| 「パーティー作成」アイコンの行 | `button[aria-label="お気に入りボタン"]` / `[aria-label="シェアボタン"]` が並ぶ `div.grid` |
+| 再生ページ | `/vod/playback/on-demand/?season=…&content=…`。詳細は `/vod/detail/?season=…&content=…` |
+
+- エピソードは `season/content` を `part_id` に載せる（backend の `DmmTvLobbyResolveAPI` が分解する）。
+- 話の切り替え（「次のエピソード」・エピソード選択）は SPA の遷移で、URL と video 要素が置き換わる。
+  `syncWithDom` が video のイベント・操作ボタン・サイドバーの配置・話数名を付け直す。
+  ゲストはホストの操作に載る `part_id` が自分と違ったら、その話の再生ページへ
+  `party=join&room_id=` 付きで移って入り直す（`PlayerControllerDmm.followEpisode`）。
+  ホスト以外の操作には追従しない。dアニメストアの `next` / `prev` に当たる。
+
 content script の DOM 操作は、dアニメストア・DMM TV の実ページ（視聴には契約が要る）でしか最終確認できない。
 実ページから localhost の backend へつなぐには `chrome://flags/#block-insecure-private-network-requests`
 を Disabled にする。

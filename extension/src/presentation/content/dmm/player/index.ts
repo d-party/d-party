@@ -17,6 +17,7 @@ import { sidebarWidth, type SidebarTab } from "../../party/react/sidebarStore";
 import { ReactionViewReact } from "../../party/ReactionViewReact";
 import {
   PlayerControllerDmm,
+  dmmEpisodeTitle,
   dmmPartId,
   findDmmVideo,
 } from "./PlayerControllerDmm";
@@ -28,36 +29,47 @@ import {
  * dアニメストアの `content/party/index.ts` に対応する DMM 版の合成ルート。共通層
  * （{@link RoomSession}・{@link PartyWebSocketClient}・sidebar・reactions・stats・
  * settings）はそのまま再利用し、**サービス固有のプレイヤー駆動だけ**を
- * {@link PlayerControllerDmm} に差し替える。dアニメの `party/index.ts` には一切手を
- * 入れない（実サイトでしか検証できず回帰リスクがあるため、意図的に別ファイルで実装）。
+ * {@link PlayerControllerDmm} に差し替える。dアニメの `party/index.ts` には手を入れない
+ * （実サイトでしか検証できず回帰リスクがあるため、意図的に別ファイルで実装）。
  *
- * 制約（実機で要確認・PR フォロー）:
- *  - DMM は SPA。エピソード間をリロードなしで遷移した場合、この content script は
- *    再実行されない。パーティーは 1 エピソードのセッション（playback URL の初回ロード）
- *    を前提とする。
- *  - インライン操作ボタン（sync/リアクション）のマウント位置とサイドバーのレイアウトは
- *    DMM の実 DOM で最終調整する。セレクタは下の SELECTORS に集約してある。
+ * DMM は React の SPA で、プレイヤーは後から描かれ、話を切り替えると（「次のエピソード」・
+ * エピソード選択）URL と video 要素が置き換わる。content script は再実行されないので、
+ * DOM の変化を見張って video のイベント・操作ボタン・サイドバーの配置を付け直す
+ * （`syncWithDom`）。ゲストはホストの操作に載る part_id の変化で別の話へ移る
+ * （`PlayerControllerDmm.followEpisode`）。
  */
 
 // DMM の実 DOM に依存する箇所はここへ集約（実機での微調整を一箇所で行えるように）。
+// 見た目の Tailwind クラスは版で変わるので、役割の分かる属性（name・aria-label・id）を使う。
 const SELECTORS = {
   // 操作ボタン（sync + リアクション）を差し込むアンカー候補。先に見つかった要素の
-  // 直前へ display:contents で挿入する。コントロールバーは video 初期化後に現れる。
+  // セル（`div.group`）が属するコントロールの並び（`div.grid.grid-flow-col`）の末尾へ足す。
+  // コントロールバーは video 初期化後に現れる。
   controlAnchors: [
     'button[name="再生・停止を切り替えるボタン"]',
+    'button[aria-label="再生・停止を切り替えるボタン"]',
     'button[aria-label="フルスクリーン"]',
-    'button[aria-label="再生速度"]',
   ],
-  // 共有タイトル（OGP・サイドバー表示用）に使う作品タイトル。
-  title: ".grid-area-title h1",
+  // プレイヤー全体。video・上下のコントローラ・中央の再生ボタンをすべて含む。
+  player: "#vodWrapper",
 };
+
+const CONTROLS_HOST_ID = "d-party-player-controls";
 
 // --- settings (kept live) ---------------------------------------------------
 const settingsRepo = new ChromeStorageSettingsRepository();
 let currentSettings: Settings = DEFAULT_SETTINGS;
 const settings: SettingsProvider = { current: () => currentSettings };
-void settingsRepo.getAll().then((s) => (currentSettings = s));
-settingsRepo.onChange((s) => (currentSettings = s));
+
+/**
+ * Delivers the current value right away (the initial load may still be pending), then changes.
+ * 拡張機能を再読み込みした後のページでは読み出しが失敗する。そのときは手元の値のまま続ける。
+ */
+const subscribeSettings = (cb: (s: Settings) => void): (() => void) => {
+  settingsRepo.getAll().then(cb, () => undefined);
+  return settingsRepo.onChange(cb);
+};
+subscribeSettings((s) => (currentSettings = s));
 
 // --- personal stats (client-only) -------------------------------------------
 const statsRepo = new ChromePersonalStatsRepository();
@@ -70,11 +82,14 @@ const stats: StatsRecorder = {
 };
 
 // --- composition root -------------------------------------------------------
+const getPlayerContainer = (): HTMLElement | null =>
+  document.querySelector<HTMLElement>(SELECTORS.player) ??
+  findDmmVideo()?.parentElement ??
+  null;
+
 const guard = new ActionGuard();
-const reactions = new ReactionViewReact(() =>
-  document.getElementById("vodWrapper"),
-);
-const player = new PlayerControllerDmm(guard);
+const reactions = new ReactionViewReact(getPlayerContainer);
+const player = new PlayerControllerDmm({ guard, roomId: currentRoomId });
 const client = new PartyWebSocketClient(DMM_WEBSOCKET_ENDPOINT);
 
 // Mode comes from the URL (?party=create|join).
@@ -143,6 +158,22 @@ if (mode === "normal") {
   mountDmmPartyButton({ onClick: () => sidebarStore.setMode("create") });
 }
 
+/**
+ * 今いるルームの id。ゲストは URL（`?room_id=`）、ホストは共有リンク（`/dmm-tv/lobby/<id>`）
+ * から取る。入室前は null。
+ */
+function currentRoomId(): string | null {
+  const fromUrl = getParam("room_id");
+  if (fromUrl) return fromUrl;
+  const shareUrl = sidebarStore.getSnapshot().shareUrl;
+  if (!shareUrl) return null;
+  try {
+    return new URL(shareUrl).pathname.split("/").filter(Boolean).pop() ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // DMM は React SPA でプレイヤーがビューポート基準（w-full / h-dvh / fixed のコントローラ）
 // なので DOM は再配置しない。サイドバーは「プレイヤー領域の右横」にだけ並べたいので:
 //   1) プレイヤー要素だけ幅を詰めて動画を左へ寄せる（html 全体ではなくプレイヤーだけを
@@ -153,10 +184,6 @@ if (mode === "normal") {
 //      （fixed だとスクロールしても付いてきて下の要素にも被るため、absolute にして
 //       プレイヤーの高さぶんだけ表示し、スクロールで一緒に流れて消えるようにする）。
 // 固定コントローラ（上部/下部バー）の右寄せだけは CSS（dmm-player.css）が担当する。
-const getPlayerContainer = (): HTMLElement | null =>
-  document.getElementById("vodWrapper") ??
-  findDmmVideo()?.parentElement ??
-  null;
 
 // DMM のルート <html> font-size が 16px でないと、Shadow DOM 内 Tailwind v4 の
 // rem/spacing 基準がズレて UI が小さくなる（rem・spacing は Shadow DOM でも
@@ -208,10 +235,10 @@ toastHostObserver.observe(document.body, { childList: true });
 
 const layoutDmmSidebar = (): void => {
   const host = document.getElementById("d-party-sidebar-host");
-  const player = getPlayerContainer();
+  const playerEl = getPlayerContainer();
   const width = sidebarWidth(sidebarStore.getSnapshot());
 
-  if (!host || !player) return;
+  if (!host || !playerEl) return;
   normalizeSidebarScale(host);
 
   // ホスト幅はサイドバーの本来幅（px 定数）。中身は上の normalize で必ずこの幅を満たす。
@@ -219,19 +246,19 @@ const layoutDmmSidebar = (): void => {
 
   // 1) プレイヤーだけ幅を詰める（border-box）。abspos; w-full のヘッダー overlay も
   //    #vodWrapper の幅を参照するので width なら一緒に縮む（padding だと縮まない）。
-  player.style.boxSizing = "border-box";
+  playerEl.style.boxSizing = "border-box";
   if (width > 0) {
-    player.style.width = `calc(100% - ${width}px)`;
-    player.style.right = "auto"; // abspos で right:0 のときも左寄せを保つ
+    playerEl.style.width = `calc(100% - ${width}px)`;
+    playerEl.style.right = "auto"; // abspos で right:0 のときも左寄せを保つ
   } else {
-    player.style.width = "";
-    player.style.right = "";
+    playerEl.style.width = "";
+    playerEl.style.right = "";
   }
 
   // 2) サイドバーをプレイヤーの document 座標へ absolute で配置（スクロール追従しない）。
   //    left を「詰めたあとのプレイヤーの右端（rect.right）」に合わせる。余白幅もホスト幅も
   //    同じ値から導くので、隙間・はみ出しなく収まる。
-  const rect = player.getBoundingClientRect();
+  const rect = playerEl.getBoundingClientRect();
   host.style.position = "absolute";
   host.style.top = `${rect.top + window.scrollY}px`;
   host.style.left = `${rect.right + window.scrollX}px`;
@@ -243,26 +270,64 @@ layoutDmmSidebar();
 sidebarStore.subscribe(layoutDmmSidebar);
 window.addEventListener("resize", layoutDmmSidebar);
 
-let playerEventsBound = false;
+// --- DOM の変化への追従 -------------------------------------------------------
+// video 要素・コントロールバー・プレイヤー全体は後から描かれ、話を切り替えると作り直される。
+// 1 つの MutationObserver で見張り、変わっていたらそれぞれ付け直す。
 
-// DMM は SPA なので video 要素は後から描画される。要素が現れてから join を発火する。
-whenVideoReady((video) => {
-  sidebarStore.setShareTitle(shareTitle());
-  // プレイヤーが現れ／サイズが確定したのでサイドバー配置を再計算し、以後の
-  // プレイヤーサイズ変化（DMM は初期化後にリサイズすることがある）にも追従する。
-  layoutDmmSidebar();
+/** これまでに見た主プレイヤーの video。別の要素に変わったら話が切り替わったとみなす。 */
+let seenVideo: HTMLVideoElement | null = null;
+/** 再生イベントを購読している video。 */
+let wiredVideo: HTMLVideoElement | null = null;
+/** ルームに入っていて、video が変わっても再生イベントを購読し続けるか。 */
+let wireWanted = false;
+/** 操作ボタンを出していて、コントロールバーが描き直されても出し直すか。 */
+let controlsWanted = false;
+/** 大きさの変化を見ているプレイヤー要素。 */
+let observedPlayer: HTMLElement | null = null;
+// プレイヤーは初期化後にリサイズすることがあるので、サイドバーの配置を追従させる。
+const playerResize = new ResizeObserver(layoutDmmSidebar);
+
+function syncWithDom(): void {
+  const v = findDmmVideo();
+  if (v && v !== seenVideo) onVideo(v, seenVideo === null);
+
   const playerEl = getPlayerContainer();
-  if (playerEl) new ResizeObserver(layoutDmmSidebar).observe(playerEl);
-  if (mode === "join") {
+  if (playerEl && playerEl !== observedPlayer) {
+    if (observedPlayer) playerResize.unobserve(observedPlayer);
+    playerResize.observe(playerEl);
+    observedPlayer = playerEl;
+    layoutDmmSidebar();
+  }
+
+  if (controlsWanted && !document.getElementById(CONTROLS_HOST_ID)) {
+    mountControls();
+  }
+
+  // 話数名は話の切り替えで変わる（video の置き換えより遅れて描かれることがある）。
+  const title = shareTitle();
+  if (title !== sidebarStore.getSnapshot().shareTitle) {
+    sidebarStore.setShareTitle(title);
+  }
+}
+
+/** 主プレイヤーの video が現れた（`first`）か、別の要素に置き換わった。 */
+function onVideo(v: HTMLVideoElement, first: boolean): void {
+  seenVideo = v;
+  layoutDmmSidebar();
+  if (wireWanted) wirePlayerEvents(v);
+  if (first && mode === "join") {
     addControlButtons();
     bindPlayerEvents();
     session.joinRoom(getParam("room_id") ?? "");
     armGuestAutoplayCatchUp();
   }
   // create は「ルーム作成」ボタン（onCreateRoom）で発火する。normal は何もしない。
-  video.addEventListener("loadeddata", () => {
-    sidebarStore.setShareTitle(shareTitle());
-  });
+}
+
+syncWithDom();
+new MutationObserver(syncWithDom).observe(document.documentElement, {
+  childList: true,
+  subtree: true,
 });
 
 // フルスクリーン中はサイドバーを隠す（dアニメと同じ挙動）。
@@ -276,10 +341,7 @@ document.addEventListener("fullscreenchange", () => {
 
 /** 作品タイトル（サイドバー共有表示・OGP 用）。取得できなければ document.title。 */
 function shareTitle(): string {
-  return (
-    document.querySelector(SELECTORS.title)?.textContent?.trim() ||
-    document.title
-  );
+  return dmmEpisodeTitle() || document.title;
 }
 
 /**
@@ -307,11 +369,16 @@ function armGuestAutoplayCatchUp(): void {
 // --- player event wiring ----------------------------------------------------
 // DMM の主プレイヤーは標準 HTMLVideoElement なので、ネイティブのメディアイベントを
 // そのまま購読して同期する（dアニメのようにコントロール class をフックしない）。
+// イベントは要素に付くので、話の切り替えで video が置き換わったら新しい要素へ付け直す。
 function bindPlayerEvents(): void {
-  if (playerEventsBound) return;
+  wireWanted = true;
   const v = findDmmVideo();
-  if (!v) return;
-  playerEventsBound = true;
+  if (v) wirePlayerEvents(v);
+}
+
+function wirePlayerEvents(v: HTMLVideoElement): void {
+  if (wiredVideo === v) return;
+  wiredVideo = v;
 
   const active = () => guard.available && session.inRoom;
   // ルームへ操作を通知し（他の参加者へ operation_notification）、自己通知が無効なら
@@ -350,101 +417,52 @@ function bindPlayerEvents(): void {
 
 /**
  * sync + リアクションのインライン操作ボタンを DMM のコントロールバーへ差し込む。
- * バーは video 初期化後に描画されるため、アンカーが見つかるまで MutationObserver で待つ。
+ * バーは video 初期化後に描かれ、話の切り替えで描き直されるので、`syncWithDom` が
+ * 無くなっていれば出し直す。
  */
 function addControlButtons(): void {
-  const mount = (anchor: Element): void => {
-    // DMM: 再生ボタンは grid（grid-flow-col）の 1 セル（.group）に入っている。
-    // そのボタン自体の前（セル内の block）に差し込むと display:contents の子が縦積み
-    // になるのでセルをアンカーにして一旦マウントし、その後に時間/画質表示の flex へ
-    // 移動する。CSS でホストを flex 行にして横並びで入れる（dmm-player.css）。
-    const cell = anchor.closest("div.group") ?? anchor;
-    mountPlayerControls({
-      anchor: cell,
-      initialSettings: currentSettings,
-      subscribe: (cb) => {
-        void settingsRepo.getAll().then(cb);
-        return settingsRepo.onChange(cb);
-      },
-      handlers: {
-        onSync: () => {
-          if (guard.available && session.inRoom) session.requestSync();
-        },
-        onReaction: (type) => {
-          if (!session.inRoom) return;
-          reactions.play(type, {
-            userName: currentSettings.userName,
-            mode: currentSettings.reactionDisplay,
-          });
-          session.sendReaction(type);
-        },
-      },
-    });
-    // リアクションを「秒数/画質表示の右」に出す。時間/画質は左クラスタ 2 列目の
-    // flex（`<div class="flex p-2 ...">08:15 / 24:00 ... AUTO(1080p)</div>`）なので、
-    // その flex に append すれば “AUTO(1080p)” の右に横並びで入る（mountPlayerControls の
-    // 既定挿入はアンカー直前＝一番左なので移動する）。
-    const controls = document.getElementById("d-party-player-controls");
-    const buttonGrid = cell.parentElement; // <div class="grid grid-flow-col gap-2">
-    const timeDisplay = buttonGrid?.nextElementSibling; // 時間/画質の <div class="flex p-2 ...">
-    if (controls) {
-      if (timeDisplay instanceof HTMLElement) {
-        // 時間/画質 flex は items-center を持たないため、背の高いリアクション（50px）を
-        // 入れると行が高くなり、テキストが上付きになる。縦中央寄せにして時間・画質・
-        // リアクションを揃える。
-        timeDisplay.style.alignItems = "center";
-        timeDisplay.appendChild(controls);
-      } else {
-        buttonGrid?.appendChild(controls);
-      }
-    }
-  };
-
-  const find = (): Element | null => {
-    for (const selector of SELECTORS.controlAnchors) {
-      const el = document.querySelector(selector);
-      if (el) return el;
-    }
-    return null;
-  };
-
-  const existing = find();
-  if (existing) {
-    mount(existing);
-    return;
-  }
-  const observer = new MutationObserver(() => {
-    const el = find();
-    if (el) {
-      observer.disconnect();
-      mount(el);
-    }
-  });
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-  });
+  controlsWanted = true;
+  mountControls();
 }
 
-/**
- * DMM の主プレイヤー video 要素が現れたら一度だけ `cb` を呼ぶ。SPA なので初回描画を
- * MutationObserver で待つ（既に存在すれば即時）。
- */
-function whenVideoReady(cb: (video: HTMLVideoElement) => void): void {
-  const existing = findDmmVideo();
-  if (existing) {
-    cb(existing);
-    return;
+function mountControls(): void {
+  const anchor = findControlAnchor();
+  if (!anchor) return;
+  // DMM: 再生ボタンは `<div class="group relative inline-block">` のセルに入っていて、
+  // 再生・10 秒戻し・10 秒送り・音量のセルが `<div class="grid grid-flow-col">` に並ぶ。
+  // セルの直前に display:contents で挿すとセルの中で縦積みになるので、いったんセルの前に
+  // マウントしてから並びの末尾（音量の右）へ移す。横並びは dmm-player.css がホストを
+  // flex にして保つ。
+  const cell = anchor.closest("div.group") ?? anchor;
+  mountPlayerControls({
+    anchor: cell,
+    initialSettings: currentSettings,
+    subscribe: subscribeSettings,
+    handlers: {
+      onSync: () => {
+        if (guard.available && session.inRoom) session.requestSync();
+      },
+      onReaction: (type) => {
+        if (!session.inRoom) return;
+        reactions.play(type, {
+          userName: currentSettings.userName,
+          mode: currentSettings.reactionDisplay,
+        });
+        session.sendReaction(type);
+      },
+    },
+  });
+  const controls = document.getElementById(CONTROLS_HOST_ID);
+  const row = cell.parentElement;
+  if (controls && row && controls.parentElement === row) {
+    row.appendChild(controls);
   }
-  const observer = new MutationObserver(() => {
-    const v = findDmmVideo();
-    if (v) {
-      observer.disconnect();
-      cb(v);
-    }
-  });
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-  });
+}
+
+function findControlAnchor(): Element | null {
+  for (const selector of SELECTORS.controlAnchors) {
+    const el = document.querySelector(selector);
+    if (el) return el;
+  }
+  return null;
 }

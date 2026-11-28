@@ -33,11 +33,17 @@ export interface Notifier {
   alert(message: string): void;
 }
 
-/** Controls the dアニメストア HTML5 player and reads its state. */
+/** 届いた操作の送り主。プレイヤーが「誰の操作か」で扱いを変えるときに見る。 */
+export interface ActionSource {
+  /** ホストの操作か。`sync_response` はホストからしか来ないので常に true。 */
+  fromHost: boolean;
+}
+
+/** Controls the service's player (dアニメストア / DMM TV) and reads its state. */
 export interface PlayerController {
   getOption(): PlayerOption;
   getTitle(): string;
-  onAction(operation: string, option: SyncOption): void;
+  onAction(operation: string, option: SyncOption, source?: ActionSource): void;
 }
 
 /** Renders the sidebar (share/history/users/control panels). */
