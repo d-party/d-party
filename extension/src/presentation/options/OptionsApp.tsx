@@ -18,7 +18,7 @@ const DESCRIPTIONS: Record<TabValue, string> = {
   settings:
     "表示名とアイコン、同時視聴とプレイヤーの設定です。変更はその場で保存されます。",
   reaction: "プレイヤーが送れるリアクションを管理します。",
-  stats: "このブラウザでの利用状況です。d-party のサーバーには送られません。",
+  stats: "このブラウザでの利用状況から算出する統計情報です。",
   info: "d-party の関連リンクです。",
 };
 
