@@ -21,7 +21,7 @@ export const DOC_IMAGES = {
   "popup-reactions": { src: "/img/docs/popup-reactions.webp", width: 720, height: 1196 },
   "popup-settings": { src: "/img/docs/popup-settings.webp", width: 720, height: 1196 },
   "popup-stats": { src: "/img/docs/popup-stats.webp", width: 720, height: 1196 },
-  "popup-sync-settings": { src: "/img/docs/popup-sync-settings.webp", width: 720, height: 1706 },
+  "popup-sync-settings": { src: "/img/docs/popup-sync-settings.webp", width: 720, height: 1708 },
   "popup-utility-settings": { src: "/img/docs/popup-utility-settings.webp", width: 720, height: 1196 },
   "reaction-badge": { src: "/img/docs/reaction-badge.webp", width: 2560, height: 1440 },
   "reaction-left": { src: "/img/docs/reaction-left.webp", width: 2560, height: 1440 },
