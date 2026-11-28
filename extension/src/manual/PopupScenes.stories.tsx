@@ -1,4 +1,4 @@
-/** 利用マニュアル用: 架空のユーザー「さくら」の設定と統計を入れたポップアップ。 */
+/** 利用マニュアル用: 架空のユーザー「さくら」の設定と実績を入れたポップアップ。 */
 import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
 
 import { PopupApp } from "@/presentation/popup/PopupApp";

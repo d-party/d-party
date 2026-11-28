@@ -33,7 +33,7 @@ export const YUUKI: User = {
 };
 export const USERS: User[] = [SAKURA, TAKESHI, YUUKI];
 
-/** ポップアップと設定タブの場面で使う、さくらの設定と統計（chrome.storage）。 */
+/** ポップアップと設定タブの場面で使う、さくらの設定と実績（chrome.storage）。 */
 export const SAKURA_STORAGE = {
   [STORAGE_KEYS.userName]: "さくら",
   [STORAGE_KEYS.userIcon]: "FaCat",
