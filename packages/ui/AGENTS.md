@@ -16,7 +16,7 @@ TypeScript のソースのまま公開し、消費側がトランスパイルす
 | --- | --- |
 | extension | rspack。symlink の実パスが `node_modules` の外なので、ローダの `exclude` に当たらない（設定不要） |
 | frontend | `next.config.ts` の `transpilePackages: ["@d-party/ui"]` |
-| Tailwind v4 | 3 つの CSS エントリに `@source`（`extension/src/presentation/popup/styles.css` · `extension/src/styles/sidebar.css` · `frontend/src/app/globals.css`）。無いとクラスが purge される |
+| Tailwind v4 | 4 つの CSS エントリに `@source`（`extension/src/presentation/popup/styles.css` · `extension/src/presentation/options/styles.css` · `extension/src/styles/sidebar.css` · `frontend/src/app/globals.css`）。無いとクラスが purge される |
 | frontend/Dockerfile | `packages/ui` の manifest とソースをコンテキストへコピー |
 
 ## Storybook

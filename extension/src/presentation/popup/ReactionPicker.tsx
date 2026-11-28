@@ -31,7 +31,7 @@ export function ReactionPicker({
       <div
         role="group"
         aria-label="追加できるリアクション"
-        className="grid max-h-44 grid-cols-8 gap-1 overflow-y-auto rounded-lg border bg-muted/30 p-2"
+        className="grid max-h-44 grid-cols-8 gap-1 overflow-y-auto rounded-lg border bg-muted/30 p-2 @lg:max-h-80 @lg:grid-cols-[repeat(auto-fill,minmax(2.5rem,1fr))]"
       >
         {items.map((r) => {
           const isSelected = selectedSet.has(r.id);
@@ -50,7 +50,7 @@ export function ReactionPicker({
                   : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
-              <ReactionIcon iconKey={r.reactIcon} className="size-4" />
+              <ReactionIcon iconKey={r.reactIcon} className="size-4 @lg:size-5" />
               {isSelected && (
                 <Check
                   className="absolute -right-0.5 -top-0.5 size-3 rounded-full bg-white text-red-600"
@@ -61,7 +61,7 @@ export function ReactionPicker({
           );
         })}
         {items.length === 0 && (
-          <p className="col-span-8 py-3 text-center text-xs text-muted-foreground">
+          <p className="col-span-full py-3 text-center text-xs text-muted-foreground">
             該当するリアクションがありません
           </p>
         )}

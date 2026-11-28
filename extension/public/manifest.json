@@ -15,6 +15,10 @@
     "default_title": "d-party 設定",
     "default_popup": "popup.html"
   },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "permissions": [
     "storage"
   ],

@@ -1,12 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import {
-  BarChart3,
-  Info,
-  type LucideIcon,
-  Settings as SettingsIcon,
-  Smile,
-  Users,
-} from "lucide-react";
+import { ExternalLink, type LucideIcon } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { Announcements } from "@/components/Announcements";
@@ -23,18 +16,13 @@ import {
   TooltipTrigger,
 } from "@d-party/ui";
 
+import { BrandHeader } from "./BrandHeader";
 import { InfoPanel } from "./InfoPanel";
 import { PersonalStatsPanel } from "./PersonalStatsPanel";
 import { ReactionsPanel } from "./ReactionsPanel";
 import { SettingsPanel } from "./SettingsPanel";
+import { TABS } from "./tabs";
 import { useSettings } from "./useSettings";
-
-const TABS = [
-  { value: "settings", label: "設定", icon: SettingsIcon },
-  { value: "reaction", label: "リアクション", icon: Smile },
-  { value: "stats", label: "統計", icon: BarChart3 },
-  { value: "info", label: "情報", icon: Info },
-] as const satisfies readonly { value: string; label: string; icon: LucideIcon }[];
 
 /**
  * Inactive panels stay laid out, so the popup does not jump when switching tabs.
@@ -87,21 +75,9 @@ export function PopupApp({
       transition={{ duration: 0.2, ease: "easeOut" }}
       className={`flex min-h-[480px] ${POPUP_MAX_HEIGHT} flex-col bg-background text-foreground`}
     >
-      <header className="shrink-0 border-b-2 border-red-600 bg-neutral-950 px-5 py-4 text-white">
-        <div className="flex items-center gap-3">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20 backdrop-blur">
-            <Users className="size-5 text-red-600" aria-hidden />
-          </div>
-          <div className="leading-tight">
-            <h1 className="text-base font-bold tracking-tight text-red-600">
-              d-party
-            </h1>
-            <p className="text-xs text-white/70">
-              dアニメストア 同時視聴の設定
-            </p>
-          </div>
-        </div>
-      </header>
+      <BrandHeader className="px-5 py-4">
+        <OpenSettingsTabLink />
+      </BrandHeader>
 
       <Announcements load={loadAnnouncements} itemClassName="px-4" />
 
@@ -159,6 +135,41 @@ export function PopupApp({
         v{chrome.runtime.getManifest().version} · powered by U-Not
       </footer>
     </motion.div>
+  );
+}
+
+const OPEN_SETTINGS_TAB_LABEL = "設定を別タブで開く";
+
+/**
+ * 設定タブ（options.html）を開く。開いていればそのタブへ移る。ポップアップは狭いので、
+ * 同じ設定を広い画面で触れるようにする。360px のヘッダーでサブタイトルを折り返さない
+ * よう、見える文言は短くし、全文はツールチップと読み上げで伝える。
+ */
+function OpenSettingsTabLink(): React.JSX.Element {
+  const open = (): void => {
+    // タブへフォーカスが移ればポップアップは閉じるが、念のため自分でも閉じる。
+    void chrome.runtime.openOptionsPage().finally(() => window.close());
+  };
+  return (
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={open}
+            aria-label={OPEN_SETTINGS_TAB_LABEL}
+            className="flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-xs text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          >
+            別タブ
+            <ExternalLink className="size-3.5" aria-hidden />
+          </button>
+        </TooltipTrigger>
+        {/* 右端のボタンなので、ポップアップの縁に張り付かないよう少し離す。 */}
+        <TooltipContent collisionPadding={8}>
+          {OPEN_SETTINGS_TAB_LABEL}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 

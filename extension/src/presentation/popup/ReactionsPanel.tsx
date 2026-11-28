@@ -7,14 +7,19 @@ import { findExtraReaction } from "@/domain/extraReactions";
 import { DEFAULT_REACTIONS } from "@/domain/reactions";
 
 import { ReactionPicker } from "./ReactionPicker";
+import type { PanelLayout } from "./tabs";
 
 export function ReactionsPanel({
   value,
   onChange,
+  layout = "popup",
 }: {
   value: string[];
   onChange: (ids: string[]) => void;
+  /** `page`（設定タブ）では「追加」で開かず、選ぶ一覧を常に出す。 */
+  layout?: PanelLayout;
 }): React.JSX.Element {
+  const collapsible = layout === "popup";
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const toggle = (id: string): void => {
@@ -46,22 +51,25 @@ export function ReactionsPanel({
 
       <div className="mt-3 mb-1 flex items-center justify-between">
         <h2 className="text-sm font-semibold">追加したリアクション</h2>
-        <Button
-          type="button"
-          size="sm"
-          variant={pickerOpen ? "secondary" : "outline"}
-          className="h-7 gap-1 px-2 text-xs"
-          aria-expanded={pickerOpen}
-          onClick={() => setPickerOpen((o) => !o)}
-        >
-          <Plus className="size-3.5" aria-hidden />
-          追加
-        </Button>
+        {collapsible && (
+          <Button
+            type="button"
+            size="sm"
+            variant={pickerOpen ? "secondary" : "outline"}
+            className="h-7 gap-1 px-2 text-xs"
+            aria-expanded={pickerOpen}
+            onClick={() => setPickerOpen((o) => !o)}
+          >
+            <Plus className="size-3.5" aria-hidden />
+            追加
+          </Button>
+        )}
       </div>
 
       {added.length === 0 ? (
         <p className="rounded-lg bg-muted/40 px-2 py-2 text-xs text-muted-foreground">
-          「追加」からリアクションを選ぶと、プレイヤーで使えるようになります。
+          {collapsible ? "「追加」から" : "下の一覧から"}
+          リアクションを選ぶと、プレイヤーで使えるようになります。
         </p>
       ) : (
         <div className="flex flex-wrap gap-1.5">
@@ -81,10 +89,17 @@ export function ReactionsPanel({
         </div>
       )}
 
-      {pickerOpen && (
-        <div className="mt-2">
+      {collapsible ? (
+        pickerOpen && (
+          <div className="mt-2">
+            <ReactionPicker selected={value} onToggle={toggle} />
+          </div>
+        )
+      ) : (
+        <>
+          <h2 className="mt-4 mb-1 text-sm font-semibold">リアクションを選ぶ</h2>
           <ReactionPicker selected={value} onToggle={toggle} />
-        </div>
+        </>
       )}
     </section>
   );

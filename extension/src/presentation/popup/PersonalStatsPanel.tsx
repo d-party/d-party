@@ -69,7 +69,7 @@ export function PersonalStatsPanel(): React.JSX.Element {
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 @lg:grid-cols-4 @lg:gap-3">
         <StatCard
           icon={Sparkles}
           label="作成したルーム"
