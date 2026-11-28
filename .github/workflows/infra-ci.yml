@@ -1,5 +1,5 @@
 # Helm chart の静的検証（クラスタ不要）。
-name: Infra/CI
+name: Infra / CI
 
 on:
   push:

@@ -123,5 +123,5 @@ content script の DOM 操作は、有料の dアニメストア実ページで�
 
 ## CI
 
-`Extension/CI`（生成物の drift · typecheck · lint · license-check）と
-`Extension/Build`（build:prod と manifest の参照先の実在確認 · zip · storybook）。
+`Extension / CI`（生成物の drift · typecheck · lint · license-check）と
+`Extension / Build`（build:prod と manifest の参照先の実在確認 · zip · storybook）。

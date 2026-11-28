@@ -192,8 +192,8 @@ GATES_LOG_DIR=<W>/final .claude/skills/maintenance/scripts/gates.sh
      -q '.[] | [.workflowName, .status, .conclusion, .headSha[0:8]] | @tsv'
    ```
 
-   Repo/CI 以外は path で絞られ、main では走らないことがある。その分は、マージした PR の CI
-   （Backend/Build · Frontend/Build · Extension/Build を含む）が緑だったことで補う。
+   Repo / CI 以外は path で絞られ、main では走らないことがある。その分は、マージした PR の CI
+   （Backend / Build · Frontend / Build · Extension / Build を含む）が緑だったことで補う。
 
 3. [security.md](security.md) の「洗い出す」をやり直し、残った脆弱性がすべて理由付きで説明できる
 4. `pins.sh` に説明できない ⚠ が無い

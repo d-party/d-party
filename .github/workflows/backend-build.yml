@@ -1,5 +1,5 @@
 # イメージを組み、PostgreSQL / Redis につないで起動し、API が応答するまでを見る。
-name: Backend/Build
+name: Backend / Build
 
 on:
   push:

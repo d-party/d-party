@@ -1,5 +1,5 @@
-# backend の lint・型・テスト。イメージは Backend/Build が見る。
-name: Backend/CI
+# backend の lint・型・テスト。イメージは Backend / Build が見る。
+name: Backend / CI
 
 on:
   push:

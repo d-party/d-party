@@ -1,4 +1,4 @@
-# actionlint の設定（ローカルと Repo/CI の reviewdog が自動で読む）。
+# actionlint の設定（ローカルと Repo / CI の reviewdog が自動で読む）。
 paths:
   .github/workflows/**/*.yml:
     ignore:

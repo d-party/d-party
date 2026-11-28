@@ -1,5 +1,5 @@
 # 出荷する拡張機能を作り、中身を確かめる。
-name: Extension/Build
+name: Extension / Build
 
 on:
   push:

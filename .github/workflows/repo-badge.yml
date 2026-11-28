@@ -1,6 +1,6 @@
 # PR が触ったディレクトリに応じてラベル（Backend / Frontend / Extension / Infra）を付ける。
 # 対応表は .github/labeler.yml。
-name: Repo/Badge
+name: Repo / Badge
 
 on:
   # fork と Dependabot の PR では pull_request の GITHUB_TOKEN が読み取り専用になり、
