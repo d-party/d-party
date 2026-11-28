@@ -4,6 +4,7 @@ import asyncio
 import functools
 import json
 import logging
+from typing import ClassVar
 
 from django.http import Http404
 from djangochannelsrestframework.consumers import AsyncAPIConsumer
@@ -42,7 +43,7 @@ from .format import (
     VideoOperation,
     VideoOperationRequest,
 )
-from .models import PART_ID_MAX_LENGTH, AnimeRoom, AnimeUser, ReactionType
+from .models import ANIME_STORE, DMM_TV, BaseRoom, BaseUser, ReactionType, Service
 
 logger = logging.getLogger(__name__)
 
@@ -92,13 +93,15 @@ def _cancel_pending_room_delete(group: str) -> None:
         task.cancel()
 
 
-def _schedule_room_delete(group: str, delay: float = ROOM_GRACE_SECONDS) -> None:
+def _schedule_room_delete(
+    service: Service, group: str, delay: float = ROOM_GRACE_SECONDS
+) -> None:
     _cancel_pending_room_delete(group)
 
     async def delete_after() -> None:
         try:
             await asyncio.sleep(delay)
-            await repository.close_room_if_empty(group)
+            await repository.close_room_if_empty(service, group)
         finally:
             # 後から予約し直されたタスクを消さない。
             if _pending_room_deletes.get(group) is task:
@@ -108,11 +111,11 @@ def _schedule_room_delete(group: str, delay: float = ROOM_GRACE_SECONDS) -> None
     _pending_room_deletes[group] = task
 
 
-def _group_of(room: AnimeRoom) -> str:
+def _group_of(room: BaseRoom) -> str:
     return str(room.room_id)
 
 
-def _wire_user(user: AnimeUser) -> User:
+def _wire_user(user: BaseUser) -> User:
     return User.model_validate(user, from_attributes=True)
 
 
@@ -126,7 +129,7 @@ def _member_action(request_model: type[BaseModel] | None = None):
     def decorator(handler):
         @action()
         @functools.wraps(handler)
-        async def wrapper(self: AnimePartyConsumer, **payload) -> None:
+        async def wrapper(self: BasePartyConsumer, **payload) -> None:
             room, user = self._room, self._user
             if room is None or user is None:
                 return
@@ -142,14 +145,22 @@ def _member_action(request_model: type[BaseModel] | None = None):
     return decorator
 
 
-class AnimePartyConsumer(AsyncAPIConsumer):
+class BasePartyConsumer(AsyncAPIConsumer):
+    """同時視聴の consumer の共通実装。
+
+    dアニメストア（``AnimePartyConsumer``）と DMM TV（``DmmPartyConsumer``）は、扱うモデル
+    一式（``service``）だけを差し替える。``part_id`` / ``title`` / 動画の ``option`` は
+    不透明な文字列として中継するだけで、サービス固有のプレイヤーの知識は持たない。
+    """
+
     permission_classes = ()
+    service: ClassVar[Service]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._room: AnimeRoom | None = None
-        # spectate の接続は AnimeUser を持たない。
-        self._user: AnimeUser | None = None
+        self._room: BaseRoom | None = None
+        # spectate の接続は参加ユーザーを持たない。
+        self._user: BaseUser | None = None
         # Setting のキャッシュ。メッセージごとに DB を引かないため。setting_send で更新する。
         self._setting = RoomSetting()
         # 閉じた後も、同じ読み込みで届いていたフレームは処理されうる。二重に閉じない。
@@ -228,7 +239,9 @@ class AnimePartyConsumer(AsyncAPIConsumer):
             return
         request = CreateRequest.model_validate(payload)
         room, user = await repository.create_room(
-            part_id=request.part_id,
+            self.service,
+            # 受信時はサービスの中で最も長い上限で切っているので、このサービスの列の長さへ切る。
+            part_id=request.part_id[: self.service.part_id_max_length],
             title=request.title,
             user_name=request.user_name,
             user_icon=request.user_icon,
@@ -244,7 +257,7 @@ class AnimePartyConsumer(AsyncAPIConsumer):
         if self._room is not None:
             return
         request = JoinRequest.model_validate(payload)
-        room = await repository.get_alive_room(request.room_id)
+        room = await repository.get_alive_room(self.service, request.room_id)
         if room is None:
             await self._reply(ServerMessage(message_type="failed_join"))
             await self.close()
@@ -265,12 +278,12 @@ class AnimePartyConsumer(AsyncAPIConsumer):
     async def spectate(self, **payload):
         """読み取り専用で参加する（タイマー画面用）。
 
-        ``AnimeUser`` を作らないので、人数・一覧・ホスト委譲・自動削除に影響しない。
+        参加ユーザーを作らないので、人数・一覧・ホスト委譲・自動削除に影響しない。
         """
         if self._room is not None:
             return
         request = SpectateRequest.model_validate(payload)
-        room = await repository.get_alive_room(request.room_id)
+        room = await repository.get_alive_room(self.service, request.room_id)
         if room is None:
             await self._reply(ServerMessage(message_type="failed_spectate"))
             await self.close()
@@ -296,7 +309,7 @@ class AnimePartyConsumer(AsyncAPIConsumer):
         if (
             user.is_host
             and part_id != room.part_id
-            and len(part_id) <= PART_ID_MAX_LENGTH
+            and len(part_id) <= self.service.part_id_max_length
         ):
             await repository.update_part_id(room, part_id)
         await self._broadcast(
@@ -434,7 +447,7 @@ class AnimePartyConsumer(AsyncAPIConsumer):
 
     async def _broadcast(
         self,
-        room: AnimeRoom,
+        room: BaseRoom,
         response: ResponseBaseFormat,
         envelope: type[BaseGroupSend] = GroupSend,
         **extra,
@@ -446,15 +459,15 @@ class AnimePartyConsumer(AsyncAPIConsumer):
             _group_of(room), message.model_dump(mode="json")
         )
 
-    async def _broadcast_user_list(self, room: AnimeRoom) -> None:
+    async def _broadcast_user_list(self, room: BaseRoom) -> None:
         users = await repository.list_users(room)
         await self._broadcast(room, UserList(user_list=users), RoomSend)
 
-    async def _enter(self, room: AnimeRoom, user: AnimeUser | None) -> None:
+    async def _enter(self, room: BaseRoom, user: BaseUser | None) -> None:
         self._room, self._user = room, user
         await self.channel_layer.group_add(_group_of(room), self.channel_name)
 
-    async def _close_room(self, room: AnimeRoom) -> None:
+    async def _close_room(self, room: BaseRoom) -> None:
         _cancel_pending_room_delete(_group_of(room))
         await self._broadcast(
             room, ServerMessage(message_type="room_deleted"), RoomSend
@@ -478,10 +491,22 @@ class AnimePartyConsumer(AsyncAPIConsumer):
             await self._close_room(room)
             return
         if remaining == 0:
-            _schedule_room_delete(_group_of(room))
+            _schedule_room_delete(self.service, _group_of(room))
         elif user.is_host and await repository.promote_next_host(room):
             await self._broadcast(
                 room, ServerMessage(message_type="host_change"), HostSend
             )
         await self._broadcast(room, Leave(user=_wire_user(user)))
         await self._broadcast_user_list(room)
+
+
+class AnimePartyConsumer(BasePartyConsumer):
+    """dアニメストアの同時視聴。WS: ``anime-store/party/``。"""
+
+    service = ANIME_STORE
+
+
+class DmmPartyConsumer(BasePartyConsumer):
+    """DMM TV の同時視聴。WS: ``dmm-tv/party/``。"""
+
+    service = DMM_TV

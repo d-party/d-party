@@ -14,9 +14,10 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 
 DEBUG = os.environ["DEBUG"] == "1"
 
-# 公開サイトのドメインと、拡張機能が動く dアニメストアのドメイン。
+# 公開サイトのドメインと、拡張機能が動く動画配信サービス（dアニメストア・DMM TV）のドメイン。
 MY_DOMAIN = os.environ["MY_DOMAIN"]
 D_ANIME_STORE_DOMAIN = os.environ["D_ANIME_STORE_DOMAIN"]
+DMM_TV_DOMAIN = os.environ.get("DMM_TV_DOMAIN", "tv.dmm.com")
 
 # これより古い拡張機能にはロビーで更新を促す（``x.y.z``）。
 CHROME_EXTENSION_REQUIRED_VERSION = os.environ.get("CHROME_EXTENSION_REQUIRED_VERSION")

@@ -51,7 +51,7 @@ export default async function LobbyPage({
         </div>
       }
     >
-      <LobbyView roomId={roomId} />
+      <LobbyView roomId={roomId} service="anime-store" timer />
     </Suspense>
   );
 }

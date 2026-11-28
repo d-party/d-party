@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 
 from . import consumers
-from .consumers import AnimePartyConsumer
+from .consumers import BasePartyConsumer
 from .format import ResponseBaseFormat
 from .management.commands import close_expired_rooms
 from .models import ReactionType
@@ -26,9 +26,10 @@ def _actions(typescript: str) -> set[str]:
 
 
 def test_client_actions_match_the_consumer():
+    # dアニメストアと DMM TV の consumer はこの基底の action をそのまま使う。
     consumer_actions = {
         name
-        for name, member in vars(AnimePartyConsumer).items()
+        for name, member in vars(BasePartyConsumer).items()
         if getattr(member, "action", False)
     }
 

@@ -62,13 +62,13 @@ const UTILITY_TOGGLES: Toggle[] = [
   {
     key: "autoAnotherTab",
     label: "動画は全て別タブで開く",
-    description: "再生を常に新しいタブで開く",
+    description: "dアニメストアで再生を常に新しいタブで開く",
     icon: ExternalLink,
   },
   {
     key: "enablePictureInPicture",
     label: "ピクチャーインピクチャーを有効",
-    description: "プレイヤーに PiP ボタンを表示する",
+    description: "dアニメストアのプレイヤーに PiP ボタンを表示する",
     icon: PictureInPicture2,
   },
 ];

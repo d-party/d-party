@@ -19,7 +19,7 @@ export default function SettingsPage(): React.JSX.Element {
   return (
     <DocArticle
       slug="settings"
-      lead="ブラウザのツールバーにある d-party のアイコンを押すと、設定のポップアップが開きます。ポップアップ右上の歯車のボタンを押すと、同じ設定を新しいタブの広い画面で開けます。変更はその場で保存され、多くの設定は開いている dアニメストアのページにもすぐに反映されます（表示名とアイコンは次にルームへ入ったときから）。"
+      lead="ブラウザのツールバーにある d-party のアイコンを押すと、設定のポップアップが開きます。ポップアップ右上の歯車のボタンを押すと、同じ設定を新しいタブの広い画面で開けます。変更はその場で保存され、多くの設定は開いている dアニメストア・DMM TV のページにもすぐに反映されます（表示名とアイコンは次にルームへ入ったときから）。"
     >
       <DocSection id="popup" title="ポップアップの構成">
         <p>
@@ -128,7 +128,7 @@ export default function SettingsPage(): React.JSX.Element {
       </DocSection>
 
       <DocSection id="utility" title="ユーティリティ設定">
-        <p>ルームに関係なく、dアニメストアを少し便利にする設定です。</p>
+        <p>ルームに関係なく、dアニメストアを少し便利にする設定です。DMM TV には効きません。</p>
         <DocFigure
           name="popup-utility-settings"
           alt="ユーティリティ設定を開いたポップアップ。動画は全て別タブで開く、ピクチャーインピクチャーを有効 の 2 つのスイッチ"
@@ -195,11 +195,11 @@ export default function SettingsPage(): React.JSX.Element {
 
       <DocSection id="info" title="情報タブ">
         <p>
-          d-party のホームページ、この利用マニュアル（<Ui>使い方</Ui>）、dアニメストアのトップ、Chrome ウェブストア（レビューの投稿もここから）、開発を支援する GitHub Sponsors へのリンクがあります。
+          d-party のホームページ、この利用マニュアル（<Ui>使い方</Ui>）、dアニメストアと DMM TV のトップ、Chrome ウェブストア（レビューの投稿もここから）、開発を支援する GitHub Sponsors へのリンクがあります。
         </p>
         <DocFigure
           name="popup-info"
-          alt="情報タブ。ホームページ、使い方、dアニメストア、Chrome ウェブストア、寄付（GitHub Sponsors）へのリンク"
+          alt="情報タブ。ホームページ、使い方、dアニメストア、DMM TV、Chrome ウェブストア、寄付（GitHub Sponsors）へのリンク"
           caption="情報タブ"
           maxWidth={360}
         />

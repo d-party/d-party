@@ -24,15 +24,24 @@ const SAMPLE_USERS: User[] = [
 const SAMPLE_URL =
   "http://localhost/anime-store/lobby/4f1c2e9a-1234-4abc-9def-0123456789ab";
 const SAMPLE_TITLE = "Dr.STONE SCIENCE FUTURE - 第1話 - RYUSUI VS. SENKU";
+const SAMPLE_DMM_URL =
+  "http://localhost/dmm-tv/lobby/4f1c2e9a-1234-4abc-9def-0123456789ab";
 
 function frame(
   store: SidebarStore,
-  loadAnnouncements?: () => Promise<Announcement[]>,
+  {
+    showTimerUrl = true,
+    loadAnnouncements,
+  }: {
+    showTimerUrl?: boolean;
+    loadAnnouncements?: () => Promise<Announcement[]>;
+  } = {},
 ) {
   return (
     <div className="flex h-[560px] justify-end bg-neutral-300 p-3">
       <Sidebar
         store={store}
+        showTimerUrl={showTimerUrl}
         onCreateRoom={() => store.setJoined(true)}
         onLeave={() => store.hide()}
         onDeleteRoom={() => store.resetToCreate()}
@@ -85,6 +94,20 @@ export const ShareTab: Story = {
     store.updateUsers(SAMPLE_USERS);
     store.setActiveTab("share");
     return frame(store);
+  },
+};
+
+/** DMM TV のルームの共有タブ。タイマー画面が無いので「タイマーのみの URL」は出さない。 */
+export const ShareTabDmm: Story = {
+  render: () => {
+    const store = new SidebarStore();
+    store.setMode("join");
+    store.setJoined(true);
+    store.setShareLink(SAMPLE_DMM_URL);
+    store.setShareTitle(SAMPLE_TITLE);
+    store.updateUsers(SAMPLE_USERS);
+    store.setActiveTab("share");
+    return frame(store, { showTimerUrl: false });
   },
 };
 
@@ -200,7 +223,7 @@ export const CreateModeWithAnnouncement: Story = {
     installChromeMock();
     const store = new SidebarStore();
     store.setMode("create");
-    return frame(store, loadOf(SAMPLE_WARNING));
+    return frame(store, { loadAnnouncements: loadOf(SAMPLE_WARNING) });
   },
 };
 
@@ -215,7 +238,7 @@ export const ShareTabWithAnnouncement: Story = {
     store.setShareTitle(SAMPLE_TITLE);
     store.updateUsers(SAMPLE_USERS);
     store.setActiveTab("share");
-    return frame(store, loadOf(SAMPLE_WARNING));
+    return frame(store, { loadAnnouncements: loadOf(SAMPLE_WARNING) });
   },
 };
 
@@ -230,7 +253,27 @@ export const ShareTabWithAnnouncements: Story = {
     store.setShareTitle(SAMPLE_TITLE);
     store.updateUsers(SAMPLE_USERS);
     store.setActiveTab("share");
-    return frame(store, loadOf(SAMPLE_WARNING, SAMPLE_INFO));
+    return frame(store, {
+      loadAnnouncements: loadOf(SAMPLE_WARNING, SAMPLE_INFO),
+    });
+  },
+};
+
+/** DMM TV の再生ページでも、ヘッダーの下に出す（共有タブにタイマーのみの URL は出さない）。 */
+export const ShareTabDmmWithAnnouncements: Story = {
+  render: () => {
+    installChromeMock();
+    const store = new SidebarStore();
+    store.setMode("join");
+    store.setJoined(true);
+    store.setShareLink(SAMPLE_DMM_URL);
+    store.setShareTitle(SAMPLE_TITLE);
+    store.updateUsers(SAMPLE_USERS);
+    store.setActiveTab("share");
+    return frame(store, {
+      showTimerUrl: false,
+      loadAnnouncements: loadOf(SAMPLE_WARNING, SAMPLE_INFO),
+    });
   },
 };
 
@@ -245,6 +288,8 @@ export const ShareTabWithLinkAnnouncements: Story = {
     store.setShareTitle(SAMPLE_TITLE);
     store.updateUsers(SAMPLE_USERS);
     store.setActiveTab("share");
-    return frame(store, loadOf(SAMPLE_WARNING_LINKS, SAMPLE_LINK));
+    return frame(store, {
+      loadAnnouncements: loadOf(SAMPLE_WARNING_LINKS, SAMPLE_LINK),
+    });
   },
 };

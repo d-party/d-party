@@ -23,7 +23,7 @@ export function BrandHeader({
           <h1 className="text-base font-bold tracking-tight text-red-600">
             d-party
           </h1>
-          <p className="text-xs text-white/70">dアニメストア 同時視聴の設定</p>
+          <p className="text-xs text-white/70">dアニメストア・DMM TV 同時視聴の設定</p>
         </div>
         {children && <div className="ml-auto shrink-0">{children}</div>}
       </div>

@@ -2,7 +2,7 @@
 
 Django バックエンド。中心は WebSocket（Channels）によるルーム内の再生同期で、ほかに
 REST API（統計・バッジ・拡張機能のバージョン確認・ロビー解決）と管理画面を持つ。
-公開ページは `../frontend` が持ち、nginx が `/api`・`/admin`・`/anime-store/party/` だけを
+公開ページは `../frontend` が持ち、nginx が `/api`・`/admin`・`/anime-store/party/`・`/dmm-tv/party/` だけを
 Django へ振り分ける。
 
 | 項目 | 採用 |
@@ -18,11 +18,13 @@ Django へ振り分ける。
 d_party/        settings.py · asgi.py（ProtocolTypeRouter / OriginValidator）· urls.py
                 · workers.py（gunicorn の worker。WebSocket の 1 メッセージの上限）
 streamer/       同時視聴のコア
-  consumers.py    AnimePartyConsumer（create / join / leave / video_operation / reaction …）
+  consumers.py    BasePartyConsumer（create / join / leave / video_operation / reaction …）と、
+                  モデル一式（Service）だけを差し替える AnimePartyConsumer / DmmPartyConsumer
   format.py       pydantic のメッセージ定義（公開プロトコル。受信の検証と送信の形）
   repository.py   consumer が await で呼ぶ永続化（ルーム・参加者・設定）
-  reactions.py    リアクションの集計（ルーム終了時の ReactionStat への畳み込み · 種別ごとの累計）
-  models.py       AnimeRoom / AnimeUser / AnimeReaction / AnimeRoomHistory / Setting / ReactionStat
+  reactions.py    リアクションの集計（ルーム終了時の ReactionStat への畳み込み · 全サービス合算の種別ごとの累計）
+  models.py       抽象基底（BaseRoom ほか）と具象（dアニメストア: AnimeRoom / AnimeUser / AnimeReaction /
+                  AnimeRoomHistory / Setting / ReactionStat、DMM TV: Dmm*）· サービスの組（ANIME_STORE / DMM_TV）
   mixins.py       LogicalDeletionMixin（論理削除）
   fields.py       EncryptedCharField（Fernet）
   management/commands/close_active_sessions.py   起動時の ghost 回収
@@ -38,7 +40,8 @@ manage.py       /env_files/*.env があれば読む
 compose・nginx・env はルートが持ち、`backend/` は build context として参照される。
 ホストの解決先は env（`DATABASE_HOST` · `REDIS_HOST` など）で差し替える。
 env を読むのは `settings.py` だけにし、ほかは `django.conf.settings` から参照する。
-任意の env は `STATS_CACHE_SECONDS`（統計 API と shields バッジのキャッシュ秒数。既定 300）。
+任意の env は `STATS_CACHE_SECONDS`（統計 API と shields バッジのキャッシュ秒数。既定 300）と
+`DMM_TV_DOMAIN`（DMM TV のロビー解決が返す再生ページのドメインで、WebSocket の Origin の許可にも使う。既定 `tv.dmm.com`）。
 
 ## 壊してはいけないもの
 
@@ -51,7 +54,7 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
   例外では、`handle_exception` が退室の後始末をしてから接続を閉じる。例外を素通しすると
   `disconnect` が呼ばれず、在室者の行が alive のまま残る。
   - JSON として読めない・オブジェクトでない・バイナリ・大きすぎるフレームは、DCRF の
-    `handle_action` より前で落ちるので、`AnimePartyConsumer.receive` で同じ後始末をする。
+    `handle_action` より前で落ちるので、`BasePartyConsumer.receive` で同じ後始末をする。
   - 1 メッセージの上限は uvicorn の `ws_max_size`（既定 16 MiB）を `d_party/workers.py` で
     64 KiB にしている。`gunicorn.conf.py` の `worker_class` を `uvicorn_worker.UvicornWorker` に戻さない。
 - **論理削除**: `objects.alive()` / `delete()`（論理）/ `delete(hard=True)`（物理）の意味を変えない。
@@ -59,6 +62,11 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
 - **REST API**: `api/urls.py` のパスとレスポンスの形は外部から参照される（shields は `{"schemaVersion": 1, ...}`）。
   レスポンスの形は `api/serializers.py` に宣言し、`@extend_schema` の `operation_id` が
   TypeScript の関数名になる。変えたら `openapi.json` を再生成する（手順はルートの `AGENTS.md`）。
+- **WebSocket の Origin**: `asgi.py` の `OriginValidator` は、拡張機能が注入される
+  `D_ANIME_STORE_DOMAIN` · `DMM_TV_DOMAIN` と、タイマー画面の `MY_DOMAIN`（`www.` 付きも）だけを許可する
+  （`DEBUG=1` は `*`）。content script の WebSocket の Origin は注入先のページになるので、
+  対応サービスを増やしたらそのドメインも足す。`anime.dmkt-sp.jp` は `animestore.docomo.ne.jp` へ
+  301 で転送されてページが開かないので許可していない。
 - **ヘルスチェック（`/api/v1/health`）**: PostgreSQL と Redis まで確かめ、どれかが落ちていれば 503
   （本文は空）。拡張機能は 200 以外で「ルームを作成」ボタンを無効にする。コンテナの
   liveness / readiness には使わない（DB の障害で django が再起動を繰り返すため。probe は TCP）。
@@ -97,9 +105,9 @@ env を読むのは `settings.py` だけにし、ほかは `django.conf.settings
   受け付けない（設定に関係なく）。ゲストから通すと、宛先を選んで他人の再生を動かせる。
   ホストかどうかは接続が持つ値ではなく、`repository.refresh` した DB の値で判定する。
 - **ghost の回収**: graceful でない停止で alive のまま残った行は、起動時の
-  `close_active_sessions` が `updated_at` が 1 日以上前のものだけ論理削除する（別 Pod の稼働中セッションを巻き込まない）。
+  `close_active_sessions` が全サービス（`SERVICES`）について `updated_at` が 1 日以上前のものだけ論理削除する（別 Pod の稼働中セッションを巻き込まない）。
 - **ルームの寿命**: 作成（`created_at`）から 48 時間を超えたルームは、在室中でも
-  `close_expired_rooms` が強制クローズする（統計に alive のまま残さない）。ホストの `delete_room` と同じく
+  `close_expired_rooms` が全サービス（`SERVICES`）について強制クローズする（統計に alive のまま残さない）。ホストの `delete_room` と同じく
   リアクションを畳み込み、ユーザーとルームを論理削除し、`room_deleted` を配信する。起動時ではなく
   cron で走らせる（k3s では Helm の CronJob）。
 - **管理画面のパスキー**: django-otp-webauthn。パスワードのログインも残している。

@@ -10,7 +10,7 @@ import {
 export const SITE_NAME = "d-party";
 
 export const SITE_DESCRIPTION =
-  "dアニメストアでもウォッチパーティーができる、完全無料の Google Chrome 向け拡張機能 d-party。";
+  "dアニメストア・DMM TV でウォッチパーティーができる、完全無料の Google Chrome 向け拡張機能 d-party。";
 
 /** `openGraph` fields every page shares. */
 export const OPEN_GRAPH_BASE = {
@@ -42,7 +42,7 @@ export interface PageMetadataInput {
   titleIsBranded?: boolean;
 }
 
-/** For public pages. The room lobby has its own (`app/anime-store/lobby/[roomId]/page.tsx`). */
+/** For public pages. The room lobbies have their own (`app/{anime-store,dmm-tv}/lobby/[roomId]/page.tsx`). */
 export function pageMetadata({
   path,
   title,

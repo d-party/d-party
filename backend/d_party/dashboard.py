@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from django.conf import settings
 from django.utils.timezone import localdate
 
-from streamer.models import AnimeRoom, AnimeUser, ReactionType
+from streamer.models import SERVICES, ReactionType
 from streamer.reactions import reaction_counts_by_type
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from streamer.models import Service
 
 
 def environment_callback(request):
@@ -37,13 +44,30 @@ def _reaction_breakdown():
     return breakdown, total
 
 
+def _count_services(count: Callable[[Service], int]) -> tuple[int, str]:
+    """全サービスの合計と、``"dアニメストア 3 · DMM TV 1"`` の形のサービス別の内訳を返す。"""
+    counts = [(service.label, count(service)) for service in SERVICES]
+    total = sum(n for _, n in counts)
+    breakdown = " · ".join(f"{label} {n:,}" for label, n in counts)
+    return total, breakdown
+
+
 def dashboard_callback(request, context):
-    """トップページへ KPI カードとリアクション内訳を追加する。"""
+    """トップページへ KPI カードとリアクション内訳を追加する。
+
+    ルーム・ユーザーの数は全サービス（``SERVICES``）の合計で、説明にサービス別の内訳を出す。
+    """
     today = localdate()
 
-    alive_rooms = AnimeRoom.objects.alive().count()
-    alive_users = AnimeUser.objects.alive().count()
-    rooms_today = AnimeRoom.objects.filter(created_at__date=today).count()
+    alive_rooms, alive_rooms_by_service = _count_services(
+        lambda service: service.room.objects.alive().count()
+    )
+    alive_users, alive_users_by_service = _count_services(
+        lambda service: service.user.objects.alive().count()
+    )
+    rooms_today, rooms_today_by_service = _count_services(
+        lambda service: service.room.objects.filter(created_at__date=today).count()
+    )
 
     breakdown, total_reactions = _reaction_breakdown()
 
@@ -54,25 +78,27 @@ def dashboard_callback(request, context):
                     "title": "アクティブなルーム",
                     "value": alive_rooms,
                     "icon": "meeting_room",
-                    "description": "現在 alive な視聴ルーム",
+                    "description": f"現在 alive な視聴ルーム（{alive_rooms_by_service}）",
                 },
                 {
                     "title": "接続中ユーザー",
                     "value": alive_users,
                     "icon": "group",
-                    "description": "現在 alive な参加ユーザー",
+                    "description": f"現在 alive な参加ユーザー（{alive_users_by_service}）",
                 },
                 {
                     "title": "本日作成ルーム",
                     "value": rooms_today,
                     "icon": "today",
-                    "description": "論理削除済みを含む本日の作成数",
+                    "description": (
+                        f"論理削除済みを含む本日の作成数（{rooms_today_by_service}）"
+                    ),
                 },
                 {
                     "title": "累計リアクション",
                     "value": f"{total_reactions:,}",
                     "icon": "favorite",
-                    "description": "ReactionStat + 未畳み込みの合算",
+                    "description": "全サービスの集計 + 未畳み込みの合算",
                 },
             ],
             "dp_reaction_breakdown": breakdown,

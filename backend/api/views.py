@@ -2,6 +2,7 @@ import datetime
 import logging
 import re
 import urllib.parse
+from collections import Counter
 
 import redis
 from django.conf import settings
@@ -18,7 +19,7 @@ from rest_framework.views import APIView
 
 from announcements import versions
 from announcements.models import Announcement
-from streamer.models import AnimeRoom, AnimeUser, ReactionType
+from streamer.models import SERVICES, AnimeRoom, DmmRoom, ReactionType
 from streamer.reactions import reaction_counts_by_type
 
 from .serializers import (
@@ -38,6 +39,11 @@ logger = logging.getLogger(__name__)
 
 # ヘルスチェックが Redis の応答を待つ上限（秒）。
 HEALTH_CHECK_REDIS_TIMEOUT_SECONDS = 2
+
+# 統計はサービス（dアニメストア / DMM TV）を横断した d-party 全体の利用状況を表す。各集計は
+# 全サービスのモデルを合算する（サービスは ``streamer.models.SERVICES`` に足せば反映される）。
+ROOM_MODELS = tuple(service.room for service in SERVICES)
+USER_MODELS = tuple(service.user for service in SERVICES)
 
 # A strict ``major.minor.patch`` triple.
 _STRICT_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
@@ -158,23 +164,57 @@ def _mean_per_day(rows: list[dict]) -> float:
     return sum(row["count"] for row in rows) / len(rows) if rows else 0.0
 
 
+def _combined_per_day(models, since: datetime.date | None = None) -> list[dict]:
+    """``_per_day_counts`` を複数のモデル（全サービス）で日ごとに合算する。"""
+    merged: Counter[datetime.date] = Counter()
+    for model in models:
+        for row in _per_day_counts(model, since):
+            merged[row["day"]] += row["count"]
+    return [{"day": day, "count": merged[day]} for day in sorted(merged)]
+
+
+def _sum_created(models, since: datetime.date) -> int:
+    """``since`` 以降に作られた行数を全サービスで合算する。"""
+    return sum(m.objects.filter(created_at__date__gte=since).count() for m in models)
+
+
+def _sum_all(models) -> int:
+    """論理削除済みも含む行数を全サービスで合算する。"""
+    return sum(m.objects.count() for m in models)
+
+
+def _sum_alive(models) -> int:
+    """alive な行数を全サービスで合算する。"""
+    return sum(m.objects.alive().count() for m in models)
+
+
 def _hourly_average_entries(since: datetime.date) -> list[dict]:
     """``[{"hour": 0..23, "average": x}, ...]``。時間帯ごとの 1 日あたり平均入室数。
 
-    入室時刻（``AnimeUser.created_at``）だけで数え、退室時刻は見ない。時刻は settings の
-    TIME_ZONE で切る。分母はその時間帯が来た日数で、期間は ``since`` と最初の入室日の
-    遅い方から今日まで。今日のまだ来ていない時間帯は分母に入れない。
+    入室時刻（参加ユーザーの ``created_at``。全サービスの合算）だけで数え、退室時刻は
+    見ない。時刻は settings の TIME_ZONE で切る。分母はその時間帯が来た日数で、期間は
+    ``since`` と最初の入室日の遅い方から今日まで。今日のまだ来ていない時間帯は分母に
+    入れない。
     """
-    rows = AnimeUser.objects.filter(created_at__date__gte=since)
-    first = rows.aggregate(first=Min("created_at"))["first"]
-    if first is None:
+    counts: Counter[int] = Counter()
+    firsts = []
+    for model in USER_MODELS:
+        rows = model.objects.filter(created_at__date__gte=since)
+        first = rows.aggregate(first=Min("created_at"))["first"]
+        if first is None:
+            continue
+        firsts.append(first)
+        counts.update(
+            dict(
+                rows.annotate(hour=ExtractHour("created_at"))
+                .values("hour")
+                .annotate(count=Count("pk"))
+                .values_list("hour", "count")
+            )
+        )
+    if not firsts:
         return [{"hour": hour, "average": 0.0} for hour in range(24)]
-    counts = dict(
-        rows.annotate(hour=ExtractHour("created_at"))
-        .values("hour")
-        .annotate(count=Count("pk"))
-        .values_list("hour", "count")
-    )
+    first = min(firsts)
     now = timezone.localtime()
     days = (now.date() - max(since, timezone.localdate(first))).days + 1
 
@@ -185,9 +225,9 @@ def _hourly_average_entries(since: datetime.date) -> list[dict]:
     return [{"hour": hour, "average": average(hour)} for hour in range(24)]
 
 
-def _mean_created_per_day(model) -> float:
-    """全期間の 1 日あたりの平均作成数。"""
-    return _mean_per_day(_resample_per_day(_per_day_counts(model)))
+def _mean_created_per_day(models) -> float:
+    """全期間の 1 日あたりの平均作成数（全サービスの合算）。"""
+    return _mean_per_day(_resample_per_day(_combined_per_day(models)))
 
 
 def _database_ok() -> bool:
@@ -311,7 +351,7 @@ class AnimeActiveUserPerDayAPI(_StatsView):
     cache_key = "active-user-per-day"
 
     def produce(self, since):
-        return _resample_per_day(_per_day_counts(AnimeUser, since), since)
+        return _resample_per_day(_combined_per_day(USER_MODELS, since), since)
 
     @_stats_schema("statsActiveUserPerDay", PerDayResultSerializer)
     def get(self, request, format=None) -> Response:
@@ -324,7 +364,7 @@ class AnimeActiveRoomPerDayAPI(_StatsView):
     cache_key = "active-room-per-day"
 
     def produce(self, since):
-        return _resample_per_day(_per_day_counts(AnimeRoom, since), since)
+        return _resample_per_day(_combined_per_day(ROOM_MODELS, since), since)
 
     @_stats_schema("statsActiveRoomPerDay", PerDayResultSerializer)
     def get(self, request, format=None) -> Response:
@@ -380,7 +420,7 @@ class AnimeUserAllCountAPI(_StatsView):
     cache_key = "user-all-count"
 
     def produce(self, since):
-        return {"count": AnimeUser.objects.filter(created_at__date__gte=since).count()}
+        return {"count": _sum_created(USER_MODELS, since)}
 
     @_stats_schema("statsUserAllCount", CountResultSerializer)
     def get(self, request, format=None) -> Response:
@@ -393,7 +433,7 @@ class AnimeRoomAllCountAPI(_StatsView):
     cache_key = "room-all-count"
 
     def produce(self, since):
-        return {"count": AnimeRoom.objects.filter(created_at__date__gte=since).count()}
+        return {"count": _sum_created(ROOM_MODELS, since)}
 
     @_stats_schema("statsRoomAllCount", CountResultSerializer)
     def get(self, request, format=None) -> Response:
@@ -405,7 +445,7 @@ class AnimeUserAliveCountAPI(APIView):
 
     @_stats_schema("statsUserAliveCount", CountResultSerializer, days=False)
     def get(self, request, format=None) -> Response:
-        return Response({"data": {"count": AnimeUser.objects.alive().count()}})
+        return Response({"data": {"count": _sum_alive(USER_MODELS)}})
 
 
 class AnimeRoomAliveCountAPI(APIView):
@@ -413,7 +453,7 @@ class AnimeRoomAliveCountAPI(APIView):
 
     @_stats_schema("statsRoomAliveCount", CountResultSerializer, days=False)
     def get(self, request, format=None) -> Response:
-        return Response({"data": {"count": AnimeRoom.objects.alive().count()}})
+        return Response({"data": {"count": _sum_alive(ROOM_MODELS)}})
 
 
 class _ShieldsView(APIView):
@@ -434,14 +474,14 @@ class _ShieldsView(APIView):
 
 class RoomCountShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
-        return {"label": "TotalRoom", "message": str(AnimeRoom.objects.count())}
+        return {"label": "TotalRoom", "message": str(_sum_all(ROOM_MODELS))}
 
 
 class RoomCountParDayShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
         return {
             "label": "Room",
-            "message": f"{_mean_created_per_day(AnimeRoom):.2f}/day",
+            "message": f"{_mean_created_per_day(ROOM_MODELS):.2f}/day",
             "color": "brightgreen",
             "cacheSeconds": 86400,
         }
@@ -449,14 +489,14 @@ class RoomCountParDayShieldsAPI(_ShieldsView):
 
 class UserCountShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
-        return {"label": "TotalUser", "message": str(AnimeUser.objects.count())}
+        return {"label": "TotalUser", "message": str(_sum_all(USER_MODELS))}
 
 
 class UserCountParDayShieldsAPI(_ShieldsView):
     def shields_data(self) -> dict:
         return {
             "label": "User",
-            "message": f"{_mean_created_per_day(AnimeUser):.2f}/day",
+            "message": f"{_mean_created_per_day(USER_MODELS):.2f}/day",
             "color": "brightgreen",
             "cacheSeconds": 86400,
         }
@@ -504,6 +544,58 @@ class AnimeStoreLobbyResolveAPI(APIView):
                 "part_id": anime_room.part_id,
                 "room_id": str(room_id),
                 "title": anime_room.title,
+            }
+        )
+
+
+class DmmTvLobbyResolveAPI(APIView):
+    """Resolve a room id to the DMM TV redirect URL.
+
+    ``AnimeStoreLobbyResolveAPI`` の DMM TV 版。フロントのルーム遷移ページ
+    （``/dmm-tv/lobby/<room_id>``）が、拡張機能のインストール確認後にユーザーを
+    どこへリダイレクトするか（＝再生ページ + party=join マーカー）を得るために呼ぶ。
+
+    DMM の再生ページ URL は ``?season=..&content=..`` の両方で再生対象が決まるため、
+    拡張機能は create 時に ``part_id`` へ ``season/content`` をまとめて格納する。ここでは
+    それを分解して再生ページ（``/vod/playback/on-demand/``）の URL を復元する。スラッシュを
+    含まない古い/最小データは content のみとして扱う。レスポンス契約（redirect_url /
+    part_id / room_id / title）は anime 版と共通。
+    """
+
+    @extend_schema(
+        operation_id="dmmLobbyResolve",
+        responses={200: LobbyRedirectSerializer, 404: ApiMessageSerializer},
+    )
+    def get(self, request, room_id, format=None) -> Response:
+        dmm_room = DmmRoom.objects.filter(room_id=room_id).first()
+        if dmm_room is None:
+            return Response(
+                {"message": "ルームが見つかりません"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if dmm_room.is_dead():
+            return Response(
+                {"message": "ルームは終了しています"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # part_id は "season/content"。スラッシュが無ければ content のみとして扱う。
+        if "/" in dmm_room.part_id:
+            season, content = dmm_room.part_id.split("/", 1)
+        else:
+            season, content = "", dmm_room.part_id
+
+        base_url = f"https://{settings.DMM_TV_DOMAIN}/vod/playback/on-demand/?"
+        params = {"content": content, "party": "join", "room_id": str(room_id)}
+        if season:
+            params["season"] = season
+        url_param = urllib.parse.urlencode(params)
+        return Response(
+            {
+                "redirect_url": base_url + url_param,
+                "part_id": dmm_room.part_id,
+                "room_id": str(room_id),
+                "title": dmm_room.title,
             }
         )
 

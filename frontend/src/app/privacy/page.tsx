@@ -11,7 +11,7 @@ export const metadata: Metadata = pageMetadata({
     "d-party のプライバシーポリシー。取得する情報、利用目的、第三者提供、保存期間、および問い合わせ先を定めます。",
 });
 
-const UPDATED_AT = "2026-10-12";
+const UPDATED_AT = "2026-11-27";
 
 const SOURCE_URL = `${GITHUB_REPO_URL}/blob/main/extension/PRIVACY.md`;
 
@@ -32,10 +32,9 @@ export default function PrivacyPage(): React.JSX.Element {
             https://d-party.net
           </code>
           、およびバックエンドサービス（以下総称して「本サービス」）における
-          利用者情報の取り扱いについて定めるものです。本サービスは、株式会社 NTT
-          ドコモが運営する「dアニメストア」上で利用者同士が動画を同時視聴
-          （ウォッチパーティー）するための機能を提供する、有志による非営利の
-          オープンソースプロジェクトです。dアニメストアの公式サービスではありません。
+          利用者情報の取り扱いについて定めるものです。本サービスは、動画配信サービス「dアニメストア」（株式会社 NTT
+          ドコモが運営）と「DMM TV」上で利用者同士が動画を同時視聴（ウォッチパーティー）するための機能を提供する、有志による非営利のオープンソースプロジェクトです。dアニメストア・DMM
+          TV の公式サービスではありません。
         </p>
       </header>
 
@@ -113,7 +112,7 @@ export default function PrivacyPage(): React.JSX.Element {
             ["ルーム ID", "サーバが生成するランダム UUID", "平文"],
             [
               "視聴中作品の part_id",
-              "dアニメストアのエピソード識別子",
+              "動画配信サービスのエピソード識別子（dアニメストアの partId、DMM TV の season / content の ID）",
               "平文",
             ],
             [
@@ -156,7 +155,7 @@ export default function PrivacyPage(): React.JSX.Element {
           ]}
         />
         <p className="mt-4">
-          ルームの共有リンクを知っている人は、拡張機能が無くてもタイマー画面から
+          dアニメストアのルームの共有リンクを知っている人は、拡張機能が無くてもタイマー画面から
           そのルームの作品タイトルと再生状況（再生中かどうか・再生位置）を閲覧できます。
         </p>
 
@@ -165,7 +164,9 @@ export default function PrivacyPage(): React.JSX.Element {
         </p>
         <ul className="list-disc space-y-1 pl-6">
           <li>氏名、メールアドレス、電話番号、住所等の個人を直接識別する情報</li>
-          <li>dアニメストアのアカウント情報、ログイン認証情報、パスワード</li>
+          <li>
+            dアニメストア・DMM TV のアカウント情報、ログイン認証情報、パスワード
+          </li>
           <li>クレジットカード情報、決済情報</li>
           <li>
             IP アドレスの長期保存（リクエストログとして一時的に記録される場合があります）
@@ -226,6 +227,9 @@ export default function PrivacyPage(): React.JSX.Element {
             ドコモ）: 動画配信の本体。本サービスは dアニメストアの提供者ではありません。
           </li>
           <li>
+            <strong>DMM TV</strong>: 動画配信の本体。本サービスは DMM TV の提供者ではありません。
+          </li>
+          <li>
             <strong>Google Chrome / Chrome Web Store</strong>（Google
             LLC）: 本拡張機能の配布基盤。
           </li>
@@ -234,7 +238,7 @@ export default function PrivacyPage(): React.JSX.Element {
           </li>
           <li>
             <strong>Google Fonts</strong>（Google LLC）:
-            dアニメストアの一覧ページで拡張機能が追加するボタンのアイコン（Material
+            dアニメストアの一覧ページと DMM TV の作品ページで拡張機能が追加するボタンのアイコン（Material
             Icons）を fonts.googleapis.com から読み込みます。このとき利用者のブラウザから
             Google へリクエストが送られます。
           </li>
@@ -288,13 +292,17 @@ export default function PrivacyPage(): React.JSX.Element {
               "dアニメストア上で同時視聴 UI を表示し、プレイヤーの状態を取得・制御するため",
             ],
             [
+              "host_permissions: tv.dmm.com",
+              "DMM TV 上で同時視聴 UI を表示し、プレイヤーの状態を取得・制御するため",
+            ],
+            [
               "host_permissions: d-party.net",
               "ロビーページでバージョン確認を行うため",
             ],
           ]}
         />
         <p className="mt-4">
-          これらの権限は、上記目的の範囲外（例: dアニメストア上での操作内容の
+          これらの権限は、上記目的の範囲外（例: dアニメストア・DMM TV 上での操作内容の
           収集・送信、他サイトの閲覧情報の取得等）には使用しません。
         </p>
       </Section>
@@ -344,7 +352,7 @@ export default function PrivacyPage(): React.JSX.Element {
 
       <Section title="11. 未成年者の利用">
         <p>
-          dアニメストアの利用規約に従ってください。本サービス独自に未成年者から
+          dアニメストア・DMM TV の利用規約に従ってください。本サービス独自に未成年者から
           別途同意を取得することはありません。
         </p>
       </Section>

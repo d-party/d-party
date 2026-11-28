@@ -10,6 +10,7 @@ from .consumers import AnimePartyConsumer
 from .format import (
     OPTION_SRC_MAX_LENGTH,
     OPTION_VALUE_MAX_LENGTH,
+    PART_ID_RECEIVE_MAX_LENGTH,
     SyncResponseRequest,
     UserRef,
 )
@@ -164,7 +165,7 @@ async def test_video_operation_clips_the_relayed_option():
     assert relayed["src"] == "s" * OPTION_SRC_MAX_LENGTH
     assert relayed["paused"] == "p" * OPTION_VALUE_MAX_LENGTH
     assert relayed["rate"] == "r" * OPTION_VALUE_MAX_LENGTH
-    assert relayed["part_id"] == "9" * OPTION_VALUE_MAX_LENGTH
+    assert relayed["part_id"] == "9" * PART_ID_RECEIVE_MAX_LENGTH
     # 保存できる長さを超える part_id は、ホストのものでも保存しない。
     room = await _room(created["room_id"])
     assert room.part_id == "1"

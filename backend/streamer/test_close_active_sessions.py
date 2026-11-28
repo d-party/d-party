@@ -6,13 +6,28 @@ so that running on a fresh replica never wipes another replica's live sessions.
 """
 
 import datetime
+import io
 
 import pytest
 from django.core.management import call_command
 from django.utils import timezone
 
-from .factories import AnimeRoomFactory, AnimeUserFactory
-from .models import AnimeReaction, AnimeRoom, AnimeUser, ReactionStat
+from .factories import (
+    AnimeRoomFactory,
+    AnimeUserFactory,
+    DmmRoomFactory,
+    DmmUserFactory,
+)
+from .models import (
+    AnimeReaction,
+    AnimeRoom,
+    AnimeUser,
+    DmmReaction,
+    DmmReactionStat,
+    DmmRoom,
+    DmmUser,
+    ReactionStat,
+)
 
 
 def _set_updated_at(instance, when):
@@ -66,3 +81,53 @@ def test_folds_reactions_of_stale_rooms():
     assert AnimeRoom.objects.alive().filter(pk=room.pk).exists() is False
     assert AnimeReaction.objects.filter(room_id=room).exists() is False
     assert sum(ReactionStat.objects.values_list("count", flat=True)) == before + 2
+
+
+@pytest.mark.django_db
+def test_closes_stale_dmm_rows_too():
+    stale = timezone.now() - datetime.timedelta(days=2)
+    fresh = timezone.now() - datetime.timedelta(minutes=5)
+
+    stale_user = DmmUserFactory()
+    fresh_user = DmmUserFactory()
+    _set_updated_at(stale_user.room_id, stale)
+    _set_updated_at(stale_user, stale)
+    _set_updated_at(fresh_user.room_id, fresh)
+    _set_updated_at(fresh_user, fresh)
+
+    call_command("close_active_sessions")
+
+    assert DmmUser.objects.alive().filter(pk=stale_user.pk).exists() is False
+    assert DmmRoom.objects.alive().filter(pk=stale_user.room_id.pk).exists() is False
+    assert DmmUser.objects.alive().filter(pk=fresh_user.pk).exists() is True
+    assert DmmRoom.objects.alive().filter(pk=fresh_user.room_id.pk).exists() is True
+
+
+@pytest.mark.django_db
+def test_folds_reactions_of_stale_dmm_rooms_into_dmm_stats():
+    stale = timezone.now() - datetime.timedelta(days=2)
+    room = DmmRoomFactory()
+    DmmReaction.objects.create(room_id=room, reaction_type="S")
+    DmmReaction.objects.create(room_id=room, reaction_type="S")
+    _set_updated_at(room, stale)
+
+    call_command("close_active_sessions")
+
+    assert DmmRoom.objects.alive().filter(pk=room.pk).exists() is False
+    assert DmmReaction.objects.filter(room_id=room).exists() is False
+    assert DmmReactionStat.objects.get(reaction_type="S").count == 2
+    # dアニメストアの集計には混ぜない。
+    assert ReactionStat.objects.exists() is False
+
+
+@pytest.mark.django_db
+def test_counts_rows_of_every_service():
+    stale = timezone.now() - datetime.timedelta(days=2)
+    for user in (AnimeUserFactory(), DmmUserFactory()):
+        _set_updated_at(user.room_id, stale)
+        _set_updated_at(user, stale)
+    out = io.StringIO()
+
+    call_command("close_active_sessions", stdout=out)
+
+    assert "closed 2 stale user(s) and 2 stale room(s)" in out.getvalue()

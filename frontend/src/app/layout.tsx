@@ -23,6 +23,7 @@ export const metadata: Metadata = {
     "dパーティー",
     "ウォッチパーティー",
     "dアニメストア",
+    "DMM TV",
     "同時視聴",
   ],
   authors: [{ name: "U-Not" }],

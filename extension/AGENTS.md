@@ -1,6 +1,6 @@
 # AGENTS.md — extension
 
-dアニメストアのページに注入して同時視聴を実現する Manifest V3 拡張機能。
+dアニメストア・DMM TV のページに注入して同時視聴を実現する Manifest V3 拡張機能。
 
 - TypeScript（strict）· React 19 · rspack（swc）· Tailwind CSS v4 · shadcn/ui
 - primitive と `cn` は `@d-party/ui`。`Button` だけ `src/components/ui/button.tsx` に自前で持つ。
@@ -22,6 +22,7 @@ src/
     background/      service worker
     content/store/   作品ページ
     content/party/   プレイヤーページ（サイドバー・プレイヤー・リアクション）
+    content/dmm/     DMM TV の作品詳細（detail/）と再生ページ（player/。サイドバー・通知・リアクションは party/ を再利用）
     content/version/ ロビーでのバージョン確認
     popup/           設定 UI（ポップアップ）。パネルは options と共有する
     options/         別タブの設定ページ（options.html）。popup/ のパネルを広く並べる
@@ -30,7 +31,7 @@ src/
 ```
 
 rspack のエントリは `background` · `content-store` · `content-party` · `content-version` ·
-`popup` · `options` · `sidebar-style`。ページへ直接当てる CSS は `manifest.json` の `css`（`public/css/`）で
+`content-dmm-detail` · `content-dmm-player` · `popup` · `options` · `sidebar-style`。ページへ直接当てる CSS は `manifest.json` の `css`（`public/css/`）で
 注入し、Shadow DOM 用の CSS（`sidebar-style`）だけをバンドルして実行時に読み込む。
 
 ## 約束
@@ -47,7 +48,8 @@ rspack のエントリは `background` · `content-store` · `content-party` · 
 - サイドバーは初回表示時に background 経由で `/api/v1/health` を確かめる。200 以外なら
   `connectionStatus` を `maintenance` にし、「ルームを作成」ボタンを無効化して「メンテナンス中です」
   のツールチップを出す。メンテナンス中は 30 秒ごとに確かめ直し、通れば `idle` に戻す。
-- 共有パネルの「タイマーのみの URL」はロビー URL に `?timer=true` を付けたもの。
+- 共有パネルの「タイマーのみの URL」はロビー URL に `?timer=true` を付けたもの。タイマー画面は
+  dアニメストアのロビーにしか無いので、DMM TV では `mountSidebar` に `showTimerUrl: false` を渡して出さない。
 - 設定 UI はポップアップ（`popup.html`）と設定タブ（`options.html`、manifest の `options_ui`）の 2 つ。
   設定タブはポップアップのヘッダー右上の歯車のボタン（`chrome.runtime.openOptionsPage()`。開いていれば
   そのタブへ移る）と、ツールバーのアイコンの右クリック →「オプション」から開く。設定タブは 4 つの
@@ -90,9 +92,35 @@ pnpm storybook      # :6006
 対象ページ:
 
 - `https://animestore.docomo.ne.jp/animestore/*`（`anime.dmkt-sp.jp` も同じ。プレイヤーは `sc_d_pc`）
-- `https://d-party.net/anime-store/lobby/*`（dev は `http://localhost/anime-store/lobby/*`）
+- `https://tv.dmm.com/*`（作品詳細へのアイコン注入）と `https://tv.dmm.com/vod/playback/on-demand/*`
+  （再生ページのプレイヤー同期）
+- `https://d-party.net/{anime-store,dmm-tv}/lobby/*`（dev は `http://localhost/...`）
 
-content script の DOM 操作は、有料の dアニメストア実ページでしか最終確認できない。
+### DMM TV の DOM との契約
+
+DMM TV は Next.js の SPA で、要素は Tailwind のユーティリティクラスだけで組まれている（版で変わる）。
+content script は役割の分かる属性だけを頼りにする。セレクタは `content/dmm/player/index.ts` の
+`SELECTORS` と `PlayerControllerDmm.ts` の `VIDEO_SELECTORS` · `TITLE_SELECTORS`、
+`dom/dmmPartyButton.ts` の `findActionRow` に集約してある。実ページの HTML を保存して照らし合わせる。
+
+| 役割 | 目印 |
+| --- | --- |
+| 主プレイヤー | `video[aria-label="OnDemandPlayerV2"]`（`#vodWrapper` の中。MSE の blob） |
+| プレイヤー全体（サイドバーの右寄せ・リアクションの重ね先） | `#vodWrapper` |
+| 操作ボタンの差し込み先 | `button[name="再生・停止を切り替えるボタン"]` のセル `div.group` が並ぶ `div.grid.grid-flow-col` の末尾 |
+| 話数名 | 上部コントローラの `[class~="grid-area-title"]`。無ければ `#detail-header [role="heading"]` |
+| 作品名 | `#detail-header span.mr-xs`（1 つ目）。どちらも無ければ `document.title` の `話数名 | 作品名 (アニメ/2022年)｜…` を読む |
+| 「パーティー作成」アイコンの行 | `button[aria-label="お気に入りボタン"]` / `[aria-label="シェアボタン"]` が並ぶ `div.grid` |
+| 再生ページ | `/vod/playback/on-demand/?season=…&content=…`。詳細は `/vod/detail/?season=…&content=…` |
+
+- エピソードは `season/content` を `part_id` に載せる（backend の `DmmTvLobbyResolveAPI` が分解する）。
+- 話の切り替え（「次のエピソード」・エピソード選択）は SPA の遷移で、URL と video 要素が置き換わる。
+  `syncWithDom` が video のイベント・操作ボタン・サイドバーの配置・話数名を付け直す。
+  ゲストはホストの操作に載る `part_id` が自分と違ったら、その話の再生ページへ
+  `party=join&room_id=` 付きで移って入り直す（`PlayerControllerDmm.followEpisode`）。
+  ホスト以外の操作には追従しない。dアニメストアの `next` / `prev` に当たる。
+
+content script の DOM 操作は、dアニメストア・DMM TV の実ページ（視聴には契約が要る）でしか最終確認できない。
 実ページから localhost の backend へつなぐには `chrome://flags/#block-insecure-private-network-requests`
 を Disabled にする。
 

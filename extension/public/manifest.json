@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "d-party",
-  "description": "dアニメストアでは行う事ができない、オンラインでの『同時に視聴機能』を提供するための拡張機能",
+  "description": "dアニメストア・DMM TV の動画を、離れた友だちとオンラインで『同時視聴』するための拡張機能",
   "version": "2.16.2",
   "icons": {
     "16": "icon/icon16.png",
@@ -25,6 +25,7 @@
   "host_permissions": [
     "https://animestore.docomo.ne.jp/*",
     "https://anime.dmkt-sp.jp/*",
+    "https://tv.dmm.com/*",
     "https://d-party.net/*",
     "http://localhost/*"
   ],
@@ -61,13 +62,41 @@
     {
       "matches": [
         "https://d-party.net/anime-store/lobby/*",
-        "http://localhost/anime-store/lobby/*"
+        "http://localhost/anime-store/lobby/*",
+        "https://d-party.net/dmm-tv/lobby/*",
+        "http://localhost/dmm-tv/lobby/*"
       ],
       "js": [
         "js/content-version.js"
       ],
       "css": [
         "css/style.css"
+      ]
+    },
+    {
+      "matches": [
+        "https://tv.dmm.com/*"
+      ],
+      "exclude_matches": [
+        "https://tv.dmm.com/vod/playback/on-demand/*"
+      ],
+      "js": [
+        "js/content-dmm-detail.js"
+      ],
+      "css": [
+        "css/style.css"
+      ]
+    },
+    {
+      "matches": [
+        "https://tv.dmm.com/vod/playback/on-demand/*"
+      ],
+      "js": [
+        "js/content-dmm-player.js"
+      ],
+      "css": [
+        "css/style.css",
+        "css/dmm-player.css"
       ]
     }
   ],
@@ -79,6 +108,15 @@
       "matches": [
         "https://animestore.docomo.ne.jp/*",
         "https://anime.dmkt-sp.jp/*"
+      ]
+    },
+    {
+      "resources": [
+        "assets/*",
+        "js/sidebar-style.css"
+      ],
+      "matches": [
+        "https://tv.dmm.com/*"
       ]
     }
   ]

@@ -1,15 +1,15 @@
 # プライバシーポリシー / Privacy Policy
 
-最終更新日: 2026-10-12
+最終更新日: 2026-11-27
 
 本ポリシーは、Chrome 拡張機能 **d-party**（以下「本拡張機能」）および
 これに付随するウェブサイト `https://d-party.net`、ならびにバックエンドサービス
 （以下総称して「本サービス」）における利用者情報の取り扱いについて定めるものです。
 
-本サービスは、株式会社 NTT ドコモが運営する「dアニメストア」上で、利用者同士が
-動画の再生・一時停止・シーク等を同期して同時視聴（ウォッチパーティー）するための
-機能を提供します。本サービスは dアニメストアの公式サービスではなく、有志による
-非営利のオープンソースプロジェクトです。
+本サービスは、動画配信サービス「dアニメストア」（株式会社 NTT ドコモが運営）と
+「DMM TV」上で、利用者同士が動画の再生・一時停止・シーク等を同期して同時視聴
+（ウォッチパーティー）するための機能を提供します。本サービスは dアニメストア・DMM TV の
+公式サービスではなく、有志による非営利のオープンソースプロジェクトです。
 
 ## 1. 運営者
 
@@ -44,7 +44,7 @@
 | 項目 | 内容 | 保存形式 |
 |---|---|---|
 | ルーム ID | サーバが生成するランダム UUID | 平文 |
-| 視聴中作品の `part_id` | dアニメストアのエピソード識別子 | 平文 |
+| 視聴中作品の `part_id` | 動画配信サービスのエピソード識別子（dアニメストアの `partId`、DMM TV の `season` / `content` の ID） | 平文 |
 | ユーザー ID | サーバが生成するランダム UUID（アカウントではない） | 平文 |
 | 表示名 | 上記 2.1 の表示名 | **暗号化して保存**（Fernet / `cryptography`） |
 | 表示アイコン | 上記 2.1 のアイコンの種類 | 平文 |
@@ -55,13 +55,14 @@
 | プレイヤー操作イベント | 再生 / 一時停止 / シーク位置 / 再生速度 / 視聴中のエピソードタイトル | 同期のため一時的にメモリ上で配信。永続化されない |
 | リアクション | 5 種類のデフォルトリアクション（cry / smile / thumbs_up / fav / middle_finger）とエクストラリアクション | デフォルトリアクションは統計目的で保存し、ルーム終了時に日別・種類別の件数へ集計。エクストラリアクションは配信のみで保存しない |
 
-ルームの共有リンクを知っている人は、拡張機能が無くてもタイマー画面（`?timer=true`）から
-そのルームの作品タイトルと再生状況（再生中かどうか・再生位置）を閲覧できます。
+dアニメストアのルームの共有リンクを知っている人は、拡張機能が無くてもタイマー画面
+（`?timer=true`）からそのルームの作品タイトルと再生状況（再生中かどうか・再生位置）を
+閲覧できます。
 
 **本サービスは以下の情報を取得しません。**
 
 - 氏名、メールアドレス、電話番号、住所等の個人を直接識別する情報
-- dアニメストアのアカウント情報、ログイン認証情報、パスワード
+- dアニメストア・DMM TV のアカウント情報、ログイン認証情報、パスワード
 - クレジットカード情報、決済情報
 - IP アドレスの長期保存（リクエストログとして一時的に記録される場合があります）
 - 視聴履歴（どの作品のどのエピソードを再生したかは `part_id` 単位で
@@ -100,9 +101,10 @@
 
 - **dアニメストア**（株式会社 NTT ドコモ）: 動画配信の本体。本サービスは
   dアニメストアの提供者ではありません。
+- **DMM TV**: 動画配信の本体。本サービスは DMM TV の提供者ではありません。
 - **Google Chrome / Chrome Web Store**（Google LLC）: 本拡張機能の配布基盤。
 - **GitHub**（GitHub, Inc.）: ソースコードのホスティング。
-- **Google Fonts**（Google LLC）: dアニメストアの一覧ページで拡張機能が追加するボタンのアイコン
+- **Google Fonts**（Google LLC）: dアニメストアの一覧ページと DMM TV の作品ページで拡張機能が追加するボタンのアイコン
   （Material Icons）を `fonts.googleapis.com` から読み込みます。このとき利用者のブラウザから
   Google へリクエストが送られます。
 - **Cloudflare**（Cloudflare, Inc.）: 本番環境では、ウェブサイトとバックエンドへの通信が
@@ -132,9 +134,10 @@
 |---|---|
 | `storage` | 上記 2.1 の設定情報をブラウザに保存するため |
 | `host_permissions: https://anime.dmkt-sp.jp/*`, `https://animestore.docomo.ne.jp/*` | dアニメストア上で同時視聴 UI を表示し、プレイヤーの状態を取得・制御するため |
+| `host_permissions: https://tv.dmm.com/*` | DMM TV 上で同時視聴 UI を表示し、プレイヤーの状態を取得・制御するため |
 | `host_permissions: https://d-party.net/*` | ロビーページでバージョン確認を行うため |
 
-これらの権限は、上記目的の範囲外（例: dアニメストア上での操作内容の
+これらの権限は、上記目的の範囲外（例: dアニメストア・DMM TV 上での操作内容の
 収集・送信、他サイトの閲覧情報の取得等）には使用しません。
 
 ## 9. 利用者の権利
@@ -160,7 +163,7 @@
 
 ## 11. 未成年者の利用
 
-dアニメストアの利用規約に従ってください。本サービス独自に未成年者から
+dアニメストア・DMM TV の利用規約に従ってください。本サービス独自に未成年者から
 別途同意を取得することはありません。
 
 ## 12. 本ポリシーの変更
@@ -183,7 +186,7 @@ dアニメストアの利用規約に従ってください。本サービス独�
 
 This Chrome extension ("d-party") and its companion website
 `https://d-party.net` provide a watch-party feature for the Japanese video
-streaming service "dアニメストア" (operated by NTT DOCOMO, INC.).
+streaming services "dアニメストア" (operated by NTT DOCOMO, INC.) and "DMM TV".
 d-party is an unofficial, non-commercial, open-source project.
 
 **Data we collect**
@@ -192,18 +195,18 @@ d-party is an unofficial, non-commercial, open-source project.
   display name and icon, display/behaviour settings, and personal usage
   statistics (rooms created/joined, reactions sent, time connected).
 - On our servers when you create or join a room: a random room UUID, a random
-  user UUID, the dアニメストア episode identifier (`part_id`) and episode
+  user UUID, the streaming service's episode identifier (`part_id`) and episode
   title, your display name (stored encrypted with Fernet) and icon, host flag,
   room settings, join/leave timestamps, real-time player events (not
   persisted), and the five default reactions (aggregated into daily counts
   when the room ends; extra reactions are relayed but not stored).
-- Anyone with a room's share link can see its episode title and playback
-  state on the timer page, without the extension.
+- Anyone with a dアニメストア room's share link can see its episode title and
+  playback state on the timer page, without the extension.
 
 **What we do NOT collect**
 
 - Personal identifiers (name, email, phone, address)
-- dアニメストア account credentials
+- dアニメストア / DMM TV account credentials
 - Payment information
 - Cross-site tracking data, advertising identifiers
 - Per-user viewing history beyond the lifetime of a room
@@ -214,7 +217,7 @@ database. Reactions are reduced to daily counts when a room ends. Removing
 the extension clears all locally-stored settings.
 
 **Third parties.** d-party does not sell or share user data with third
-parties. Related services (dアニメストア, Google Chrome Web Store, GitHub,
+parties. Related services (dアニメストア, DMM TV, Google Chrome Web Store, GitHub,
 Google Fonts, Cloudflare) are operated by their respective providers under
 their own privacy policies.
 

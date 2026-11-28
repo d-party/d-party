@@ -218,7 +218,7 @@ ecosystem ごとの注意:
 - **frontend**: `gates.sh smoke` が本番と同じ `server.js` を起動し、ページ · DOM 契約 ·
   OG 画像を叩く。
 - **拡張機能**: 自動テストが無い。確かめられるのは typecheck · lint · 本番バンドル
-  （`gates.sh bundle`）· Storybook のビルドまで。dアニメストア上の動作はこの環境から
+  （`gates.sh bundle`）· Storybook のビルドまで。dアニメストア・DMM TV 上の動作はこの環境から
   確かめられない。同梱される依存の挙動が変わる更新は、その旨を報告に書き、
   SKILL.md の「リリース」の確認に回す。
 

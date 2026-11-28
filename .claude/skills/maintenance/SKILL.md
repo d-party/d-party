@@ -226,7 +226,7 @@ GATES_LOG_DIR=<W>/final .claude/skills/maintenance/scripts/gates.sh
 | `!:` か `BREAKING CHANGE` がある | リリースするか。するなら種別 |
 | 拡張機能に、ここでは動作を確かめられない変更が入る（下のどれか） | そのまま公開するか、アップロードだけにして手で確かめるか |
 
-3 行目に当たるもの（拡張機能には自動テストが無く、dアニメストア上の動作は確かめられない）:
+3 行目に当たるもの（拡張機能には自動テストが無く、dアニメストア・DMM TV 上の動作は確かめられない）:
 
 - 拡張機能に同梱される依存の major 更新、または [investigation.md](investigation.md) で
   「挙動が変わる」と判定した更新

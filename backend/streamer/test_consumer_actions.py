@@ -15,7 +15,15 @@ from . import consumers, repository
 from .consumers import AnimePartyConsumer
 from .factories import AnimeRoomFactory, AnimeUserFactory
 from .format import OPERATION_MAX_LENGTH
-from .models import AnimeReaction, AnimeRoom, AnimeUser, ReactionStat, ReactionType
+from .models import (
+    ANIME_STORE,
+    PART_ID_MAX_LENGTH,
+    AnimeReaction,
+    AnimeRoom,
+    AnimeUser,
+    ReactionStat,
+    ReactionType,
+)
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -441,7 +449,7 @@ class TestRoomGracePeriod:
             room_id=room, reaction_type="S"
         )
 
-        assert await repository.close_room_if_empty(str(room.room_id))
+        assert await repository.close_room_if_empty(ANIME_STORE, str(room.room_id))
 
         assert not await _is_alive(AnimeRoom, room.pk)
         assert not await database_sync_to_async(AnimeReaction.objects.exists)()
@@ -452,7 +460,7 @@ class TestRoomGracePeriod:
         room = await database_sync_to_async(AnimeRoomFactory)()
         await database_sync_to_async(AnimeUserFactory)(room_id=room)
 
-        assert not await repository.close_room_if_empty(str(room.room_id))
+        assert not await repository.close_room_if_empty(ANIME_STORE, str(room.room_id))
 
         assert await _is_alive(AnimeRoom, room.pk)
 
@@ -461,7 +469,7 @@ class TestRoomGracePeriod:
         await database_sync_to_async(room.delete)()
         closed_at = room.deleted_at
 
-        assert not await repository.close_room_if_empty(str(room.room_id))
+        assert not await repository.close_room_if_empty(ANIME_STORE, str(room.room_id))
 
         stored = await database_sync_to_async(AnimeRoom.objects.get)(pk=room.pk)
         assert stored.deleted_at == closed_at
@@ -470,7 +478,7 @@ class TestRoomGracePeriod:
         room = await database_sync_to_async(AnimeRoomFactory)()
         room_id = str(room.room_id)
 
-        consumers._schedule_room_delete(room_id, delay=0)
+        consumers._schedule_room_delete(ANIME_STORE, room_id, delay=0)
         await consumers._pending_room_deletes[room_id]
 
         assert not await _is_alive(AnimeRoom, room.pk)
@@ -479,7 +487,7 @@ class TestRoomGracePeriod:
     async def test_cancelled_delete_keeps_the_room(self):
         room = await database_sync_to_async(AnimeRoomFactory)()
         room_id = str(room.room_id)
-        consumers._schedule_room_delete(room_id, delay=0)
+        consumers._schedule_room_delete(ANIME_STORE, room_id, delay=0)
         task = consumers._pending_room_deletes[room_id]
 
         consumers._cancel_pending_room_delete(room_id)
@@ -491,10 +499,10 @@ class TestRoomGracePeriod:
     async def test_rescheduling_replaces_the_previous_task(self):
         room = await database_sync_to_async(AnimeRoomFactory)()
         room_id = str(room.room_id)
-        consumers._schedule_room_delete(room_id)
+        consumers._schedule_room_delete(ANIME_STORE, room_id)
         first = consumers._pending_room_deletes[room_id]
 
-        consumers._schedule_room_delete(room_id)
+        consumers._schedule_room_delete(ANIME_STORE, room_id)
         await asyncio.wait([first])
 
         assert first.cancelled() or first.done()
@@ -599,7 +607,7 @@ class TestVideoOperation:
     async def test_oversized_part_id_is_not_stored(self):
         host, created, _ = await _room_with_guests()
 
-        await self._send_part_id(host, "9" * (consumers.PART_ID_MAX_LENGTH + 1))
+        await self._send_part_id(host, "9" * (PART_ID_MAX_LENGTH + 1))
 
         assert await self._stored_part_id(created["room_id"]) == "1"
         await host.disconnect()
@@ -709,5 +717,5 @@ async def test_spectator_neither_keeps_the_room_open_nor_becomes_host():
     assert messages[1]["user_list"] == []
     # 観覧だけが残ったルームは無人として扱い、猶予のあとで閉じる。
     assert room_id in consumers._pending_room_deletes
-    assert await repository.close_room_if_empty(room_id)
+    assert await repository.close_room_if_empty(ANIME_STORE, room_id)
     await spectator.disconnect()

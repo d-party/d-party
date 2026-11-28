@@ -8,10 +8,10 @@ export const OG_FONT_FAMILY = "Noto Sans JP";
 
 /** `alt` of the site-wide card. */
 export const SITE_OG_ALT =
-  "d-party — dアニメストアを友だちと同時視聴できる Chrome 拡張機能";
+  "d-party — dアニメストア・DMM TV を友だちと同時視聴できる Chrome 拡張機能";
 
 /** `alt` of a room's card. */
-export const ROOM_OG_ALT = "d-party — dアニメストアで同時視聴";
+export const ROOM_OG_ALT = "d-party — dアニメストア・DMM TV で同時視聴";
 
 /** Routes serving the site-wide card (the `app/` file conventions). */
 export const SITE_OG_IMAGE_PATH = "/opengraph-image";

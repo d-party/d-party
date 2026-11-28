@@ -65,11 +65,26 @@ function CopyField({
   );
 }
 
-export function SharePanel({ state }: { state: SidebarState }): React.JSX.Element {
+/** 共有リンク（ロビー）のパスから、共有の文言に出すサービス（「〜で」）とハッシュタグを決める。 */
+function serviceOf(url: string): { on: string; hashtag: string } {
+  return url.includes("/dmm-tv/lobby/")
+    ? { on: "DMM TV で", hashtag: "DMMTV" }
+    : { on: "dアニメストアで", hashtag: "dアニメストア" };
+}
+
+export function SharePanel({
+  state,
+  showTimerUrl = true,
+}: {
+  state: SidebarState;
+  /** 「タイマーのみの URL」を出すか。タイマー画面（ロビーの `?timer=true`）は dアニメストアだけ。 */
+  showTimerUrl?: boolean;
+}): React.JSX.Element {
   const url = state.shareUrl;
   const { copied, copy } = useCopy(url);
+  const service = serviceOf(url);
 
-  const text = `dアニメストアで『${state.shareTitle}』を一緒に見ませんか？ 拡張機能『d-party』を使ってパーティーに参加してください`;
+  const text = `${service.on}『${state.shareTitle}』を一緒に見ませんか？ 拡張機能『d-party』を使ってパーティーに参加してください`;
   const open = (shareUrl: string) => window.open(shareUrl, "", "width=700,height=400");
 
   return (
@@ -92,7 +107,7 @@ export function SharePanel({ state }: { state: SidebarState }): React.JSX.Elemen
         </TooltipContent>
       </Tooltip>
 
-      <TimerUrlAccordion url={timerUrl(url)} />
+      {showTimerUrl && <TimerUrlAccordion url={timerUrl(url)} />}
 
       <div className="flex items-center justify-center gap-3">
         <ShareIcon
@@ -105,7 +120,7 @@ export function SharePanel({ state }: { state: SidebarState }): React.JSX.Elemen
               "&url=" +
               encodeURIComponent(url) +
               "&hashtags=" +
-              encodeURIComponent("dアニメストア,dパーティー"),
+              encodeURIComponent(`${service.hashtag},dパーティー`),
             )
           }
         >
@@ -143,7 +158,7 @@ export function SharePanel({ state }: { state: SidebarState }): React.JSX.Elemen
           onClick={() =>
             open(
               "mailto:?&subject=" +
-              encodeURIComponent("dアニメストアで一緒にアニメを観ませんか？") +
+              encodeURIComponent(`${service.on}一緒にアニメを観ませんか？`) +
               "&body=" +
               encodeURIComponent(text + "\n\n") +
               encodeURIComponent(url + "\n"),

@@ -23,4 +23,11 @@ export const WEBSOCKET_ENDPOINT = `${IS_PRODUCTION ? "wss" : "ws"}://${HOST}/ani
 export const lobbyUrl = (roomId: string): string =>
   `${SITE_URL}anime-store/lobby/${roomId}`;
 
+// DMM TV 用（backend の dmm-tv/* ルート）。同期プロトコルは dアニメと共通で、接続先だけが違う。
+export const DMM_WEBSOCKET_ENDPOINT = `${IS_PRODUCTION ? "wss" : "ws"}://${HOST}/dmm-tv/party/`;
+
+/** DMM TV の共有リンク（ロビー）。 */
+export const dmmLobbyUrl = (roomId: string): string =>
+  `${SITE_URL}dmm-tv/lobby/${roomId}`;
+
 export const FACEBOOK_APP_ID = "256850306460920";

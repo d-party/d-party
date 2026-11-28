@@ -1,6 +1,6 @@
 # AGENTS.md — d-party
 
-dアニメストアでの「同時視聴」サービスの monorepo。各ディレクトリの詳細はそこにある
+dアニメストア・DMM TV での「同時視聴」サービスの monorepo。各ディレクトリの詳細はそこにある
 `AGENTS.md` を読むこと。
 
 | パス | 中身 | スタック |
@@ -14,16 +14,23 @@ dアニメストアでの「同時視聴」サービスの monorepo。各ディ�
 | `.github/` | CI / リリース | GitHub Actions |
 
 ```
-拡張機能 (dアニメストアのページに content script を注入)
+拡張機能 (dアニメストア / DMM TV のページに content script を注入)
         │  WebSocket (wss://d-party.net)
         ▼
 Nginx ──▶ Django (gunicorn + uvicorn-worker / dev は runserver)
         ├─ REST API (DRF)      : /api/*
-        ├─ WebSocket (Channels): /anime-store/party/
+        ├─ WebSocket (Channels): /anime-store/party/ · /dmm-tv/party/
         └─ 管理画面 (Unfold)   : /admin/*
       ──▶ Next.js              : それ以外の公開ページ
 Django ──▶ PostgreSQL（永続化） / Redis（Channels レイヤ）
 ```
+
+同期コア（WebSocket プロトコル・consumer の同期処理・stats・grace 削除、拡張側の
+`RoomSession` / `PartyWebSocketClient` / `protocol`）はサービス非依存で共有する。サービス固有
+なのはプレイヤー駆動 DOM（`PlayerController`）・一覧/詳細ページへのアイコン注入・lobby URL の
+解決だけ。backend は dアニメ（`anime_*` テーブル・`anime-store/party/`）と DMM（`dmm_*`
+テーブル・`dmm-tv/party/`）でデータを分け、抽象基底モデルとパラメータ化した consumer でロジックを
+共有する。
 
 負荷の本質は**ブロードキャスト増幅**。1 ルーム N 人で 1 人の操作が N-1 接続へ配信される。
 計測基盤（Prometheus など）は持っていない。
@@ -36,6 +43,7 @@ Django ──▶ PostgreSQL（永続化） / Redis（Channels レイヤ）
 - REST API: `backend/api/` → `backend/openapi.json`（drf-spectacular が出力）→
   `{extension,frontend}/src/infrastructure/api/generated/`（orval が生成）。手で書かない。
 - ロビーの DOM 契約: `frontend` の `.chrome_extension_field` ⇔ `extension` の `content-version`
+  （`/anime-store/lobby/*` と `/dmm-tv/lobby/*` の両方）
 
 ### REST API の型連携
 
