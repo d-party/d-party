@@ -10,7 +10,6 @@ services:
     volumes:
       - "./nginx/:/etc/nginx/"
       - "./backend/static:/static"
-      - "./nginx/.well-known:/.well-known"
     depends_on:
       django:
         condition: service_healthy
