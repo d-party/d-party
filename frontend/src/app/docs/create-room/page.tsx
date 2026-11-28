@@ -22,7 +22,7 @@ export default function CreateRoomPage(): React.JSX.Element {
       slug="create-room"
       lead="一緒に見る作品と話数を決めたら、ルーム（パーティールーム）を作ります。ルームを作った人がそのルームのオーナー（ホスト）になります。"
     >
-      <DocSection id="episode-buttons" title="作品ページのボタン">
+      <DocSection id="episode-buttons" title="作品ページのボタン（dアニメストア）">
         <p>
           d-party を入れた状態で dアニメストアの作品ページ（話数の一覧が並ぶページ）を開くと、各話のカードの右下に 2 つのボタンが追加されます。マウスを乗せるとボタンの名前が表示されます。
         </p>
@@ -47,11 +47,30 @@ export default function CreateRoomPage(): React.JSX.Element {
         />
       </DocSection>
 
+      <DocSection id="dmm-tv" title="作品ページのボタン（DMM TV）">
+        <p>
+          DMM TV では、作品ページ（作品の詳細とエピソードの一覧が並ぶページ）の、お気に入りやシェアのボタンが並ぶ行に{" "}
+          <Ui>パーティールームを作成</Ui>{" "}
+          のボタン（👥）が 1 つ追加されます。マウスを乗せるとボタンの名前が表示されます。
+        </p>
+        <ul className="list-disc space-y-2 pl-6">
+          <li>
+            押すと、その作品のいま選んでいる話（話を選んでいなければ最初の話）の再生ページが<strong className="text-foreground">同じタブで</strong>開き、右側にルーム作成用のサイドバーが表示されます。新しいタブでは開きません。
+          </li>
+          <li>
+            dアニメストアの「別タブで再生」にあたるボタンはありません。ひとりで見るときは DMM TV のふだんの再生ボタンを使います。
+          </li>
+        </ul>
+        <p>
+          ここから先の手順（サイドバーでルームを作る・詳細設定・招待）は dアニメストアと同じです。
+        </p>
+      </DocSection>
+
       <DocSection id="create" title="ルームを作成する">
         <Steps>
           <Step title={<>見たい話の <Ui>パーティールームを作成</Ui> を押す</>}>
             <p>
-              新しいタブでプレイヤーが開き、右側に d-party のサイドバーが表示されます。動画は一時停止した状態で始まります。
+              プレイヤーが開き（dアニメストアは新しいタブ、DMM TV は同じタブ）、右側に d-party のサイドバーが表示されます。動画は一時停止した状態で始まります。
             </p>
           </Step>
           <Step title="必要なら詳細設定を選ぶ">
@@ -127,11 +146,11 @@ export default function CreateRoomPage(): React.JSX.Element {
         <ul className="list-disc space-y-2 pl-6">
           <li>
             サイドバーが出るのは、<Ui>パーティールームを作成</Ui>{" "}
-            から開いたときと、招待リンクから参加したときだけです。dアニメストアのふつうの「視聴する」や「別タブで再生」から開いたプレイヤーには表示されません。
+            から開いたときと、招待リンクから参加したときだけです。dアニメストアのふつうの「視聴する」や「別タブで再生」、DMM TV のふだんの再生ボタンから開いたプレイヤーには表示されません。
           </li>
           <li>
             ルームを作ったあとに次の話へ進むと、参加者全員のプレイヤーも次の話へ移ります（
-            <DocLink href={`${docPath("sync")}#synced`}>同期される操作</DocLink>）。話ごとにルームを作り直す必要はありません。
+            <DocLink href={`${docPath("sync")}#synced`}>同期される操作</DocLink>）。話ごとにルームを作り直す必要はありません。DMM TV のルームでは話の移動は同期されないので、次の話を一緒に見るときはその話でルームを作り直してください。
           </li>
           <li>
             何人まで入れるかの上限は設けていませんが、動作を確かめているのは 10 人程度までです。大人数では同期がずれやすくなります。

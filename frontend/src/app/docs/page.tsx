@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import {
   CHROME_WEBSTORE_URL,
   D_ANIME_STORE_URL,
+  DMM_TV_URL,
   GOOGLE_CHROME_URL,
   MICROSOFT_EDGE_URL,
 } from "@/lib/links";
@@ -24,7 +25,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/docs",
   title: "使い方（利用マニュアル）",
   description:
-    "d-party の使い方。Chrome / Edge への拡張機能のインストールから、dアニメストアでのルームの作り方と招待、サイドバーの見方、再生の同期のしくみ、リアクション、設定、退室、よくあるトラブルまでをスクリーンショットつきで解説します。",
+    "d-party の使い方。Chrome / Edge への拡張機能のインストールから、dアニメストア・DMM TV でのルームの作り方と招待、サイドバーの見方、再生の同期のしくみ、リアクション、設定、退室、よくあるトラブルまでをスクリーンショットつきで解説します。",
 });
 
 export default function DocsIndexPage(): React.JSX.Element {
@@ -34,7 +35,7 @@ export default function DocsIndexPage(): React.JSX.Element {
         <p className="text-sm font-medium text-primary">d-party の使い方</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight">利用マニュアル</h1>
         <p className="mt-3 leading-relaxed text-muted-foreground">
-          d-party は、dアニメストアの動画を友だちと「同時に」見るための PC 向けブラウザ拡張機能です。
+          d-party は、dアニメストア・DMM TV の動画を友だちと「同時に」見るための PC 向けブラウザ拡張機能です。
           このマニュアルでは、インストールからルームの作成・招待、視聴中の画面の見方、困ったときの対処までを順に説明します。
           まずは下の「3 分でわかる流れ」で全体をつかみ、詳しいことは各章をご覧ください。
         </p>
@@ -64,13 +65,14 @@ export default function DocsIndexPage(): React.JSX.Element {
       <section className="mt-10 space-y-4">
         <h2 className="text-2xl font-semibold tracking-tight">3 分でわかる流れ</h2>
         <Steps>
-          <Step title="PC のブラウザと dアニメストアを用意する">
+          <Step title="PC のブラウザと動画配信サービスを用意する">
             <p className="text-muted-foreground">
               PC 版の <DocLink href={GOOGLE_CHROME_URL}>Google Chrome</DocLink> か{" "}
               <DocLink href={MICROSOFT_EDGE_URL}>Microsoft Edge</DocLink>{" "}
               を使います（スマートフォンでは使えません）。本家の{" "}
-              <DocLink href={D_ANIME_STORE_URL}>dアニメストア</DocLink>{" "}
-              を契約し、ログインしておきます。一緒に見る人も全員必要です。
+              <DocLink href={D_ANIME_STORE_URL}>dアニメストア</DocLink> か{" "}
+              <DocLink href={DMM_TV_URL}>DMM TV</DocLink>{" "}
+              を契約し、ログインしておきます。一緒に見る人も全員、同じサービスが必要です。
               → <DocLink href={`${docPath("getting-started")}#requirements`}>必要なもの</DocLink>
             </p>
           </Step>
@@ -82,7 +84,7 @@ export default function DocsIndexPage(): React.JSX.Element {
           </Step>
           <Step title="ルームを作る">
             <p className="text-muted-foreground">
-              dアニメストアの作品ページで、見たい話の <Ui>パーティールームを作成</Ui>{" "}
+              dアニメストア・DMM TV の作品ページで <Ui>パーティールームを作成</Ui>{" "}
               ボタンを押し、サイドバーの <Ui>ルームを作成</Ui> を押します。
               → <DocLink href={docPath("create-room")}>ルームを作る</DocLink>
             </p>
@@ -137,11 +139,11 @@ export default function DocsIndexPage(): React.JSX.Element {
         </h2>
         <p className="leading-relaxed text-muted-foreground">
           d-party はアカウント登録なしで使えます。ルームを作成・参加すると、ポップアップで設定した表示名とアイコン、見ている作品のタイトルと話の ID、再生状態（再生 / 一時停止・再生位置・速度）、送ったリアクションが d-party のサーバーに送られ、ルームの参加者へ配信されます。表示名やルームの情報は、ルームを運営するためにサーバーに保存されます。
-          dアニメストアのログイン情報や決済情報、動画そのものは送りません。そのほかの設定とポップアップの「統計」はブラウザ（Chrome の拡張機能用ストレージ）に保存され、d-party のサーバーには送られません。
+          dアニメストア・DMM TV のログイン情報や決済情報、動画そのものは送りません。そのほかの設定とポップアップの「統計」はブラウザ（Chrome の拡張機能用ストレージ）に保存され、d-party のサーバーには送られません。
         </p>
         <Callout variant="note" title="招待リンクを知っている人について">
           <p>
-            招待リンク（とタイマーの URL）を知っている人は、拡張機能がなくてもタイマー画面から作品のタイトルと再生位置を見られます。SNS などで公開するときは、知らない人が参加する可能性があることも覚えておいてください。
+            dアニメストアのルームの招待リンク（とタイマーの URL）を知っている人は、拡張機能がなくてもタイマー画面から作品のタイトルと再生位置を見られます。SNS などで公開するときは、知らない人が参加する可能性があることも覚えておいてください。
           </p>
         </Callout>
         <p className="leading-relaxed text-muted-foreground">

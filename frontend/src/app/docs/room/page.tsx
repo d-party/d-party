@@ -44,7 +44,7 @@ export default function RoomPage(): React.JSX.Element {
               term: "コントロールバー（下）",
               description: (
                 <>
-                  dアニメストアのボタンに加えて、シンクボタンとリアクションボタンが並びます（
+                  dアニメストア・DMM TV のボタンに加えて、シンクボタンとリアクションボタンが並びます（
                   <DocLink href="#controls">コントロールバーのボタン</DocLink>）。
                 </>
               ),
@@ -276,7 +276,7 @@ export default function RoomPage(): React.JSX.Element {
               term: "ピクチャーインピクチャー",
               description: (
                 <>
-                  全画面ボタンの左にあります。動画を小さなウィンドウに切り出します。自分の画面だけの機能で、ルームがなくても使えます（
+                  dアニメストアだけの機能で、全画面ボタンの左にあります。動画を小さなウィンドウに切り出します。自分の画面だけの機能で、ルームがなくても使えます（
                   <DocLink href={`${docPath("settings")}#utility`}>設定</DocLink>）。
                 </>
               ),

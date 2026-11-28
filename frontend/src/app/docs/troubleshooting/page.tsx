@@ -58,8 +58,9 @@ export default function TroubleshootingPage(): React.JSX.Element {
         <ul className="list-disc space-y-2 pl-6">
           <li>
             サイドバーは、作品ページの <Ui>パーティールームを作成</Ui>{" "}
-            から開いたときと、招待リンクから参加したときだけ表示されます。ふつうの「視聴する」から開いたプレイヤーには出ません（
-            <DocLink href={`${docPath("create-room")}#episode-buttons`}>作品ページのボタン</DocLink>）。
+            から開いたときと、招待リンクから参加したときだけ表示されます。dアニメストアのふつうの「視聴する」や DMM TV のふだんの再生ボタンから開いたプレイヤーには出ません（
+            <DocLink href={`${docPath("create-room")}#episode-buttons`}>dアニメストア</DocLink>・
+            <DocLink href={`${docPath("create-room")}#dmm-tv`}>DMM TV</DocLink> の作品ページのボタン）。
           </li>
           <li>
             作品ページにボタンが出ていない場合は、拡張機能が有効になっているか、ブラウザの拡張機能の管理画面で確かめてください。PC 版の Chrome / Edge 以外では動きません。
@@ -96,7 +97,7 @@ export default function TroubleshootingPage(): React.JSX.Element {
           </li>
           <li>
             拡張機能を入れられない人は、同じ画面の <Ui>タイマーを見る</Ui>{" "}
-            で再生位置だけを見られます（
+            で再生位置だけを見られます（dアニメストアのルームだけ。
             <DocLink href={`${docPath("invite")}#timer`}>タイマー画面</DocLink>）。
           </li>
         </ul>
@@ -195,7 +196,7 @@ export default function TroubleshootingPage(): React.JSX.Element {
 
       <DocSection id="after-update" title="拡張機能を更新したあと動きがおかしい">
         <p>
-          拡張機能が更新・再読み込みされると、それより前から開いていた dアニメストアのタブでは設定の読み込みなどがうまくいかないことがあります。dアニメストアのタブを再読み込みしてください。
+          拡張機能が更新・再読み込みされると、それより前から開いていた dアニメストア・DMM TV のタブでは設定の読み込みなどがうまくいかないことがあります。そのタブを再読み込みしてください。
         </p>
       </DocSection>
 

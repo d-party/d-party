@@ -29,7 +29,11 @@ export default function InvitePage(): React.JSX.Element {
           <code className="rounded bg-muted px-1 py-0.5 text-xs">
             https://d-party.net/anime-store/lobby/…
           </code>{" "}
-          の形で、ルームごとにランダムに作られます。
+          （DMM TV のルームは{" "}
+          <code className="rounded bg-muted px-1 py-0.5 text-xs">
+            https://d-party.net/dmm-tv/lobby/…
+          </code>
+          ）の形で、ルームごとにランダムに作られます。
         </p>
         <DefinitionList
           items={[
@@ -41,7 +45,7 @@ export default function InvitePage(): React.JSX.Element {
             {
               term: "X / LINE / Facebook",
               description:
-                "それぞれの共有画面が小さなウィンドウで開きます。X では「dアニメストアで『作品名 - 話数 - サブタイトル』を一緒に見ませんか？ 拡張機能『d-party』を使ってパーティーに参加してください」という文とリンク、ハッシュタグ（#dアニメストア #dパーティー）が入力された状態になります。",
+                "それぞれの共有画面が小さなウィンドウで開きます。X では「dアニメストアで『作品名 - 話数 - サブタイトル』を一緒に見ませんか？ 拡張機能『d-party』を使ってパーティーに参加してください」という文とリンク、ハッシュタグ（#dアニメストア #dパーティー）が入力された状態になります。DMM TV のルームでは「DMM TV で『…』を一緒に見ませんか？」とハッシュタグ #DMMTV になります。",
             },
             {
               term: "メール",
@@ -53,7 +57,7 @@ export default function InvitePage(): React.JSX.Element {
               description: (
                 <>
                   開くと、拡張機能がなくても再生中の作品名と再生位置だけを見られる URL が表示されます（
-                  <DocLink href="#timer">タイマー画面</DocLink>）。
+                  <DocLink href="#timer">タイマー画面</DocLink>）。dアニメストアのルームだけで、DMM TV のルームでは表示されません。
                 </>
               ),
             },
@@ -79,9 +83,9 @@ export default function InvitePage(): React.JSX.Element {
               リンクを開くと d-party のページが表示され、「ルームに接続しています」と出ます。この間に拡張機能が入っているか、バージョンが対応しているかを確かめています。
             </p>
           </Step>
-          <Step title="dアニメストアのプレイヤーへ自動で移動する">
+          <Step title="プレイヤーへ自動で移動する">
             <p>
-              確認できると、ルームで見ている話のプレイヤーへ自動で移動し、ルームに参加します。「ルームに参加」と通知され、再生位置・速度・再生中かどうかがすぐにオーナー（ホスト）に合わせられます。
+              確認できると、ルームで見ている話のプレイヤー（dアニメストアか DMM TV の再生ページ）へ自動で移動し、ルームに参加します。「ルームに参加」と通知され、再生位置・速度・再生中かどうかがすぐにオーナー（ホスト）に合わせられます。
             </p>
           </Step>
           <Step title="あとはホストと一緒に視聴する">
@@ -106,9 +110,9 @@ export default function InvitePage(): React.JSX.Element {
           alt="ルームを作った人のプレイヤー。右上に「『ゆうき』さんが参加」の通知、サイドバーの参加者タブに 3 人が並ぶ"
           caption="ルームを作った「さくら」さんの画面。参加があるたびに通知されます。"
         />
-        <Callout variant="warning" title="dアニメストアにログインしておく">
+        <Callout variant="warning" title="dアニメストア・DMM TV にログインしておく">
           <p>
-            移動先は dアニメストアのプレイヤーです。ログインしていない・契約していない場合は動画を再生できません。参加する前にログインしておきましょう。
+            移動先は、ルームを作った人が見ているサービス（dアニメストアか DMM TV）のプレイヤーです。ログインしていない・契約していない場合は動画を再生できません。参加する前にログインしておきましょう。
           </p>
         </Callout>
       </DocSection>
@@ -141,6 +145,10 @@ export default function InvitePage(): React.JSX.Element {
           ]}
         />
         <p>
+          DMM TV のルームの招待リンクでは、タイマー画面がないので <Ui>インストールする / アップデートする</Ui>{" "}
+          だけが出ます。
+        </p>
+        <p>
           リンクが間違っているか、ルームがすでに終わっている場合は「ルームが見つかりませんでした」と表示されます（
           <DocLink href={`${docPath("troubleshooting")}#room-not-found`}>対処</DocLink>）。
         </p>
@@ -148,7 +156,7 @@ export default function InvitePage(): React.JSX.Element {
 
       <DocSection id="timer" title="タイマー画面（拡張機能なしで再生位置を見る）">
         <p>
-          タイマー画面は、拡張機能を入れられない人や、別の端末で dアニメストアを見ている人のための画面です。ルームの今の作品名・再生位置・再生中かどうかを表示します。開くには、招待リンクの末尾に{" "}
+          タイマー画面は、拡張機能を入れられない人や、別の端末で dアニメストアを見ている人のための画面です。いまのところ dアニメストアのルームだけで使えます。ルームの今の作品名・再生位置・再生中かどうかを表示します。開くには、招待リンクの末尾に{" "}
           <code className="rounded bg-muted px-1 py-0.5 text-xs">?timer=true</code>{" "}
           が付いた「タイマーのみのURL」を使うか、上の画面で <Ui>タイマーを見る</Ui> を押します。
         </p>

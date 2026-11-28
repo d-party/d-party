@@ -16,6 +16,7 @@ import { docMetadata } from "@/components/docs/metadata";
 import {
   CHROME_WEBSTORE_URL,
   D_ANIME_STORE_URL,
+  DMM_TV_URL,
   GOOGLE_CHROME_URL,
   MICROSOFT_EDGE_URL,
 } from "@/lib/links";
@@ -38,20 +39,21 @@ export default function GettingStartedPage(): React.JSX.Element {
             の PC 版で動きます。スマートフォンやタブレットのブラウザ、アプリでは使えません。
           </li>
           <li>
-            <strong className="text-foreground">dアニメストアの契約とログイン</strong>
-            ：本家の <DocLink href={D_ANIME_STORE_URL}>dアニメストア</DocLink>{" "}
-            のアカウントが必要です。「dアニメストア for Prime Video」や「dアニメストア ニコニコ支店」では使えません。
+            <strong className="text-foreground">dアニメストア・DMM TV の契約とログイン</strong>
+            ：d-party は <DocLink href={D_ANIME_STORE_URL}>dアニメストア</DocLink> と{" "}
+            <DocLink href={DMM_TV_URL}>DMM TV</DocLink>{" "}
+            で使えます。一緒に見るサービスのアカウントが必要です。dアニメストアは本家のものだけで、「dアニメストア for Prime Video」や「dアニメストア ニコニコ支店」では使えません。DMM TV は、見たい作品を視聴できる状態にしておいてください。
             しばらく使っていなかった場合はログインが切れていることがあるので、先にトップページからログインできるか確かめておきましょう。
           </li>
           <li>
             <strong className="text-foreground">参加する全員の準備</strong>
-            ：一緒に見る人もそれぞれ dアニメストアを契約し、d-party をインストールしておく必要があります。
-            拡張機能がない人は、再生位置だけを表示する{" "}
-            <DocLink href={`${docPath("invite")}#timer`}>タイマー画面</DocLink> を使えます。
+            ：一緒に見る人もそれぞれ同じサービス（dアニメストアのルームなら dアニメストア、DMM TV のルームなら DMM TV）を契約し、d-party をインストールしておく必要があります。
+            dアニメストアのルームなら、拡張機能がない人は再生位置だけを表示する{" "}
+            <DocLink href={`${docPath("invite")}#timer`}>タイマー画面</DocLink> を使えます（DMM TV のルームにはまだありません）。
           </li>
         </ul>
         <Callout variant="tip" title="料金">
-          <p>d-party は無料で、広告もありません。必要なのは dアニメストアの月額料金だけです。</p>
+          <p>d-party は無料で、広告もありません。必要なのは、見るサービス（dアニメストア・DMM TV）の料金だけです。</p>
         </Callout>
       </DocSection>
 
@@ -65,7 +67,7 @@ export default function GettingStartedPage(): React.JSX.Element {
             </p>
           </Step>
           <Step title={<>「Chrome に追加」を押す</>}>
-            <p>確認のダイアログで拡張機能を追加します。インストールはすぐに終わり、ブラウザの再起動は要りません。インストールの前から開いていた dアニメストアのタブは、再読み込みすると d-party が使えるようになります。</p>
+            <p>確認のダイアログで拡張機能を追加します。インストールはすぐに終わり、ブラウザの再起動は要りません。インストールの前から開いていた dアニメストア・DMM TV のタブは、再読み込みすると d-party が使えるようになります。</p>
           </Step>
           <Step title="利用マニュアルが開く">
             <p>

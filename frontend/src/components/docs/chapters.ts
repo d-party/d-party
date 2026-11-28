@@ -11,13 +11,13 @@ export const DOC_CHAPTERS = [
     slug: "getting-started",
     title: "はじめる準備",
     description:
-      "対応ブラウザ、dアニメストアの契約、拡張機能のインストール、表示名とアイコンの設定まで。",
+      "対応ブラウザ、dアニメストア・DMM TV の契約、拡張機能のインストール、表示名とアイコンの設定まで。",
   },
   {
     slug: "create-room",
     title: "ルームを作る",
     description:
-      "作品ページのボタンからパーティールームを作成する手順と、作成前に選べる詳細設定。",
+      "dアニメストア・DMM TV の作品ページのボタンからパーティールームを作成する手順と、作成前に選べる詳細設定。",
   },
   {
     slug: "invite",
