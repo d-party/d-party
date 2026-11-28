@@ -22,9 +22,8 @@ const BADGES = [
   "完全無料",
   "広告なし",
   "Google Chrome 拡張機能",
-  "Microsoft Edge 拡張機能",
-  "アカウント登録不要",
-  "オープンソースソフトウェア",
+  "Edge アドオン",
+  "OSS",
 ];
 
 export function Hero(): React.JSX.Element {
