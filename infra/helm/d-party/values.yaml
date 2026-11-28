@@ -131,7 +131,7 @@ nginx:
     repository: nginx
     # CVE-2026-123007（nginx2shell）の修正版以上に固定する（pullPolicy が IfNotPresent なので、
     # マイナー版のタグだと古いイメージのまま動きうる）。
-    tag: "1.31.9"
+    tag: "1.31.10"
     pullPolicy: IfNotPresent
   # RPi クラスタで他サービスと相乗りする前提のため既定 1。可用性が要るなら上げる。
   replicaCount: 1

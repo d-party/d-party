@@ -4,7 +4,7 @@ services:
   nginx:
     container_name: nginx
     # CVE-2026-123007（nginx2shell）の修正版以上に固定する。マイナー版のタグは古いキャッシュのまま動きうる。
-    image: nginx:1.31.9
+    image: nginx:1.31.10
     ports:
       - "80:80"
     volumes:
