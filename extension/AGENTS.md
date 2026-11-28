@@ -49,7 +49,7 @@ rspack のエントリは `background` · `content-store` · `content-party` · 
   のツールチップを出す。メンテナンス中は 30 秒ごとに確かめ直し、通れば `idle` に戻す。
 - 共有パネルの「タイマーのみの URL」はロビー URL に `?timer=true` を付けたもの。
 - 設定 UI はポップアップ（`popup.html`）と設定タブ（`options.html`、manifest の `options_ui`）の 2 つ。
-  設定タブはポップアップのヘッダー右上の「別タブ」（`chrome.runtime.openOptionsPage()`。開いていれば
+  設定タブはポップアップのヘッダー右上の歯車のボタン（`chrome.runtime.openOptionsPage()`。開いていれば
   そのタブへ移る）と、ツールバーのアイコンの右クリック →「オプション」から開く。選んでいる項目は
   URL の `#` に持つ。どちらも `popup/` のパネルと `tabs.ts` の `TABS` を使い、`layout`（`popup` /
   `page`）で変えるのはセクションを畳むかどうかだけ。幅に応じた並べ方は設定タブの `@container` に

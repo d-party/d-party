@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ExternalLink, type LucideIcon } from "lucide-react";
+import { type LucideIcon, Settings as SettingsIcon } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { Announcements } from "@/components/Announcements";
@@ -141,9 +141,9 @@ export function PopupApp({
 const OPEN_SETTINGS_TAB_LABEL = "設定を別タブで開く";
 
 /**
- * 設定タブ（options.html）を開く。開いていればそのタブへ移る。ポップアップは狭いので、
- * 同じ設定を広い画面で触れるようにする。360px のヘッダーでサブタイトルを折り返さない
- * よう、見える文言は短くし、全文はツールチップと読み上げで伝える。
+ * 設定タブ（options.html）を開く歯車のボタン。開いていればそのタブへ移る。ポップアップは
+ * 狭いので、同じ設定を広い画面で触れるようにする。アイコンだけなので、何をするかは
+ * ツールチップと読み上げで伝える。
  */
 function OpenSettingsTabLink(): React.JSX.Element {
   const open = (): void => {
@@ -158,10 +158,9 @@ function OpenSettingsTabLink(): React.JSX.Element {
             type="button"
             onClick={open}
             aria-label={OPEN_SETTINGS_TAB_LABEL}
-            className="flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-xs text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            className="flex size-8 items-center justify-center rounded-md text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           >
-            別タブ
-            <ExternalLink className="size-3.5" aria-hidden />
+            <SettingsIcon className="size-5" aria-hidden />
           </button>
         </TooltipTrigger>
         {/* 右端のボタンなので、ポップアップの縁に張り付かないよう少し離す。 */}
