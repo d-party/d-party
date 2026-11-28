@@ -189,10 +189,10 @@ git diff --no-index <旧の展開先>/<path> <新の展開先>/<path>
 ecosystem ごとの注意:
 
 - **docker**（ベースイメージ）: OS の世代（bookworm → trixie など）と Python / Node の minor が
-  変わっていないか。`gates.sh docker` でビルドし、起動後の疎通は PR の Backend/Build ·
-  Frontend/Build で見る。本番は arm64 なので、タグに arm64 のイメージがあることも確かめる
+  変わっていないか。`gates.sh docker` でビルドし、起動後の疎通は PR の Backend / Build ·
+  Frontend / Build で見る。本番は arm64 なので、タグに arm64 のイメージがあることも確かめる
   （`docker buildx imagetools inspect <image>`）。
-- **docker-compose**: `Nginx/CI` はイメージを固定で持っていて、compose の nginx を上げても
+- **docker-compose**: `Nginx / CI` はイメージを固定で持っていて、compose の nginx を上げても
   追従しない。`gates.sh nginx` が compose の実際のイメージで構文を検査する。postgres の major は
   データディレクトリの移行が要るので、bump だけでは取り込めない（見送って報告する）。
 - **github-actions**: action の major は入力名と既定値、要求するランナーの Node を見る。

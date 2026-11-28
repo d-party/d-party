@@ -4,11 +4,11 @@
 
 dアニメストアの動画を、離れた友だちと同時視聴するためのブラウザ拡張機能とサーバ。
 
-[![Backend/CI](https://github.com/d-party/d-party/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/backend-ci.yml)
-[![Backend/Build](https://github.com/d-party/d-party/actions/workflows/backend-build.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/backend-build.yml)
-[![Frontend/CI](https://github.com/d-party/d-party/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/frontend-ci.yml)
-[![Extension/CI](https://github.com/d-party/d-party/actions/workflows/extension-ci.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/extension-ci.yml)
-[![Repo/CI](https://github.com/d-party/d-party/actions/workflows/repo-ci.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/repo-ci.yml)
+[![Backend / CI](https://github.com/d-party/d-party/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/backend-ci.yml)
+[![Backend / Build](https://github.com/d-party/d-party/actions/workflows/backend-build.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/backend-build.yml)
+[![Frontend / CI](https://github.com/d-party/d-party/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/frontend-ci.yml)
+[![Extension / CI](https://github.com/d-party/d-party/actions/workflows/extension-ci.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/extension-ci.yml)
+[![Repo / CI](https://github.com/d-party/d-party/actions/workflows/repo-ci.yml/badge.svg?branch=main)](https://github.com/d-party/d-party/actions/workflows/repo-ci.yml)
 [![Coverage](https://raw.githubusercontent.com/d-party/d-party/python-coverage-comment-action-data/badge.svg)](https://htmlpreview.github.io/?https://github.com/d-party/d-party/blob/python-coverage-comment-action-data/htmlcov/index.html)
 
 [![Website](https://img.shields.io/website?label=d-party.net&up_message=online&url=https%3A%2F%2Fd-party.net)](https://d-party.net)
@@ -150,10 +150,10 @@ uv run ruff check .
 ### CI を手元で再現する
 
 ```bash
-actionlint                                   # Repo/CI
-shellcheck $(git ls-files '*.sh')            # Repo/CI
-yamllint .                                   # Repo/CI
-helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret  # Infra/CI
+actionlint                                   # Repo / CI
+shellcheck $(git ls-files '*.sh')            # Repo / CI
+yamllint .                                   # Repo / CI
+helm lint infra/helm/d-party --set secret.existingSecret=d-party-secret  # Infra / CI
 pre-commit run --all-files
 ```
 
@@ -176,20 +176,20 @@ UI コンポーネントの Storybook を GitHub Pages で公開しています�
 ### CI
 
 ワークフローはすべてルートの `.github/workflows/` にあり、`paths` フィルタによって、
-変更したディレクトリに対応するものだけが走ります。`<Scope>/CI` は lint・型検査・テストを、
-`<Scope>/Build` は成果物をビルドして実際に動くことを確認します。
+変更したディレクトリに対応するものだけが走ります。`<Scope> / CI` は lint・型検査・テストを、
+`<Scope> / Build` は成果物をビルドして実際に動くことを確認します。
 
 | ワークフロー | 対象 |
 | --- | --- |
-| `Backend/CI` | ruff · pytest · mypy · license-check |
-| `Backend/Build` | イメージをビルドして migrate し、起動後に API が応答することを確認 |
-| `Frontend/CI` · `Extension/CI` | 生成コードの差分検出 · typecheck · lint · license-check |
-| `Frontend/Build` | next build · storybook · イメージを起動してページの応答を確認 |
-| `Extension/Build` | 本番ビルド · manifest が参照するファイルの存在確認 · zip · storybook |
-| `Infra/CI` | helm lint · helm template |
-| `Nginx/CI` | nginx テンプレートの構文チェック |
-| `Repo/CI` | actionlint · shellcheck · yamllint · CodeQL |
-| `Storybook/Deploy` | 2 つの Storybook を GitHub Pages に公開 |
+| `Backend / CI` | ruff · pytest · mypy · license-check |
+| `Backend / Build` | イメージをビルドして migrate し、起動後に API が応答することを確認 |
+| `Frontend / CI` · `Extension / CI` | 生成コードの差分検出 · typecheck · lint · license-check |
+| `Frontend / Build` | next build · storybook · イメージを起動してページの応答を確認 |
+| `Extension / Build` | 本番ビルド · manifest が参照するファイルの存在確認 · zip · storybook |
+| `Infra / CI` | helm lint · helm template |
+| `Nginx / CI` | nginx テンプレートの構文チェック |
+| `Repo / CI` | actionlint · shellcheck · yamllint · CodeQL |
+| `Storybook / Deploy` | 2 つの Storybook を GitHub Pages に公開 |
 | `Release` | 全パッケージのリリース（手動実行） |
 
 依存のキャッシュはロックファイルのハッシュをキーにしています。pnpm ストア、Turborepo、

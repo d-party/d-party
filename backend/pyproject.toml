@@ -108,7 +108,7 @@ omit = [
     "*/test_*.py",
     "conftest.py",
     "*/factories.py",
-    # gunicorn が読む設定値だけのファイル。起動は Backend/Build が確かめる。
+    # gunicorn が読む設定値だけのファイル。起動は Backend / Build が確かめる。
     "gunicorn.conf.py",
 ]
 

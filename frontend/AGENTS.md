@@ -107,5 +107,5 @@ runner のレイアウトと `CMD` もそれに合わせてある。
 
 ## CI
 
-`Frontend/CI`（生成物の drift · typecheck · lint · license-check）と
-`Frontend/Build`（next build · storybook · イメージを起動してページ疎通）。
+`Frontend / CI`（生成物の drift · typecheck · lint · license-check）と
+`Frontend / Build`（next build · storybook · イメージを起動してページ疎通）。

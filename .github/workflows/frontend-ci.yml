@@ -1,5 +1,5 @@
-# frontend の lint・型。成果物は Frontend/Build が見る。
-name: Frontend/CI
+# frontend の lint・型。成果物は Frontend / Build が見る。
+name: Frontend / CI
 
 on:
   push:

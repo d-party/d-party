@@ -1,5 +1,5 @@
-# extension の lint・型。成果物は Extension/Build が見る。
-name: Extension/CI
+# extension の lint・型。成果物は Extension / Build が見る。
+name: Extension / CI
 
 on:
   push:

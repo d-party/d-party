@@ -78,7 +78,7 @@ backend_license() {
 }
 
 gate_backend() {
-  # CI（Backend/CI）と同じダミー env。呼び出し側で設定済みならそれを使う。
+  # CI（Backend / CI）と同じダミー env。呼び出し側で設定済みならそれを使う。
   export SECRET_KEY="${SECRET_KEY:-django-insecure-local-test}"
   export DEBUG="${DEBUG:-1}"
   export MY_DOMAIN="${MY_DOMAIN:-localhost}"
@@ -125,7 +125,7 @@ gate_web() {
 }
 
 # ── 拡張機能の本番バンドル ───────────────────────────────────────────────────
-# Extension/Build と同じ確認。rspack は黙って空の出力を出すことがある。
+# Extension / Build と同じ確認。rspack は黙って空の出力を出すことがある。
 bundle_verify() {
   test -f manifest.json || {
     echo "manifest.json がない"
@@ -174,7 +174,7 @@ expect_status() {
 
 smoke_frontend() {
   local pid rc=0 i ctype
-  # Frontend/Build の「standalone 出力の確認」と同じ。無ければ落とす（SKIP にしない）。
+  # Frontend / Build の「standalone 出力の確認」と同じ。無ければ落とす（SKIP にしない）。
   if [ ! -f .next/standalone/frontend/server.js ] || [ ! -d .next/static ]; then
     echo "frontend の standalone ビルドが無い。web と同じ実行で回す（gates.sh web smoke）"
     return 1
@@ -244,7 +244,7 @@ gate_compose() {
 }
 
 # ── nginx ────────────────────────────────────────────────────────────────────
-# Nginx/CI はイメージを固定で持つので、compose の nginx を上げる PR は CI では検査されない。
+# Nginx / CI はイメージを固定で持つので、compose の nginx を上げる PR は CI では検査されない。
 # ここでは compose が実際に使うイメージでテンプレートを検査する。
 nginx_test() {
   local template=$1 image
@@ -324,7 +324,7 @@ gate_repo() {
 
 # ── イメージのビルド ─────────────────────────────────────────────────────────
 # 起動後の疎通（migrate · API 応答 · ページ疎通）と hadolint · dockle は
-# Backend/Build · Frontend/Build が PR ごとに見る。
+# Backend / Build · Frontend / Build が PR ごとに見る。
 gate_docker() {
   step "docker: backend image" . docker build -t d-party-backend:gates backend
   step "docker: frontend image" . docker build -f frontend/Dockerfile -t d-party-frontend:gates .

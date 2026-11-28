@@ -1,5 +1,5 @@
 # パッケージを問わない lint（ワークフロー・シェル・YAML）と CodeQL。
-name: Repo/CI
+name: Repo / CI
 
 on:
   push:

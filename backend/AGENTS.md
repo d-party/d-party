@@ -147,15 +147,15 @@ Dev Container からは `DATABASE_HOST=localhost` でつながる。
   0% として数える（`source = ["."]`）。
 - 計測から外すのは、テストとその支援コード（`factories.py` · `conftest.py`）、生成物
   （`migrations/`）、プロセスの起動だけを担うもの（`manage.py` · `gunicorn.conf.py`。起動は
-  `Backend/Build` が確かめる）に限る。テストを書けるコードを `omit` や `# pragma: no cover` で
+  `Backend / Build` が確かめる）に限る。テストを書けるコードを `omit` や `# pragma: no cover` で
   隠さない。
 
 migration はコミット済み。モデルを変えたときだけ `makemigrations` して生成物をコミットする。
 
 ## CI
 
-- `Backend/CI`：ruff · pytest（カバレッジは PR にコメントし、`python-coverage-comment-action-data` ブランチへ保存）· mypy · openapi（`openapi.json` が最新か）· license-check
-- `Backend/Build`：hadolint → build → dockle → 実 PostgreSQL / Redis で migrate → 起動 → `/api/v1/health` が 200
-- linter は ruff に集約する（SAST は `S`、複雑度は `C90`（10）と `PLR09xx`）。taint 解析だけは `Repo/CI` の CodeQL。
+- `Backend / CI`：ruff · pytest（カバレッジは PR にコメントし、`python-coverage-comment-action-data` ブランチへ保存）· mypy · openapi（`openapi.json` が最新か）· license-check
+- `Backend / Build`：hadolint → build → dockle → 実 PostgreSQL / Redis で migrate → 起動 → `/api/v1/health` が 200
+- linter は ruff に集約する（SAST は `S`、複雑度は `C90`（10）と `PLR09xx`）。taint 解析だけは `Repo / CI` の CodeQL。
 - フォーマットは検査のみで、自動コミットはしない。
 - pre-commit の設定はルートの `.pre-commit-config.yaml`（`files: ^backend/`）。
