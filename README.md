@@ -29,49 +29,46 @@ dアニメストアには複数人で一緒に観る機能がありません。d
 - アカウント登録は不要です。ルームの URL を共有すれば始められます。
 - 動画は各自のブラウザが再生します。サーバが中継するのは再生位置などの同期メッセージだけで、
   映像は扱いません。
+-  Manifest V3 なので、Chrome 以外の Chromium 系ブラウザ（Edge など）でも読み込めます。
 
 ## リポジトリ構成
 
 | パス | 中身 | スタック |
 | --- | --- | --- |
-| [`backend/`](backend/AGENTS.md) | Django バックエンド | Python 3.15 · Django 6 · Channels · DRF · PostgreSQL 18 · Redis 8 |
-| [`extension/`](extension/AGENTS.md) | ブラウザ拡張機能 | Manifest V3 · TypeScript · React 19 · rspack · Tailwind CSS v4 |
-| [`frontend/`](frontend/AGENTS.md) | ユーザー向け公開サイト | Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 |
-| `packages/ui/` | extension と frontend が共有する shadcn/ui プリミティブ | TypeScript · Radix · Tailwind CSS v4 |
+| [`backend/`](backend/AGENTS.md) | Django バックエンド | Python · Django · Channels · DRF · PostgreSQL · Redis |
+| [`extension/`](extension/AGENTS.md) | ブラウザ拡張機能 | Manifest V3 · TypeScript · React · rspack · Tailwind CSS |
+| [`frontend/`](frontend/AGENTS.md) | ユーザー向け公開サイト | Next.js · React · TypeScript · Tailwind CSS |
+| `packages/ui/` | extension と frontend が共有するUIコンポーネント | TypeScript · Radix · Tailwind CSS |
 | [`infra/`](infra/README.md) | k3s (Raspberry Pi) デプロイ | Helm chart · Argo CD · rootless BuildKit |
 | [`loadtest/`](loadtest/README.md) | WebSocket 負荷試験 | k6 |
 | `nginx/` | リバースプロキシの設定 | docker compose |
 
-`extension/`・`frontend/`・`packages/ui/` は pnpm workspace のパッケージで、ロックファイルは
-ルートの `pnpm-lock.yaml` だけです。ビルド・lint・型検査は [Turborepo](https://turborepo.com/)
-（`turbo.json`）でまとめて実行します。
 
-拡張機能は Manifest V3 なので、Chrome 以外の Chromium 系ブラウザ（Edge など）でも読み込めます。
+## 開発
 
-## はじめかた
+### 開発環境構築
 
-### 必要なもの
+- Docker / Docker Compose
+- Chromium 系ブラウザ
+- Python 3.15 / [uv](https://docs.astral.sh/uv/)
+- Node.js 26 / [pnpm](https://pnpm.io/)
 
-- Docker と Docker Compose v2
-- Chromium 系ブラウザ（拡張機能の動作確認用）
-- コンテナを使わない場合は Python 3.15 と [uv](https://docs.astral.sh/uv/)、
-  Node.js 26 と [pnpm](https://pnpm.io/) 12
 
-Dev Container を使うのが簡単です。VS Code でこのフォルダを開いて
-「Dev Containers: Reopen in Container」を選ぶと、上記のほかに CI と同じ lint ツール
-（actionlint・shellcheck・yamllint・pre-commit）、helm、k3d、k6、GitHub CLI が入ります。
-手順 1 の `pnpm install`・`uv sync`・`pre-commit install` も初回起動時に実行されるので、
-手順 2 から始めてください。
+> [!NOTE]
+> [Dev Container](https://containers.dev/) を用意しています。
+>
+> 手順 1 の `pnpm install`・`uv sync`・`pre-commit install` も初回起動時に実行されるので、
+> 手順 2 から始めてください。
 
-### 1. クローンして依存を入れる
+### 1. cloneして依存をインストールする
 
 ```bash
 git clone git@github.com:d-party/d-party.git
 cd d-party
 
-pnpm install              # extension + frontend + packages/ui（ルートで 1 回）
-(cd backend && uv sync)   # backend
-pre-commit install        # backend 向けのフック。ルートで実行する
+pnpm install
+(cd backend && uv sync)
+pre-commit install
 ```
 
 ### 2. スタックを起動する
@@ -82,9 +79,7 @@ docker compose exec django python manage.py migrate
 docker compose exec django python manage.py collectstatic --noinput
 ```
 
-`docker-compose.override.yml` が自動で読み込まれるので、これは開発用の構成で起動します。
-frontend は `pnpm dev` で動くため、初回は依存のインストールとコンパイルに数分かかります
-（ヘルスチェックは 3 分まで待ちます）。
+`docker-compose.override.yml` が自動で読み込まれ開発用の環境が立ち上がります。
 
 | URL | 内容 |
 | --- | --- |
