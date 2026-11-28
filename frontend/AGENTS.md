@@ -32,6 +32,9 @@ pnpm api:generate && pnpm typecheck && pnpm lint
 pnpm storybook
 ```
 
+`next.config.ts` の `agentRules: false` を外さない。外すと `next dev` がこのファイルへ英語のブロックを
+書き足し続ける。
+
 ## ロビー `/anime-store/lobby/[roomId]` — 契約
 
 拡張機能と backend の両方と結合しているので変えないこと。

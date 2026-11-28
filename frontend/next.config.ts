@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   output: "standalone",
   // 応答に `X-Powered-By: Next.js` を付けない。
   poweredByHeader: false,
+  // `next dev` が AI エージェントを検出したときに、AGENTS.md へ英語のブロックを書き足さない
+  // （すでにあるブロックは取り除かれる）。ルートの turbo.json の `agentGuidance: false` と同じ理由。
+  agentRules: false,
   // @d-party/ui はソースのまま公開している。
   transpilePackages: ["@d-party/ui"],
   async redirects() {
