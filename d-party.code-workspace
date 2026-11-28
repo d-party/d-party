@@ -1,16 +1,62 @@
 {
-  // 単一ルートでも開けるが、パッケージごとにフォルダを切っておくと、言語サーバ
-  // （ESLint / TypeScript / Python）がパッケージ単位で設定を拾いやすく、
-  // 検索スコープも絞りやすい。
+  // マルチルートのワークスペース（「ファイル > ファイルでワークスペースを開く」でこのファイルを開く）。
+  // パッケージごとにフォルダを分けると、言語サーバ（ESLint / TypeScript / Python）がパッケージ単位で
+  // 設定を拾い、エクスプローラと検索もパッケージで絞り込める。
+  //
+  // マルチルートでは、ルートの .vscode/settings.json は "d-party (root)" フォルダの中のファイルにしか
+  // 効かず、window スコープの設定（js/ts.tsdk.path など）は読まれない。全フォルダに効かせる設定は
+  // 下の settings に書き、.vscode/settings.json と揃えておく。
+  // 推奨拡張はルートフォルダの .vscode/extensions.json が読まれるので、ここには書かない。
   "folders": [
     { "path": ".", "name": "d-party (root)" },
-    { "path": "backend", "name": "backend" },
-    { "path": "extension", "name": "extension" },
-    { "path": "frontend", "name": "frontend" },
-    { "path": "infra", "name": "infra" }
+    { "path": "backend" },
+    { "path": "extension" },
+    { "path": "frontend" },
+    { "path": "packages/ui", "name": "packages/ui" },
+    { "path": "infra" },
+    { "path": "loadtest" }
   ],
   "settings": {
+    // ── Explorer ──────────────────────────────────────────────────────────────
+    // root には各パッケージのディレクトリも入っているので、同じファイルが 2 か所に出ないよう
+    // root からは隠す。パターンは各フォルダからの相対パスなので、ほかのフォルダの中身には当たらない。
+    "files.exclude": {
+      "backend": true,
+      "extension": true,
+      "frontend": true,
+      "packages": true,
+      "infra": true,
+      "loadtest": true
+    },
+
+    // ── General（.vscode/settings.json と同じ）─────────────────────────────────
+    "editor.formatOnSave": true,
     "files.eol": "\n",
+    "files.insertFinalNewline": true,
+    "files.trimTrailingWhitespace": true,
+    // Helm テンプレートは Go テンプレートなので、YAML として検証しない（理由は .vscode/settings.json）。
+    "files.associations": {
+      "**/infra/helm/**/templates/*.yaml": "helm",
+      "**/infra/helm/**/templates/*.tpl": "helm"
+    },
+
+    // ── Python (backend) ──────────────────────────────────────────────────────
+    // ${workspaceFolder} は設定を読むフォルダごとに解決されるので、backend フォルダでは
+    // backend/.venv を指す（root フォルダは .vscode/settings.json の値が優先される）。
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+    "[python]": { "editor.defaultFormatter": "charliermarsh.ruff" },
+
+    // ── TypeScript (extension · frontend · packages/ui) ───────────────────────
+    // pnpm は typescript をパッケージの node_modules にだけ置き、ルートの node_modules には無い。
+    // 先頭の "extension/" はワークスペースのフォルダ名として解決される。版はロックファイルで
+    // 全パッケージ共通。
+    "js/ts.tsdk.path": "extension/node_modules/typescript/lib",
+    "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[typescriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[javascript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "eslint.workingDirectories": [{ "mode": "auto" }],
+
+    // ── Search / watch ────────────────────────────────────────────────────────
     "search.exclude": {
       "**/node_modules": true,
       "**/.venv": true,
@@ -18,21 +64,19 @@
       "**/.turbo": true,
       "**/dist": true,
       "**/storybook-static": true,
+      // root フォルダ
       "postgres/data*": true,
-      "backend/static": true
+      "pnpm-lock.yaml": true,
+      // backend フォルダ（collectstatic の出力とロックファイル）
+      "static": true,
+      "uv.lock": true
+    },
+    "files.watcherExclude": {
+      "**/node_modules/**": true,
+      "**/.venv/**": true,
+      "**/.next/**": true,
+      "**/.turbo/**": true,
+      "postgres/data*/**": true
     }
-  },
-  "extensions": {
-    "recommendations": [
-      "ms-python.python",
-      "ms-python.vscode-pylance",
-      "charliermarsh.ruff",
-      "dbaeumer.vscode-eslint",
-      "esbenp.prettier-vscode",
-      "ms-azuretools.vscode-docker",
-      "redhat.vscode-yaml",
-      "ms-kubernetes-tools.vscode-kubernetes-tools",
-      "anthropic.claude-code"
-    ]
   }
 }
