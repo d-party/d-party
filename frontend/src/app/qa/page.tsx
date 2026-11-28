@@ -5,6 +5,7 @@ import { Faq, type FaqEntry } from "@/components/qa/Faq";
 import {
   D_ANIME_STORE_URL,
   FEEDBACK_FORM_URL,
+  GITHUB_ISSUES_URL,
   GITHUB_ORG_URL,
   GITHUB_SPONSORS_URL,
 } from "@/lib/links";
@@ -111,7 +112,7 @@ const ENTRIES: FaqEntry[] = [
         </a>{" "}
         または{" "}
         <a
-          href={GITHUB_ORG_URL}
+          href={GITHUB_ISSUES_URL}
           target="_blank"
           rel="noreferrer noopener"
           className="text-primary underline-offset-4 hover:underline"
