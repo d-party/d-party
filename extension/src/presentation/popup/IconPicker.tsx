@@ -15,7 +15,7 @@ export function IconPicker({
     <div
       role="radiogroup"
       aria-label="表示アイコンを選択"
-      className="grid max-h-44 grid-cols-8 gap-1 overflow-y-auto rounded-lg border bg-muted/30 p-2 @lg:max-h-80 @lg:grid-cols-[repeat(auto-fill,minmax(2.5rem,1fr))]"
+      className="grid max-h-44 grid-cols-8 gap-1 overflow-y-auto rounded-lg border bg-muted/30 p-2 @lg:max-h-none @lg:grid-cols-[repeat(auto-fill,minmax(2.5rem,1fr))]"
     >
       {USER_ICON_KEYS.map((key) => {
         const selected = key === value;

@@ -16,10 +16,6 @@ export const TABS = [
 
 export type TabValue = (typeof TABS)[number]["value"];
 
-export function toTabValue(value: string): TabValue {
-  return TABS.find((tab) => tab.value === value)?.value ?? TABS[0].value;
-}
-
 /**
  * パネルを置く場所。`popup` は幅 360px のポップアップで、セクションを畳んで 1 つずつ開く。
  * `page` は別タブの設定ページで、畳まずにすべて開いておく。

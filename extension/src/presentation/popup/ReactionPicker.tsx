@@ -31,7 +31,7 @@ export function ReactionPicker({
       <div
         role="group"
         aria-label="追加できるリアクション"
-        className="grid max-h-44 grid-cols-8 gap-1 overflow-y-auto rounded-lg border bg-muted/30 p-2 @lg:max-h-80 @lg:grid-cols-[repeat(auto-fill,minmax(2.5rem,1fr))]"
+        className="grid max-h-44 grid-cols-8 gap-1 overflow-y-auto rounded-lg border bg-muted/30 p-2 @lg:max-h-none @lg:grid-cols-[repeat(auto-fill,minmax(2.5rem,1fr))]"
       >
         {items.map((r) => {
           const isSelected = selectedSet.has(r.id);
